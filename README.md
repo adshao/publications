@@ -1,10 +1,8 @@
 # My DeFi Blogs
 
-## Prerequirements
-
-如果文档中的数学公式无法正常显示，请安装Chrome浏览器插件：[MathJax Plugin for Github](https://chrome.google.com/webstore/detail/mathjax-plugin-for-github/ioemnmodlmafdkllaclgeombjnmnbima?hl=en)
-
-Install Chrome extension [MathJax Plugin for Github](https://chrome.google.com/webstore/detail/mathjax-plugin-for-github/ioemnmodlmafdkllaclgeombjnmnbima?hl=en) if the math formulas are not rendered correctly on your browser.
+> 如果文档中的数学公式无法正常显示，请安装Chrome浏览器插件：[MathJax Plugin for Github](https://chrome.google.com/webstore/detail/mathjax-plugin-for-github/ioemnmodlmafdkllaclgeombjnmnbima?hl=en)
+>
+> Install Chrome extension [MathJax Plugin for Github](https://chrome.google.com/webstore/detail/mathjax-plugin-for-github/ioemnmodlmafdkllaclgeombjnmnbima?hl=en) if the math formulas are not rendered correctly on your browser.
 
 ## Uniswap
 
@@ -14,4 +12,4 @@ Install Chrome extension [MathJax Plugin for Github](https://chrome.google.com/w
 ## Links
 
 * [Mirror](https://mirror.xyz/adshao.eth)
-* [@AdamShao](https://twitter.com/AdamShao)
+* [Twitter](https://twitter.com/AdamShao)
