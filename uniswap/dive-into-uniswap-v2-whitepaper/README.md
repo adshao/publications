@@ -380,13 +380,13 @@ Uniswap v1是一个例外。因为每一个Uniswap v1交易对都使用ETH作为
 
 如果任意一种代币余额超过最大值，swap方法的调用将会失败（由于_update()方法的检查导致）。为了从这种状况中恢复，任何人都可以调用skim()方法来从池子中移除多余的代币。
 
-引用文献
+## 引用文献
 
-[1] Hayden Adams. 2018. url: https://hackmd.io/@477aQ9OrQTCbVR3fq1Qzxg/HJ9jLsfTz?type=view.
-[2] Guillermo Angeris et al. An analysis of Uniswap markets. 2019. arXiv: 1911.03380 [q-fin.TR].
-[3] samczsun. Taking undercollateralized loans for fun and for profit. Sept. 2019. url: https://samczsun.com/taking-undercollateralized-loans-for-fun-and-for-profit/.
-[4] Fabian Vogelsteller and Vitalik Buterin. Nov. 2015. url: https://eips.ethereum.org/EIPS/eip-20.
-[5] Jordi Baylina Jacques Dafflon and Thomas Shababi. EIP 777: ERC777 Token Standard. Nov. 2017. url: https://eips.ethereum.org/EIPS/eip-777.
-[6] Radar. WTF is WETH? url: https://weth.io/.
-[7] Uniswap.info. Wrapped Ether (WETH). url: https://uniswap.info/token/0xc02aaa39b223fe8d0a0e5c4f27e
-[8] Vitalik Buterin. EIP 1014: Skinny CREATE2. Apr. 2018. url: https://eips.ethereum.org/EIPS/eip-1014.
+* [1] Hayden Adams. 2018. url: https://hackmd.io/@477aQ9OrQTCbVR3fq1Qzxg/HJ9jLsfTz?type=view.
+* [2] Guillermo Angeris et al. An analysis of Uniswap markets. 2019. arXiv: 1911.03380 [q-fin.TR].
+* [3] samczsun. Taking undercollateralized loans for fun and for profit. Sept. 2019. url: https://samczsun.com/taking-undercollateralized-loans-for-fun-and-for-profit/.
+* [4] Fabian Vogelsteller and Vitalik Buterin. Nov. 2015. url: https://eips.ethereum.org/EIPS/eip-20.
+* [5] Jordi Baylina Jacques Dafflon and Thomas Shababi. EIP 777: ERC777 Token Standard. Nov. 2017. url: https://eips.ethereum.org/EIPS/eip-777.
+* [6] Radar. WTF is WETH? url: https://weth.io/.
+* [7] Uniswap.info. Wrapped Ether (WETH). url: https://uniswap.info/token/0xc02aaa39b223fe8d0a0e5c4f27e
+* [8] Vitalik Buterin. EIP 1014: Skinny CREATE2. Apr. 2018. url: https://eips.ethereum.org/EIPS/eip-1014.
