@@ -1,5 +1,9 @@
 # 深入理解 Uniswap v2 白皮书
 
+> 如果无法正常显示文档中的数学公式，请安装Chrome浏览器插件：[MathJax Plugin for Github](https://chrome.google.com/webstore/detail/mathjax-plugin-for-github/ioemnmodlmafdkllaclgeombjnmnbima?hl=en)
+>
+> Install Chrome extension [MathJax Plugin for Github](https://chrome.google.com/webstore/detail/mathjax-plugin-for-github/ioemnmodlmafdkllaclgeombjnmnbima?hl=en) if the math formulas are not rendered correctly on your browser.
+
 ## 前言
 
 本文作为《深入理解Uniswap》系列的第一篇，将从Uniswap v2白皮书入手，讲解Uniswap v2协议的设计思路和数学公式推导过程。
@@ -278,13 +282,13 @@ Uniswap v2的一个设计重点在于最小化core交易对合约的对外接口
 
 #### 3.2.1 Adjustment for fee 手续费调整
 
-Uniswap v1的交易手续费是通过减少存入合约的代币数量来实现，在比较k恒等式之前，需要先减去0.3%的交易手续费。合约隐式约束如下：
+Uniswap v1的交易手续费是通过减少存入合约的代币数量来实现，在比较k常值函数之前，需要先减去0.3%的交易手续费。合约隐式约束如下：
 
 $$
 (x_1 - 0.003 \cdot x_{in}) \cdot y_1 \geq x_0 \cdot y_0 \tag{9}
 $$
 
-> 注：扣除手续费以后的两种代币余额，符合k恒等式。
+> 注：扣除手续费以后的两种代币余额，符合k常值函数。
 
 通过闪电贷功能，Uniswap v2引入了一种可能性，即xin和yin可能同时不为0（当一个用户希望通过归还借出的代币，而不是做交易时）。为了处理这种情况下的手续费问题，合约强制要求如下约束：
 
