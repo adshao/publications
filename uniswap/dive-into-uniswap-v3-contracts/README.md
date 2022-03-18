@@ -120,7 +120,7 @@ function getSqrtRatioAtTick(int24 tick) internal pure returns (uint160 sqrtPrice
 假设 $i > 0$ 时：
 
 $$
-\sqrt{p(i)}_{Q128128} = 2^{128} \cdot \sqrt{p(i)} = 2^{128} \cdot 1.0001^{\frac{i}{2}} \\ = \frac{2^{128}}{1.0001^{-\frac{i}{2}}} = \frac{2^{256}}{2^{128} \cdot \sqrt{p(-i)}} = \frac{2^{256}}{\sqrt{p(-i)}_{Q128128}}
+\sqrt{p_{Q128128}(i)} = 2^{128} \cdot \sqrt{p(i)} = 2^{128} \cdot 1.0001^{\frac{i}{2}} \\ = \frac{2^{128}}{1.0001^{-\frac{i}{2}}} = \frac{2^{256}}{2^{128} \cdot \sqrt{p(-i)}} = \frac{2^{256}}{\sqrt{p_{Q128128}(-i)}}
 $$
 
 因此，只需要算出 i < 0 时的 ratio 值，使用$2^{256}$处以 ratio 即可得出 i > 0 的ratio值：
