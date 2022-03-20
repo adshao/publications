@@ -9,7 +9,7 @@
 
 ## Links
 
-* [HackMD](https://hackmd.io/g7O3_jEXSm-LExfGP8vMyg)
+* [HackMD](https://hackmd.io/@adshao)
 * [Github](https://github.com/adshao)
 * [Mirror](https://mirror.xyz/adshao.eth)
 * [Twitter](https://twitter.com/AdamShao)
