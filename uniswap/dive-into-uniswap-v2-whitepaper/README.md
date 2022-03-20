@@ -1,9 +1,5 @@
 # 深入理解 Uniswap v2 白皮书
 
-> 如果无法正常显示文档中的数学公式，请安装Chrome浏览器插件：[MathJax Plugin for Github](https://chrome.google.com/webstore/detail/mathjax-plugin-for-github/ioemnmodlmafdkllaclgeombjnmnbima?hl=en)
->
-> Install Chrome extension [MathJax Plugin for Github](https://chrome.google.com/webstore/detail/mathjax-plugin-for-github/ioemnmodlmafdkllaclgeombjnmnbima?hl=en) if the math formulas are not rendered correctly on your browser.
-
 ## 前言
 
 本文作为《深入理解Uniswap》系列的第一篇，将从Uniswap v2白皮书入手，讲解Uniswap v2协议的设计思路和数学公式推导过程。

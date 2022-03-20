@@ -1,9 +1,5 @@
 # 深入理解 Uniswap v3 白皮书
 
-> 如果无法正常显示文档中的数学公式，请安装Chrome浏览器插件：[MathJax Plugin for Github](https://chrome.google.com/webstore/detail/mathjax-plugin-for-github/ioemnmodlmafdkllaclgeombjnmnbima?hl=en)
->
-> Install Chrome extension [MathJax Plugin for Github](https://chrome.google.com/webstore/detail/mathjax-plugin-for-github/ioemnmodlmafdkllaclgeombjnmnbima?hl=en) if the math formulas are not rendered correctly on your browser.
-
 ## 概述
 
 Uniswap v3是一个基于以太坊虚拟机（EVM）实现的无监管自动做市商（AMM）。与之前的版本相比，Uniswap v3提高了资金利用率，赋予流动性提供者更多控制能力，改进了价格预言机的准确性和便利性，同时增加了更灵活的手续费结构。
@@ -52,7 +48,7 @@ $$
 
 > 注：可以将一个v3池子的区间想象成一个v2池子的一部分。
 
-![](./assets/v3-1.jpg)
+![](https://i.imgur.com/6XyH2px.jpg)
 
 特别地，一个头寸只需要持有足够的代币$X$以支持价格移动到其上限，因为当价格向上方移动时需要消耗$X$代币。同样，只需要持有足够的代币$Y$以支持价格移动到下限。图1描述了在价格区间$\left[p_a, p_b\right]$的头寸与当前价格$p_c \in \left[ p_a, p_b \right]$的关系。$x_{real}$与$y_{real}$代表头寸的真实代币余额。
 
@@ -68,7 +64,7 @@ $$
 
 该曲线是公式2.1的变形，头寸只在自己的区间具有偿付能力（图2）。
 
-![](./assets/v3-2.jpg)
+![](https://i.imgur.com/cBGb3ra.jpg)
 
 > 注：下面我们来推导公式2.2：
 >
@@ -116,7 +112,7 @@ $$
 
 只要流动性提供者觉得合适，他们可以自由地创建任意数量的头寸，每个头寸拥有自己的价格区间。通过这种方式，LP可以模拟价格空间中任意有分布需求的流动性（图3列举了部分例子）。此外，这种方式可以让市场决定流动性应该分配在什么地方。理智的LP们可以通过在当前价格附近的狭窄区间集中流动性来减少资金成本，并且通过添加或移除代币来移动价格，以使他们的流动性始终保持活跃。
 
-![](./assets/v3-3.jpg)
+![](https://i.imgur.com/yZqtzrF.jpg)
 
 ### 2.1 Range Orders 区间订单
 
@@ -327,7 +323,8 @@ $$
 
 合约的全局状态包括7个与交换和流动性供应相关的存储变量。（它也有其他一些存储变量用于预言机，如第5节描述。）
 
-![](./assets/v3-4.jpg)
+![](https://i.imgur.com/GXC3N2R.jpg)
+
 
 #### 6.2.1 Price and Liquidity 价格和流动性
 
@@ -403,7 +400,7 @@ $$
 
 每个交易对池子初始化时会设置一个不可修改的手续费（$\gamma$），表示交易者需要支付的手续费，以百分之一基点为一个单位（0.0001%）。
 
-> 注：默认的手续费值为500，3000，10000，分别表示的手续费为：$500 \cdot 0.0001\% = 0.05\%, 3000 \cdot 0.0001\% = 0.30\%, 1000 \cdot 0.0001\% = 1\% $。
+> 注：默认的手续费值为500，3000，10000，分别表示的手续费为：500 x 0.0001\% = 0.05\%, 3000 x 0.0001\% = 0.30\%, 1000 x 0.0001\% = 1\%。
 
 另一个变量为协议手续费$\phi$，初始时设置为0，但是可以通过UNI治理修改。该数字表示交易者支付手续费的部分比例将分给协议，而不是流动性提供者。$\phi$只允许被设置为以下几个合法值：0, 1/4, 1/5, 1/6, 1/7, 1/8, 1/9 或者 1/10。
 
@@ -493,7 +490,8 @@ $$
 
 对于任意交易，只要交易后的开根号价格$\sqrt{P}$没有进入下一个初始化的tick所在的价格，上述公式都可以正常工作。如果计算后的$\Delta{\sqrt{P}}$将使得$\sqrt{P}$进入下一个初始化的tick，合约将完成当前tick（仅占一部分交易），再继续进入下一个tick完成剩余的交易，参考6.3.1节。
 
-![](./assets/v3-7.jpg)
+![](https://i.imgur.com/4oIYwDE.jpg)
+
 
 #### 6.2.4 Initialized Tick Bitmap 初始化Tick的位图
 
@@ -509,7 +507,8 @@ $$
 
 合约保存一个映射表，每个tick序号对应以下7个变量：
 
-![](./assets/v3-5.jpg)
+![](https://i.imgur.com/nackvVF.jpg)
+
 
 每个tick记录$\Delta{L}$，表示当该tick被完全穿越时需要加入和移除的总流动性数量。Tick只需要记录一个有符号整数：当交易促使tick值从左到右移动时，需要往该tick注入的流动性（反之，当tick值从右到左移动时，该值为负，表示移除流动性）。该值无需在每次价格穿越tick时更新（只需在使用该tick作为边界点的头寸更新时才更新）。
 
@@ -616,7 +615,8 @@ $$
 
 合约记录一个映射表，从用户地址，头寸低点（左边界，一个tick序号，int24类型）和高点（右边界，一个tick序号，int24类型）到具体头寸信息的映射关系。每个头寸记录三个值：
 
-![](./assets/v3-6.jpg)
+![](https://i.imgur.com/M33yNaC.jpg)
+
 
 liquidity（$l$）表示上一次头寸更新时，该头寸所表示的虚拟流动性数量。特别地，liquidity可以被看作$\sqrt{x \cdot y}$，其中$x$和$y$分别表示在任意时刻该头寸进入价格区间时，由对应的虚拟token0和token1数量表示的加入池子的流动性。与Uniswap v2不同（每个流动性份额随时间增长），v3的流动性份额并不改变，因为手续费是单独累计；它总是等价于$\sqrt{x \cdot y}$，其中，$x$和$y$分别表示token0和token1的数量。
 

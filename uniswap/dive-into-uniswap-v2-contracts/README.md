@@ -1,6 +1,6 @@
 # 深入理解 Uniswap v2 合约代码
 
-上文介绍了《[深入理解 Uniswap v2 白皮书](../dive-into-uniswap-v2-whitepaper/README.md)》，今天我们来讲解Uniswap v2合约代码。
+上文介绍了《[深入理解 Uniswap v2 白皮书](https://hackmd.io/@adshao/rk7nI-EG9)》，今天我们来讲解Uniswap v2合约代码。
 
 > 本文不会逐行介绍合约代码，而是关注合约架构和重点方法，如果需要详细的代码说明，推荐阅读以太坊官方的[Uniswap v2代码走读](https://ethereum.org/en/developers/tutorials/uniswap-v2-annotated-code/#introduction)。
 
@@ -8,7 +8,8 @@
 
 Uniswap v2的合约主要分为两类：core合约和periphery合约。其中，core合约仅包含最基础的交易功能，核心代码仅200行左右，由于用户资金都存储在core合约里，因此需要保证core合约最简化，避免引入bug；periphery合约则针对用户使用场景提供多种封装方法，比如支持原生ETH交易（自动转为WETH），多路径交换（一个方法同时执行A→B→C交易）等，其底层调用的是core合约。我们在[app.uniswap.org](https://app.uniswap.org/)界面操作时用的就是periphery合约。
 
-![](./assets/uniswap-v2.png)
+![](https://i.imgur.com/J9txqxI.png)
+
 
 我们先介绍几个主要合约的功能：
 
@@ -288,7 +289,8 @@ function _update(uint balance0, uint balance1, uint112 _reserve0, uint112 _reser
 
 Router02封装了最常用的几个交易接口；为了满足原生ETH交易需求，大部分接口都支持ETH版本；同时，相比Router01，部分接口增加了FeeOnTrasnferTokens的支持。
 
-![](./assets/router02.png)
+![](https://i.imgur.com/vw84rOW.png)
+
 
 我们将主要介绍ERC20版本的代码，因为ETH版本只是将ETH与WETH做转换，逻辑与ERC20一致。
 

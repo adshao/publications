@@ -1,10 +1,5 @@
 # 深入理解 Uniswap v3 合约代码
 
-> 如果无法正常显示文档中的数学公式，请安装Chrome浏览器插件：[MathJax Plugin for Github](https://chrome.google.com/webstore/detail/mathjax-plugin-for-github/ioemnmodlmafdkllaclgeombjnmnbima?hl=en)
->
-> Install Chrome extension [MathJax Plugin for Github](https://chrome.google.com/webstore/detail/mathjax-plugin-for-github/ioemnmodlmafdkllaclgeombjnmnbima?hl=en) if the math formulas are not rendered correctly on your browser.
-
-
 ## Tick
 
 ### TickMath
@@ -44,13 +39,17 @@ i = \lceil log_{1.0001}{2^{-128}} \rceil = \lceil -887272.7517970635 \rceil = -8
 $$
 
 
-对于一个给定的tick $i$（$i$是自然数），它总可以表示为二进制，因此以下式子总是成立：
+假设$i$ $\geq 0$，对于一个给定的tick $i$，它总可以表示为二进制，因此以下式子总是成立：
 
 $$
 \begin{cases} i = \sum_{n=0}^{19}{(x_n \cdot 2^n)} = x_0 \cdot 1 + x_1 \cdot 2 + x_2 \cdot 4 + ... + x_{19}\cdot 524288 \\ x_n \in \{0, 1\} \end{cases} \tag{1.1}
 $$
 
 其中，$x_n$为$i$的二进制位。如$i=6$，其对应的二进制为：`000000000000000000000110`，则$x_1 = 1, x_2 = 1$，其余$x_n$均为0。
+
+同样可以推出$i < 0$也可以用类似的公式表示。
+
+我们先看$i < 0$的情况：
 
 如果 $i < 0$，则：
 
@@ -68,7 +67,11 @@ $$
 
 为了最小化精度误差，在计算过程中，使用`Q128.128`（128位定点数）表示中间价格，对于每一个价格$p$，均需要左移128位。由于$i < 0, x_n = 1$时，$\frac{1}{1.0001^{\frac{x_n \cdot 2^n}{2}}} < 1$，因此在连续乘积过程中不会有溢出问题。
 
-可以总结计算$\sqrt{p}(i)$的办法，初始值为1，从右往左循环遍历$i$的二进制比特位，如果该位不为0，则乘以对应的$\frac{2^{128}}{1.0001^{\frac{2^n}{2}}}$，其中$2^{128}$表示左移128位。
+可以总结计算$\sqrt{p}(i)$的方法：
+
+* 初始值为1，从第0位开始，从低位到高位（从右往左）循环遍历$i$的二进制比特位
+* 如果该位不为0，则乘以对应的$\frac{2^{128}}{1.0001^{\frac{2^n}{2}}}$，其中$2^{128}$表示左移128位
+* 如果该位为0，则乘以1，可以省略
 
 
 ```solidity
@@ -105,7 +108,7 @@ function getSqrtRatioAtTick(int24 tick) internal pure returns (uint160 sqrtPrice
     if (absTick & 0x20000 != 0) ratio = (ratio * 0x5d6af8dedb81196699c329225ee604) >> 128;
     if (absTick & 0x40000 != 0) ratio = (ratio * 0x2216e584f5fa1ea926041bedfe98) >> 128;
     // 如果第19位非0，因为（2^19 = 0x80000=524288），则乘以 0x2216e584f5fa1ea926041bedfe98，即：2^128 / 1.0001^(524288/2)
-    // 因为tick的最大值为887272，因此其二进制最多只需要20位表示，从0开始计数，最后一位为第19位。
+    // tick的最大值为887272，因此其二进制最多只需要20位表示，从0开始计数，最后一位为第19位。
     if (absTick & 0x80000 != 0) ratio = (ratio * 0x48a170391f7dc42444e8fa2) >> 128;
 
     if (tick > 0) ratio = type(uint256).max / ratio;
@@ -189,61 +192,61 @@ def find_msb(x):
 Uniswap v3中的Solidity代码如下：
 
 ```solidity
-    /// @notice Calculates the greatest tick value such that getRatioAtTick(tick) <= ratio
-    /// @dev Throws in case sqrtPriceX96 < MIN_SQRT_RATIO, as MIN_SQRT_RATIO is the lowest value getRatioAtTick may
-    /// ever return.
-    /// @param sqrtPriceX96 The sqrt ratio for which to compute the tick as a Q64.96
-    /// @return tick The greatest tick for which the ratio is less than or equal to the input ratio
-    function getTickAtSqrtRatio(uint160 sqrtPriceX96) internal pure returns (int24 tick) {
-        // second inequality must be < because the price can never reach the price at the max tick
-        require(sqrtPriceX96 >= MIN_SQRT_RATIO && sqrtPriceX96 < MAX_SQRT_RATIO, 'R');
-        uint256 ratio = uint256(sqrtPriceX96) << 32; // 右移32位，转化为Q128.128格式
+/// @notice Calculates the greatest tick value such that getRatioAtTick(tick) <= ratio
+/// @dev Throws in case sqrtPriceX96 < MIN_SQRT_RATIO, as MIN_SQRT_RATIO is the lowest value getRatioAtTick may
+/// ever return.
+/// @param sqrtPriceX96 The sqrt ratio for which to compute the tick as a Q64.96
+/// @return tick The greatest tick for which the ratio is less than or equal to the input ratio
+function getTickAtSqrtRatio(uint160 sqrtPriceX96) internal pure returns (int24 tick) {
+    // second inequality must be < because the price can never reach the price at the max tick
+    require(sqrtPriceX96 >= MIN_SQRT_RATIO && sqrtPriceX96 < MAX_SQRT_RATIO, 'R');
+    uint256 ratio = uint256(sqrtPriceX96) << 32; // 右移32位，转化为Q128.128格式
 
-        uint256 r = ratio;
-        uint256 msb = 0;
+    uint256 r = ratio;
+    uint256 msb = 0;
 
-        assembly {
-            // 如果大于2 ** (2 ** 7) - 1，则保存临时变量：2 ** 7
-            let f := shl(7, gt(r, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF))
-            // msb += 2 ** 7
-            msb := or(msb, f)
-            // r /= (2 ** (2 ** 7))，即右移 2 ** 7
-            r := shr(f, r)
-        }
-        assembly {
-            let f := shl(6, gt(r, 0xFFFFFFFFFFFFFFFF))
-            msb := or(msb, f)
-            r := shr(f, r)
-        }
-        assembly {
-            let f := shl(5, gt(r, 0xFFFFFFFF))
-            msb := or(msb, f)
-            r := shr(f, r)
-        }
-        assembly {
-            let f := shl(4, gt(r, 0xFFFF))
-            msb := or(msb, f)
-            r := shr(f, r)
-        }
-        assembly {
-            let f := shl(3, gt(r, 0xFF))
-            msb := or(msb, f)
-            r := shr(f, r)
-        }
-        assembly {
-            let f := shl(2, gt(r, 0xF))
-            msb := or(msb, f)
-            r := shr(f, r)
-        }
-        assembly {
-            let f := shl(1, gt(r, 0x3))
-            msb := or(msb, f)
-            r := shr(f, r)
-        }
-        assembly {
-            let f := gt(r, 0x1)
-            msb := or(msb, f)
-        }
+    assembly {
+        // 如果大于2 ** (2 ** 7) - 1，则保存临时变量：2 ** 7
+        let f := shl(7, gt(r, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF))
+        // msb += 2 ** 7
+        msb := or(msb, f)
+        // r /= (2 ** (2 ** 7))，即右移 2 ** 7
+        r := shr(f, r)
+    }
+    assembly {
+        let f := shl(6, gt(r, 0xFFFFFFFFFFFFFFFF))
+        msb := or(msb, f)
+        r := shr(f, r)
+    }
+    assembly {
+        let f := shl(5, gt(r, 0xFFFFFFFF))
+        msb := or(msb, f)
+        r := shr(f, r)
+    }
+    assembly {
+        let f := shl(4, gt(r, 0xFFFF))
+        msb := or(msb, f)
+        r := shr(f, r)
+    }
+    assembly {
+        let f := shl(3, gt(r, 0xFF))
+        msb := or(msb, f)
+        r := shr(f, r)
+    }
+    assembly {
+        let f := shl(2, gt(r, 0xF))
+        msb := or(msb, f)
+        r := shr(f, r)
+    }
+    assembly {
+        let f := shl(1, gt(r, 0x3))
+        msb := or(msb, f)
+        r := shr(f, r)
+    }
+    assembly {
+        let f := gt(r, 0x1)
+        msb := or(msb, f)
+    }
 ```
 
 ##### 小数部分
@@ -311,7 +314,7 @@ $$
 实际上，`ratio >> msb`即为公式1.2中的$\frac{x}{2^n}$，也就是步骤1中的$r$，在后续迭代算法（步骤1-3）中需要用到。
 
 ```solidity
-        int256 log_2 = (int256(msb) - 128) << 64;
+    int256 log_2 = (int256(msb) - 128) << 64;
 ```
 因为msb是基于`Q128.128`的ratio计算的，`int256(msb) - 128`表示$n$的真正值。`<< 64`使用`Q192.64`表示$n$。
 这一行代码实际上是使用`Q192.64`保存整数部分的值。
@@ -319,104 +322,103 @@ $$
 下面代码循环计算二进制表示的小数部分的前14位小数：
 
 ```solidity
-
-        assembly {
-            // 根据步骤1，计算r^2，右移127位是因为两个r都是Q129.127
-            r := shr(127, mul(r, r))
-            // 因为1 <= r^2 < 4，仅需2位表示r^2的整数，
-            // 因此从右往左数第129和128位表示r^2的整数部分，
-            // 右移128位，仅剩129位，
-            // 该值为1，则表示r >= 2；该值为0，则表示r < 2
-            let f := shr(128, r)
-            // 如果f == 1，则log_2 += Q192.64的1/2
-            log_2 := or(log_2, shl(63, f))
-            // 根据步骤2（即公式1.4），如果r >= 2（即f == 1），则r /= 2；否则不操作，即步骤3
-            r := shr(f, r)
-        }
-        // 重复进行上述过程
-        assembly {
-            r := shr(127, mul(r, r))
-            let f := shr(128, r)
-            log_2 := or(log_2, shl(62, f))
-            r := shr(f, r)
-        }
-        assembly {
-            r := shr(127, mul(r, r))
-            let f := shr(128, r)
-            log_2 := or(log_2, shl(61, f))
-            r := shr(f, r)
-        }
-        assembly {
-            r := shr(127, mul(r, r))
-            let f := shr(128, r)
-            log_2 := or(log_2, shl(60, f))
-            r := shr(f, r)
-        }
-        assembly {
-            r := shr(127, mul(r, r))
-            let f := shr(128, r)
-            log_2 := or(log_2, shl(59, f))
-            r := shr(f, r)
-        }
-        assembly {
-            r := shr(127, mul(r, r))
-            let f := shr(128, r)
-            log_2 := or(log_2, shl(58, f))
-            r := shr(f, r)
-        }
-        assembly {
-            r := shr(127, mul(r, r))
-            let f := shr(128, r)
-            log_2 := or(log_2, shl(57, f))
-            r := shr(f, r)
-        }
-        assembly {
-            r := shr(127, mul(r, r))
-            let f := shr(128, r)
-            log_2 := or(log_2, shl(56, f))
-            r := shr(f, r)
-        }
-        assembly {
-            r := shr(127, mul(r, r))
-            let f := shr(128, r)
-            log_2 := or(log_2, shl(55, f))
-            r := shr(f, r)
-        }
-        assembly {
-            r := shr(127, mul(r, r))
-            let f := shr(128, r)
-            log_2 := or(log_2, shl(54, f))
-            r := shr(f, r)
-        }
-        assembly {
-            r := shr(127, mul(r, r))
-            let f := shr(128, r)
-            log_2 := or(log_2, shl(53, f))
-            r := shr(f, r)
-        }
-        assembly {
-            r := shr(127, mul(r, r))
-            let f := shr(128, r)
-            log_2 := or(log_2, shl(52, f))
-            r := shr(f, r)
-        }
-        assembly {
-            r := shr(127, mul(r, r))
-            let f := shr(128, r)
-            log_2 := or(log_2, shl(51, f))
-            r := shr(f, r)
-        }
-        assembly {
-            r := shr(127, mul(r, r))
-            let f := shr(128, r)
-            log_2 := or(log_2, shl(50, f))
-        }
+    assembly {
+        // 根据步骤1，计算r^2，右移127位是因为两个r都是Q129.127
+        r := shr(127, mul(r, r))
+        // 因为1 <= r^2 < 4，仅需2位表示r^2的整数，
+        // 因此从右往左数第129和128位表示r^2的整数部分，
+        // 右移128位，仅剩129位，
+        // 该值为1，则表示r >= 2；该值为0，则表示r < 2
+        let f := shr(128, r)
+        // 如果f == 1，则log_2 += Q192.64的1/2
+        log_2 := or(log_2, shl(63, f))
+        // 根据步骤2（即公式1.4），如果r >= 2（即f == 1），则r /= 2；否则不操作，即步骤3
+        r := shr(f, r)
+    }
+    // 重复进行上述过程
+    assembly {
+        r := shr(127, mul(r, r))
+        let f := shr(128, r)
+        log_2 := or(log_2, shl(62, f))
+        r := shr(f, r)
+    }
+    assembly {
+        r := shr(127, mul(r, r))
+        let f := shr(128, r)
+        log_2 := or(log_2, shl(61, f))
+        r := shr(f, r)
+    }
+    assembly {
+        r := shr(127, mul(r, r))
+        let f := shr(128, r)
+        log_2 := or(log_2, shl(60, f))
+        r := shr(f, r)
+    }
+    assembly {
+        r := shr(127, mul(r, r))
+        let f := shr(128, r)
+        log_2 := or(log_2, shl(59, f))
+        r := shr(f, r)
+    }
+    assembly {
+        r := shr(127, mul(r, r))
+        let f := shr(128, r)
+        log_2 := or(log_2, shl(58, f))
+        r := shr(f, r)
+    }
+    assembly {
+        r := shr(127, mul(r, r))
+        let f := shr(128, r)
+        log_2 := or(log_2, shl(57, f))
+        r := shr(f, r)
+    }
+    assembly {
+        r := shr(127, mul(r, r))
+        let f := shr(128, r)
+        log_2 := or(log_2, shl(56, f))
+        r := shr(f, r)
+    }
+    assembly {
+        r := shr(127, mul(r, r))
+        let f := shr(128, r)
+        log_2 := or(log_2, shl(55, f))
+        r := shr(f, r)
+    }
+    assembly {
+        r := shr(127, mul(r, r))
+        let f := shr(128, r)
+        log_2 := or(log_2, shl(54, f))
+        r := shr(f, r)
+    }
+    assembly {
+        r := shr(127, mul(r, r))
+        let f := shr(128, r)
+        log_2 := or(log_2, shl(53, f))
+        r := shr(f, r)
+    }
+    assembly {
+        r := shr(127, mul(r, r))
+        let f := shr(128, r)
+        log_2 := or(log_2, shl(52, f))
+        r := shr(f, r)
+    }
+    assembly {
+        r := shr(127, mul(r, r))
+        let f := shr(128, r)
+        log_2 := or(log_2, shl(51, f))
+        r := shr(f, r)
+    }
+    assembly {
+        r := shr(127, mul(r, r))
+        let f := shr(128, r)
+        log_2 := or(log_2, shl(50, f))
+    }
 ```
 
 上述计算的log_2即为`Q192.64`表示的$log_2{\sqrt{P}}$，精度为$2^{-14}$。
 
 ```solidity
-        int256 log_sqrt10001 = log_2 * 255738958999603826347141; // 128.128 number
+    int256 log_sqrt10001 = log_2 * 255738958999603826347141; // 128.128 number
 ```
 因为：
 
@@ -429,16 +431,18 @@ $$
 由于这里算出的$log_2{\sqrt{P}}$精度为$2^{-14}$，乘以`255738958999603826347141`后误差进一步放大，因此需要修正并确保结果是最接近给定价格的tick。
 
 ```solidity
-        int24 tickLow = int24((log_sqrt10001 - 3402992956809132418596140100660247210) >> 128);
-        int24 tickHi = int24((log_sqrt10001 + 291339464771989622907027621153398088495) >> 128);
+    int24 tickLow = int24((log_sqrt10001 - 3402992956809132418596140100660247210) >> 128);
+    int24 tickHi = int24((log_sqrt10001 + 291339464771989622907027621153398088495) >> 128);
 
-        tick = tickLow == tickHi ? tickLow : getSqrtRatioAtTick(tickHi) <= sqrtPriceX96 ? tickHi : tickLow;
+    tick = tickLow == tickHi ? tickLow : getSqrtRatioAtTick(tickHi) <= sqrtPriceX96 ? tickHi : tickLow;
 ```
 
 其中，`3402992956809132418596140100660247210`表示`0.01000049749154292 << 128`，`291339464771989622907027621153398088495`表示`0.8561697375276566 << 128`。
 
 参考[abdk的这篇文章](https://hackmd.io/@abdk/SkVJeHK9v)，当精度为$2^{-14}$时，tick的最小误差为$−
 0.85617$，最大误差为$0.0100005$。
+
+我们的目的是寻找满足当前最大的tick，使得tick对应的$\sqrt{P}$小于等于传入的值。因此如果补偿后的tickHi满足要求，则优先使用tickHi；否则使用tickLow。
 
 本节参考文章，有兴趣的朋友请扩展阅读：
 
