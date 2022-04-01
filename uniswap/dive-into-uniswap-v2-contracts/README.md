@@ -1,5 +1,7 @@
 # 深入理解 Uniswap v2 合约代码
 
+###### tags: `uniswap` `uniswap-v2` `solidity` `AMM`
+
 上文介绍了《[深入理解 Uniswap v2 白皮书](https://hackmd.io/@adshao/rk7nI-EG9)》，今天我们来讲解Uniswap v2合约代码。
 
 > 本文不会逐行介绍合约代码，而是关注合约架构和重点方法，如果需要详细的代码说明，推荐阅读以太坊官方的[Uniswap v2代码走读](https://ethereum.org/en/developers/tutorials/uniswap-v2-annotated-code/#introduction)。
@@ -16,15 +18,12 @@ Uniswap v2的合约主要分为两类：core合约和periphery合约。其中，
 * uniswap-v2-core
 
   * UniswapV2Factory：工厂合约，用于创建Pair合约（以及设置协议手续费接收地址）
-
   * UniswapV2Pair：Pair（交易对）合约，定义和交易有关的几个最基础方法，如swap/mint/burn，价格预言机等功能，其本身是一个ERC20合约，继承UniswapV2ERC20
-
   * UniswapV2ERC20：实现ERC20标准方法
 
 * uniswap-v2-periphery
 
   * UniswapV2Router02：最新版的路由合约，相比UniswapV2Router01增加了对FeeOnTransfer代币的支持；实现Uniswap v2最常用的接口，比如添加/移除流动性，使用代币A交换代币B，使用ETH交换代币等
-
   * UniswapV1Router01：旧版本Router实现，与Router02类似，但不支持FeeOnTransferTokens，目前已不使用
 
 ## uniswap-v2-core
@@ -81,15 +80,10 @@ pair := create2(0, add(bytecode, 32), mload(bytecode), salt)
 因此，这几个参数含义如下：
 
 * v=0：向新创建的pair合约中发送的ETH代币数量（单位wei）
-
 * p=add(bytecode, 32)：合约字节码的起始位置
-
   > 此处为什么要add 32呢？因为bytecode类型为bytes，根据ABI规范，bytes为变长类型，在编码时前32个字节存储bytecode的长度，接着才是bytecode的真正内容，因此合约字节码的起始位置在bytecode+32字节
-
 * n=mload(bytecode)：合约字节码总字节长度
-
   > 根据上述说明，bytecode前32个字节存储合约字节码的真正长度（以字节为单位），而mload的作用正是读出传入参数的前32个字节的值，因此mload(bytecode)就等于n
-
 * s=salt：s为自定义传入的salt，即token0和token1合并编码
 
 ### UniswapV2ERC20
@@ -326,9 +320,7 @@ function pairFor(address factory, address tokenA, address tokenB) internal pure 
 其中，新创建的pair合约的地址计算方法为：keccak256(0xff + this + salt +  keccak256(mem[p…(p+n)))：
 
 * this：工厂合约地址
-
 * salt：keccak256(abi.encodePacked(token0, token1))
-
 * keccak256(mem[p…(p+n))： 0x96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f
 
 由于每个交易对都使用UniswapV2Pair合约创建，因此init code hash都是一样的。我们可以在UniswapV2Factory写一个Solidty方法计算hash：
@@ -506,19 +498,12 @@ function addLiquidity(
 由于Router02是直接与用户交互的，因此接口设计需要从用户使用场景考虑。addLiquidity提供了8个参数：
 
 * address tokenA：代币A
-
 * address tokenB：代币B
-
 * uint amountADesired：希望存入的代币A数量
-
 * uint amountBDesired：希望存入的代币B数量
-
 * uint amountAMin：最少存入的代币A数量
-
 * uint amountBMin：最少存入的代币B数量
-
 * address to：流动性代币接收地址
-
 * uint deadline：请求失效时间
 
 用户提交交易后，该交易被矿工打包的时间是不确定的，因此提交时的代币价格与交易打包时的价格可能不同，通过amountMin可以控制价格的浮动范围，防止被矿工或机器人套利；同样，deadline可以确保该交易在超过指定时间后将失效。
@@ -589,7 +574,6 @@ function removeLiquidity(
 用户正常移除流动性时，需要两个操作：
 
 * approve：授权Router合约花费自己的流动性代币
-
 * removeLiquidity：调用Router合约移除流动性
 
 除非第一次授权了最大限额的代币，否则每次移除流动性都需要两次交互，这意味着用户需要支付两次手续费。而使用removeLiquidityWithPermit方法，用户可以通过签名方式授权Router合约花费自己的代币，无需单独调用approve，只需要调用一次移除流动性方法即可完成操作，节省了gas费用。同时，由于离线签名不需要花费gas，因此可以每次签名仅授权一定额度的代币，提高安全性。
@@ -617,7 +601,6 @@ function removeLiquidityWithPermit(
 交易时的两个常见场景：
 
 1. 使用指定数量的代币A（输入），尽可能兑换最多数量的代币B（输出）
-
 1. 获得指定数量的代币B（输出），尽可能使用最少数量的代币A（输入）
 
 本方法实现第一个场景，即根据指定的输入代币，获得最多的输出代币。
@@ -689,7 +672,6 @@ function swapTokensForExactTokens(
 由于core合约只支持ERC20代币交易，为了支持ETH交易，periphery合约需要将ETH与WETH做转换；并为大部分方法提供了ETH版本。兑换主要涉及两种操作：
 
 * 地址转换：由于ETH没有合约地址，因此需要使用WETH合约的deposit和withdraw方法完成ETH与WETH的兑换
-
 * 代币数量转换：ETH的代币需要通过msg.value获取，可根据该值计算对应的WETH数量，而后使用标准ERC20接口即可
 
 #### FeeOnTransferTokens
