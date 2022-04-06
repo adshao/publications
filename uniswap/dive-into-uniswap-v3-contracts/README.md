@@ -360,7 +360,7 @@ function _modifyPosition(ModifyPositionParams memory params)
 $$
 \begin{cases}i_c, ..., \overbrace{i_l, ..., i_u}^{amount0} & \text{$i_c < i_l$}\\
 \overbrace{i_l, ...}^{amount1}, i_c, \overbrace{..., i_u}^{amount0} & \text{$i_l \leq i_c < i_u$}\\
-\overbrace{i_l, ..., i_u}^{amount1}, ..., tc & \text{$i_u \leq i_c$}\end{cases}
+\overbrace{i_l, ..., i_u}^{amount1}, ..., i_c & \text{$i_u \leq i_c$}\end{cases}
 $$
 
 其中，$i_l$, $i_u$为提供流动性价格区间的边界，$i_c$为当前价格对应的`tick`。
