@@ -1026,6 +1026,12 @@ $$
 
 其中，$token_n$的长度为20个字节（bytes），$fee_n$的长度为3个字节，上述路径表示：从`token0`交换到`token1`，使用手续费等级为`fee0`的池子（`token0`、`token1`、`fee0`），继续交换到`token2`，使用手续费等级为`fee1`的池子（`token1`、`token2`、`fee1`）。
 
+交易路径`path`示例如下：
+
+$$
+0x\overbrace{ca90cf0734d6ccf5ef52e9ec0a515921a67d6013}^{token0,20bytes}\overbrace{0001f4}^{fee,3bytes}\overbrace{68b3465833fb72a70ecdf485e0e4c7bd8665fc45}^{token1,20bytes}
+$$
+
 #### hasMultiplePools
 
 判断交易路径是否经过多个池子（2个及以上）。
@@ -1048,7 +1054,7 @@ function hasMultiplePools(bytes memory path) internal pure returns (bool) {
 算法为：
 
 $$
-num = \frac{总长度 - 20}{20 + 3}
+num = \frac{length - 20}{20 + 3}
 $$
 
 ```solidity
@@ -1065,7 +1071,7 @@ function numPools(bytes memory path) internal pure returns (uint256) {
 
 解析第一个path的信息，包括`token0`，`token1`和`fee`。
 
-分别返回字符串中0-19子串（`token0`，转`address`类型），20-22子串（`fee`，转`uint24`类型），和23-42子串（`token1`，转`address`类型）。
+分别返回字符串中0-19子串（`token0`，转`address`类型），20-22子串（`fee`，转`uint24`类型），和23-42子串（`token1`，转`address`类型）。请参考`BytesLib.sol`的[toAddress](#toAddress)和[toUint24](#toUint24)方法。
 
 ```solidity
 /// @notice Decodes the first pool in path
@@ -1113,6 +1119,60 @@ function skipToken(bytes memory path) internal pure returns (bytes memory) {
     return path.slice(NEXT_OFFSET, path.length - NEXT_OFFSET);
 }
 ```
+
+### BytesLib.sol
+
+#### toAddress
+
+从字符串的指定序号起，读取一个地址（20个字符）：
+
+```solidity
+function toAddress(bytes memory _bytes, uint256 _start) internal pure returns (address) {
+    require(_start + 20 >= _start, 'toAddress_overflow');
+    require(_bytes.length >= _start + 20, 'toAddress_outOfBounds');
+    address tempAddress;
+
+    assembly {
+        tempAddress := div(mload(add(add(_bytes, 0x20), _start)), 0x1000000000000000000000000)
+    }
+
+    return tempAddress;
+}
+```
+
+因为变量`_bytes`类型为`bytes`，根据[ABI定义](https://docs.soliditylang.org/en/develop/abi-spec.html)，`bytes`的第一个32字节存储字符串的长度（length），因此需要先跳过前面32字节，即`add(_bytes, 0x20)`；`add(add(_bytes, 0x20), _start)`表示定位到字符串指定序号`_start`；`mload`读取从该序号起的32个字节，因为`address`类型只有20字节，因此需要`div 0x1000000000000000000000000`，即右移12字节。
+
+假设`_strat = 0`，`_bytes`的分布如下图所示：
+
+$$
+0x\overbrace{0000000...2b}^{length,32bytes}\underbrace{\overbrace{ca90cf0734d6ccf5ef52e9ec0a515921a67d6013}^{address, 20 bytes}\overbrace{0001f468b3465833fb72a70e}^{div,12 bytes}}_{mload, 32bytes}cdf485e0e4c7bd8665fc45
+$$
+
+#### toUint24
+
+从字符串的指定序号起，读取一个`uint24`（24位，即3个字符）：
+
+```solidity
+function toUint24(bytes memory _bytes, uint256 _start) internal pure returns (uint24) {
+    require(_start + 3 >= _start, 'toUint24_overflow');
+    require(_bytes.length >= _start + 3, 'toUint24_outOfBounds');
+    uint24 tempUint;
+
+    assembly {
+        tempUint := mload(add(add(_bytes, 0x3), _start))
+    }
+
+    return tempUint;
+}
+```
+
+因为`_bytes`前32个字符表示字符串长度；`mload`读取32字节，可以确保从`_start`开始的3个字节在读取出来的32字节的最低位，赋值给类型为`uint24`的变量将只保留最低位的3个字节。
+
+假设`_strat = 0`，`_bytes`的分布如下图所示：
+
+$$
+0x\overbrace{000000}^{0x3+\_start}\underbrace{0...2b\overbrace{ca90cf0734d6ccf5ef52e9ec0a515921a67d6013}^{address1,20bytes}\overbrace{0001f4}^{fee,3bytes}}_{mload,32bytes}\overbrace{68b3465833fb72a70ecdf485e0e4c7bd8665fc45}^{address2,20bytes}
+$$
 
 ### OracleLibrary.sol
 
