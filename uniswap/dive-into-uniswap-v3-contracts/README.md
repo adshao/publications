@@ -163,6 +163,7 @@ function enableFeeAmount(uint24 fee, int24 tickSpacing) public override {
 * [swap](#swap)：交换代币
 * [flash](#flash)：闪电贷
 * [collect](#collect)：取回代币
+* [increaseObservationCardinalityNext](#increaseObservationCardinalityNext)：扩展预言机空间
 * [observe](#observe)：获取预言机数据
 
 此外，factory（工厂合约）owner还可以调用以下两个方法：
@@ -1061,7 +1062,51 @@ function collect(
 
 上述代码比较简单，这里不再展开。需要注意，如果希望取回所有代币，则需要指定比`tokensOwned`更大的数，比如可以使用`type(uint128).max`。
 
+#### increaseObservationCardinalityNext
+
+扩容预言机观测点的可写入空间，该方法调用`Oracle.sol`的[grow](#grow)方法实现扩容。
+
+```solidity
+/// @inheritdoc IUniswapV3PoolActions
+function increaseObservationCardinalityNext(uint16 observationCardinalityNext)
+    external
+    override
+    lock
+    noDelegateCall
+{
+    uint16 observationCardinalityNextOld = slot0.observationCardinalityNext; // for the event
+    uint16 observationCardinalityNextNew =
+        observations.grow(observationCardinalityNextOld, observationCardinalityNext);
+    slot0.observationCardinalityNext = observationCardinalityNextNew;
+    if (observationCardinalityNextOld != observationCardinalityNextNew)
+        emit IncreaseObservationCardinalityNext(observationCardinalityNextOld, observationCardinalityNextNew);
+}
+```
+
 #### observe
+
+批量获取指定时间的观测点数据，该方法调用`Oracle.sol`的[observe](#observe2)实现。
+
+```solidity
+/// @inheritdoc IUniswapV3PoolDerivedState
+function observe(uint32[] calldata secondsAgos)
+    external
+    view
+    override
+    noDelegateCall
+    returns (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s)
+{
+    return
+        observations.observe(
+            _blockTimestamp(),
+            secondsAgos,
+            slot0.tick,
+            slot0.observationIndex,
+            liquidity,
+            slot0.observationCardinality
+        );
+}
+```
 
 #### setFeeProtocol
 
@@ -2561,4 +2606,552 @@ function getAmount1Delta(
         roundUp
             ? FullMath.mulDivRoundingUp(liquidity, sqrtRatioBX96 - sqrtRatioAX96, FixedPoint96.Q96)
             : FullMath.mulDiv(liquidity, sqrtRatioBX96 - sqrtRatioAX96, FixedPoint96.Q96);
+```
+
+### Oracle.sol
+
+本合约定义预言机相关方法。
+
+在交易对合约创建时，默认初始化长度为1的数组用于存储观测点数据；任何用户都可以调用`UniswapV3Pool.sol`的[increaseObservationCardinalityNext](#increaseObservationCardinalityNext)方法扩展预言机的观测点空间，但需要承担扩展空间带来的手续费。
+
+一个预言机观测点包括以下内容：
+
+* `blockTimestamp`：该观测点写入时的时间
+* `tickCumulative`：截止该观测点时间的累计`tick`
+* `secondsPerLiquidityCumulativeX128`：截止该观测点的累计每流动性持续时间
+* `initialized`：观测点是否初始化
+
+观测点结构定义如下：
+
+```solidity
+struct Observation {
+    // the block timestamp of the observation
+    uint32 blockTimestamp;
+    // the tick accumulator, i.e. tick * time elapsed since the pool was first initialized
+    int56 tickCumulative;
+    // the seconds per liquidity, i.e. seconds elapsed / max(1, liquidity) since the pool was first initialized
+    uint160 secondsPerLiquidityCumulativeX128;
+    // whether or not the observation is initialized
+    bool initialized;
+}
+```
+
+本合约包含以下方法：
+
+* [transform](#transform)：基于上一个观测点，返回新观测点对象（但是不写入观测点）
+* [initialize](#initialize2)：初始化观测点数组
+* [write](#write)：写入一个观测点
+* [grow](#grow)：扩展预言机观测点空间
+* [lte](#lte)：判断两个timestamp大小
+* [binarySearch](#binarySearch)：二分查找指定时间的观测点边界
+* [getSurroundingObservations](#getSurroundingObservations)：获取指定时间的观测点边界
+* [observeSingle](#observeSingle)：获取指定时间的观测点数据
+* [observe](#observe)：批量获取指定时间的观测点数据
+
+#### transform
+
+基于上一个观测点，返回临时观测点对象，但是不写入观测点。
+
+```solidity
+function transform(
+    Observation memory last,
+    uint32 blockTimestamp,
+    int24 tick,
+    uint128 liquidity
+) private pure returns (Observation memory) {
+    uint32 delta = blockTimestamp - last.blockTimestamp;
+    return
+        Observation({
+            blockTimestamp: blockTimestamp,
+            tickCumulative: last.tickCumulative + int56(tick) * delta,
+            secondsPerLiquidityCumulativeX128: last.secondsPerLiquidityCumulativeX128 +
+                ((uint160(delta) << 128) / (liquidity > 0 ? liquidity : 1)),
+            initialized: true
+        });
+}
+```
+
+首先，计算当前时间与上一个观测点的时间差：`delta = blockTimestamp - last.blockTimestamp`。
+
+接着主要计算`tickCumulative`和`secondsPerLiquidityCumulativeX128`,
+
+其中：`tickCumulative: last.tickCumulative + int56(tick) * delta`。
+
+根据白皮书公式5.3-5.5：
+
+$$
+\log_{1.0001}(P_{t_1,t_2}) = \frac{\sum^{t_2}_{i=t_1} \log_{1.0001}(P_i)}{t_2 - t_1} \tag{5.3}
+$$
+
+$$
+\log_{1.0001}(P_{t_1,t_2}) = \frac{a_{t_2} - a_{t_1}}{t_2 - t_1} \tag{5.4}
+$$
+
+$$
+P_{t_1,t_2} = 1.0001^{\frac{a_{t_2} - a_{t_1}}{t_2 - t_1}} \tag{5.5}
+$$
+
+这里保存的`tickCumulative`即为$a_{t_n}$，其对应的公式为：
+
+$$
+tickCumulative = \sum^{t_n}_{i=0} \log_{1.0001}(P_i)
+$$
+
+同样，每流动性持续时间`secondsPerLiquidityCumulative`为：
+
+$$
+secondsPerLiquidityCumulative = \sum^{n}_{i=0} \frac{t_i}{L_i}
+$$
+
+#### initialize
+
+初始化预言机存储空间，设置第一个`slot`。
+
+```solidity
+/// @notice Initialize the oracle array by writing the first slot. Called once for the lifecycle of the observations array
+/// @param self The stored oracle array
+/// @param time The time of the oracle initialization, via block.timestamp truncated to uint32
+/// @return cardinality The number of populated elements in the oracle array
+/// @return cardinalityNext The new length of the oracle array, independent of population
+function initialize(Observation[65535] storage self, uint32 time)
+    internal
+    returns (uint16 cardinality, uint16 cardinalityNext)
+{
+    self[0] = Observation({
+        blockTimestamp: time,
+        tickCumulative: 0,
+        secondsPerLiquidityCumulativeX128: 0,
+        initialized: true
+    });
+    return (1, 1);
+}
+```
+
+默认返回的`cardinality`和`cardinalityNext`都为1，即仅能存放一个观测点数据。
+
+该方法只能被调用一次，实际上是在`UniswapV3Pool.sol`的[initialize](#initialize)方法中调用：
+
+```solidity
+(uint16 cardinality, uint16 cardinalityNext) = observations.initialize(_blockTimestamp());
+```
+
+#### write
+
+写入一次观测点数据。根据之前的描述，只有在`UniswapV3Pool`发生`mint`、`burn`和`swap`操作时，才可能触发写入操作。
+
+可以将预言机观测点数组看作一个循环列表，可写入空间由`cardinality`和`cardinalityNext`决定；当数组空间写满以后，会继续从0位置开始覆盖写。
+
+本方法的参数如下：
+
+* `self`：预言机观测点数组
+* `index`：最后一次写入的观测点索引，从0开始
+* `blockTimestamp`：待添加观测点的时间
+* `tick`：待添加观测点的`tick`
+* `liquidity`：待添加观测点时间的全局可用流动性
+* `cardinality`：观测点数组当前长度（可写入空间）
+* `cardinalityNext`：观测点数组（扩展后的）最新长度
+
+```solidity
+function write(
+    Observation[65535] storage self,
+    uint16 index,
+    uint32 blockTimestamp,
+    int24 tick,
+    uint128 liquidity,
+    uint16 cardinality,
+    uint16 cardinalityNext
+) internal returns (uint16 indexUpdated, uint16 cardinalityUpdated) {
+    Observation memory last = self[index];
+
+    // early return if we've already written an observation this block
+    if (last.blockTimestamp == blockTimestamp) return (index, cardinality);
+```
+
+如果新观测点时间与最后一次观测点时间相同，则直接返回，确保每个区块最多只能写入一次观测点。
+
+```solidity
+    // if the conditions are right, we can bump the cardinality
+    if (cardinalityNext > cardinality && index == (cardinality - 1)) {
+        cardinalityUpdated = cardinalityNext;
+    } else {
+        cardinalityUpdated = cardinality;
+    }
+```
+
+* 如果`cardinalityNext > cardinality`，则表示预言机数组被扩容过；如果`index == (cardinality - 1)`即上一次写入的位置是最后一个观测点，则本次需要继续写入扩容后的空间，因此`cardinalityUpdated`使用扩容后的数组长度`cardinalityNext`；
+* 否则继续使用旧的数组长度`cardinality`，因为还未写满。
+
+```solidity
+    indexUpdated = (index + 1) % cardinalityUpdated;
+```
+
+更新本次写入观测点数组的索引`indexUpdated`，`% cardinalityUpdated`是为了计算循环写的索引。
+
+```solidity
+    self[indexUpdated] = transform(last, blockTimestamp, tick, liquidity);
+```
+
+调用[transform](#transform)方法计算最新的观测点数据，并写入观测点数组的`indexUpdated`位置。
+
+#### grow
+
+扩容观测点数组，增加可写入的观测点数量。由于合约默认只能保存1个观测点，为了能够支持更多观测点，任何用户都可以手动调用合约以扩容观测点数组。
+
+> 注意，`grow`方法使用`internal`修饰，用户实际上是通过`UniswapV3Pool.sol`的[increaseObservationCardinalityNext](#increaseObservationCardinalityNext)方法进行扩容。
+
+扩容方法会触发`SSTORE`操作，因此调用该方法的用户需要支付由此带来的gas开销。
+
+```solidity
+/// @notice Prepares the oracle array to store up to `next` observations
+/// @param self The stored oracle array
+/// @param current The current next cardinality of the oracle array
+/// @param next The proposed next cardinality which will be populated in the oracle array
+/// @return next The next cardinality which will be populated in the oracle array
+function grow(
+    Observation[65535] storage self,
+    uint16 current,
+    uint16 next
+) internal returns (uint16) {
+    require(current > 0, 'I');
+    // no-op if the passed next value isn't greater than the current next value
+    if (next <= current) return current;
+    // store in each slot to prevent fresh SSTOREs in swaps
+    // this data will not be used because the initialized boolean is still false
+    for (uint16 i = current; i < next; i++) self[i].blockTimestamp = 1;
+    return next;
+}
+```
+
+#### lte
+
+比较两个时间戳的大小。
+
+由于合约使用`uint32`类型表示时间戳，其最大值$2^{32}-1 = 4294967295$，对应的时间为`February 7, 2106 6:28:15 AM GMT+00:00`，如果两个时间`a`和`b`（$a < b$）正好位于`uint32`最大值的两边，`b`由于溢出，因此$a > b$，直接比较数值会导致错误的结果，因此需要统一时间。
+
+> 注：实际上每136年左右就会有溢出问题。
+
+方法接受3个参数：`time`、`a`和`b`；其中，`time`为基准时间，`a`和`b`在逻辑（时间）上小于等于`time`；方法返回一个`bool`，表示`a`是否在逻辑时间点上小于等于`b`。
+
+```solidity
+/// @notice comparator for 32-bit timestamps
+/// @dev safe for 0 or 1 overflows, a and b _must_ be chronologically before or equal to time
+/// @param time A timestamp truncated to 32 bits
+/// @param a A comparison timestamp from which to determine the relative position of `time`
+/// @param b From which to determine the relative position of `time`
+/// @return bool Whether `a` is chronologically <= `b`
+function lte(
+    uint32 time,
+    uint32 a,
+    uint32 b
+) private pure returns (bool) {
+    // if there hasn't been overflow, no need to adjust
+    if (a <= time && b <= time) return a <= b;
+
+    uint256 aAdjusted = a > time ? a : a + 2**32;
+    uint256 bAdjusted = b > time ? b : b + 2**32;
+
+    return aAdjusted <= bAdjusted;
+}
+```
+
+* 如果`a`和`b`都小于等于`time`，则表示没有发生溢出，因此直接返回`a <= b`
+* 由于`a`和`b`在时间线上均小于等于`time`
+  * 如果$a > time$，则表示发生溢出，`aAdjusted`为补齐`2**32`后的时间`a`
+  * 同理，`bAdjusted`为补齐后的时间`b`
+  * 最后比较两个补齐后的时间`aAdjusted`和`bAdjusted`
+
+因此，该方法在`a`、`b`与`time`存在0到1个$2^{32}$的时间差时是溢出安全的。
+
+> 不能跨越两个$2^{32} - 1$。
+
+#### binarySearch
+
+二分查找指定目标时间的观测点。
+
+参数如下：
+
+* `self`：观测点数组
+* `time`：当前区块时间
+* `target`：目标时间
+* `index`：最后一次写入的观测点索引
+* `cardinality`：观测点数组当前长度（可写入空间）
+
+```solidity
+/// @notice Fetches the observations beforeOrAt and atOrAfter a target, i.e. where [beforeOrAt, atOrAfter] is satisfied.
+/// The result may be the same observation, or adjacent observations.
+/// @dev The answer must be contained in the array, used when the target is located within the stored observation
+/// boundaries: older than the most recent observation and younger, or the same age as, the oldest observation
+/// @param self The stored oracle array
+/// @param time The current block.timestamp
+/// @param target The timestamp at which the reserved observation should be for
+/// @param index The index of the observation that was most recently written to the observations array
+/// @param cardinality The number of populated elements in the oracle array
+/// @return beforeOrAt The observation recorded before, or at, the target
+/// @return atOrAfter The observation recorded at, or after, the target
+function binarySearch(
+    Observation[65535] storage self,
+    uint32 time,
+    uint32 target,
+    uint16 index,
+    uint16 cardinality
+) private view returns (Observation memory beforeOrAt, Observation memory atOrAfter) {
+```
+
+对于二分查找算法，首先需要确认左右边界点。
+
+```solidity
+    uint256 l = (index + 1) % cardinality; // oldest observation
+    uint256 r = l + cardinality - 1; // newest observation
+```
+
+由于最后一次索引为`index`，因此循环继续右移一位（并取模）即为左边界点`l`（最老的索引，如果已写满一轮的话）；右边界点为`l + cardinality - 1`，注意，右边界点`r`没有取模，因为在二分查找中右边节点一定不能小于左边节点。
+
+```solidity
+    uint256 i;
+    while (true) {
+        i = (l + r) / 2;
+
+        beforeOrAt = self[i % cardinality];
+
+        // we've landed on an uninitialized tick, keep searching higher (more recently)
+        if (!beforeOrAt.initialized) {
+            l = i + 1;
+            continue;
+        }
+
+        atOrAfter = self[(i + 1) % cardinality];
+```
+
+如果计算的中点未初始化（即此时数组空间未写满），则使用右半部分区间（往时间点更近的方向）继续进行二分查找。
+
+`atOrAfter`为右侧紧邻的观测点。
+
+```solidity
+        bool targetAtOrAfter = lte(time, beforeOrAt.blockTimestamp, target);
+
+        // check if we've found the answer!
+        if (targetAtOrAfter && lte(time, target, atOrAfter.blockTimestamp)) break;
+
+        if (!targetAtOrAfter) r = i - 1;
+        else l = i + 1;
+    }
+}
+```
+
+* 如果目标时间`target`位于`beforeOrAt`与`atOrAfter`时间之间，则退出二分查找，返回`beforeOrAt`与`atOrAfter`两个观测点
+* 否则：
+  * 如果`beforeOrAt`时间大于目标时间`target`，则继续在左半部分（往更小的时间）进行二分查找
+  * 如果目标时间`target`大于`atOrAfter`时间，则继续往右半部分（往更大的时间）进行二分查找
+
+假设`cardinality`为10，`index`为5，我们可以画出几个变量的逻辑关系如下：
+
+![](./assets/binarySearch.jpg)
+
+#### getSurroundingObservations
+
+获取目标时间`target`的观测点数据`beforeOrAt`和`atOrAfter`，满足`target`位于`[beforeOrAt, atOrAfter]`之间。
+
+```solidity
+/// @notice Fetches the observations beforeOrAt and atOrAfter a given target, i.e. where [beforeOrAt, atOrAfter] is satisfied
+/// @dev Assumes there is at least 1 initialized observation.
+/// Used by observeSingle() to compute the counterfactual accumulator values as of a given block timestamp.
+/// @param self The stored oracle array
+/// @param time The current block.timestamp
+/// @param target The timestamp at which the reserved observation should be for
+/// @param tick The active tick at the time of the returned or simulated observation
+/// @param index The index of the observation that was most recently written to the observations array
+/// @param liquidity The total pool liquidity at the time of the call
+/// @param cardinality The number of populated elements in the oracle array
+/// @return beforeOrAt The observation which occurred at, or before, the given timestamp
+/// @return atOrAfter The observation which occurred at, or after, the given timestamp
+function getSurroundingObservations(
+    Observation[65535] storage self,
+    uint32 time,
+    uint32 target,
+    int24 tick,
+    uint16 index,
+    uint128 liquidity,
+    uint16 cardinality
+) private view returns (Observation memory beforeOrAt, Observation memory atOrAfter) {
+    // optimistically set before to the newest observation
+    beforeOrAt = self[index];
+
+    // if the target is chronologically at or after the newest observation, we can early return
+    if (lte(time, beforeOrAt.blockTimestamp, target)) {
+        if (beforeOrAt.blockTimestamp == target) {
+            // if newest observation equals target, we're in the same block, so we can ignore atOrAfter
+            return (beforeOrAt, atOrAfter);
+        } else {
+            // otherwise, we need to transform
+            return (beforeOrAt, transform(beforeOrAt, target, tick, liquidity));
+        }
+    }
+```
+
+首先将`beforeOrAt`设置为最近一次的观测点：
+
+如果`beforeOrAt`时间小于等于目标时间`target`：
+  * 如果等于目标时间，则直接返回`beforeOrAt`，忽略`atOrAfter`
+  * 如果小于目标时间，则使用[transform](#transform)基于`beforeOrAt`和`target`临时生成一个观测点作为`atOrAfter`
+
+```solidity
+    // now, set before to the oldest observation
+    beforeOrAt = self[(index + 1) % cardinality];
+    if (!beforeOrAt.initialized) beforeOrAt = self[0];
+```
+
+否则，可以确认最后（最晚）一个观测点的时间大于`target`。
+
+设置`beforeOrAt`为循环右移一个位置的观测点，即最老的观测点；如果该观测点未初始化，则表示数组没有写满，因此最早的一定是索引为0的观测点。
+
+```solidity
+    // ensure that the target is chronologically at or after the oldest observation
+    require(lte(time, beforeOrAt.blockTimestamp, target), 'OLD');
+```
+
+确认`target`时间大于等于最早的观测点时间，因此此时`target`一定位于最早的和最晚观测点的时间区间内，可以使用[binarySearch](#binarySearch)进行二分查找。
+
+```solidity
+    // if we've reached this point, we have to binary search
+    return binarySearch(self, time, target, index, cardinality);
+}
+```
+
+#### observeSingle
+
+获取指定时间的观测点数据。
+
+方法的参数如下：
+
+* `self`：预言机观测点数组
+* `time`：当前区块时间
+* `secondsAgo`：距离当前时间多少秒以前的指定时间，根据该时间寻找观测点
+* `tick`：目标时间的`tick`（价格）
+* `index`：最后一次写入的观测点索引
+* `liquidity`：当前全局可用流动性
+* `cardinality`：预言机数组当前长度（可写入空间）
+
+返回：
+
+* `tickCumulative`：从交易对池子创建以来，截止到`secondsAgo`的累计`tick`
+* `secondsPerLiquidityCumulativeX128`：从交易对池子创建以来，截止到`secondsAgo`的累计每流动性持续时间
+
+```solidity
+/// @dev Reverts if an observation at or before the desired observation timestamp does not exist.
+/// 0 may be passed as `secondsAgo' to return the current cumulative values.
+/// If called with a timestamp falling between two observations, returns the counterfactual accumulator values
+/// at exactly the timestamp between the two observations.
+/// @param self The stored oracle array
+/// @param time The current block timestamp
+/// @param secondsAgo The amount of time to look back, in seconds, at which point to return an observation
+/// @param tick The current tick
+/// @param index The index of the observation that was most recently written to the observations array
+/// @param liquidity The current in-range pool liquidity
+/// @param cardinality The number of populated elements in the oracle array
+/// @return tickCumulative The tick * time elapsed since the pool was first initialized, as of `secondsAgo`
+/// @return secondsPerLiquidityCumulativeX128 The time elapsed / max(1, liquidity) since the pool was first initialized, as of `secondsAgo`
+function observeSingle(
+    Observation[65535] storage self,
+    uint32 time,
+    uint32 secondsAgo,
+    int24 tick,
+    uint16 index,
+    uint128 liquidity,
+    uint16 cardinality
+) internal view returns (int56 tickCumulative, uint160 secondsPerLiquidityCumulativeX128) {
+    if (secondsAgo == 0) {
+        Observation memory last = self[index];
+        if (last.blockTimestamp != time) last = transform(last, time, tick, liquidity);
+        return (last.tickCumulative, last.secondsPerLiquidityCumulativeX128);
+    }
+```
+
+如果`secondsAgo == 0`，表示取当前时间的观测点。如果当前时间不等于最后一次写入的观测点时间，则使用[transform](#transform)生成一个临时观测点（注意，这里没有写入该观测点），并返回相关数据。
+
+```solidity
+    uint32 target = time - secondsAgo;
+
+    (Observation memory beforeOrAt, Observation memory atOrAfter) =
+        getSurroundingObservations(self, time, target, tick, index, liquidity, cardinality);
+```
+
+根据`secondsAgo`计算目标时间`target`，使用[getSurroundingObservations](#getSurroundingObservations)方法寻找距离目标时间最近的观测点边界`beforeOrAt`和`atOrAfter`。
+
+```solidity
+    if (target == beforeOrAt.blockTimestamp) {
+        // we're at the left boundary
+        return (beforeOrAt.tickCumulative, beforeOrAt.secondsPerLiquidityCumulativeX128);
+    } else if (target == atOrAfter.blockTimestamp) {
+        // we're at the right boundary
+        return (atOrAfter.tickCumulative, atOrAfter.secondsPerLiquidityCumulativeX128);
+    } else {
+        // we're in the middle
+        uint32 observationTimeDelta = atOrAfter.blockTimestamp - beforeOrAt.blockTimestamp;
+        uint32 targetDelta = target - beforeOrAt.blockTimestamp;
+        return (
+            beforeOrAt.tickCumulative +
+                ((atOrAfter.tickCumulative - beforeOrAt.tickCumulative) / observationTimeDelta) *
+                targetDelta,
+            beforeOrAt.secondsPerLiquidityCumulativeX128 +
+                uint160(
+                    (uint256(
+                        atOrAfter.secondsPerLiquidityCumulativeX128 - beforeOrAt.secondsPerLiquidityCumulativeX128
+                    ) * targetDelta) / observationTimeDelta
+                )
+        );
+    }
+```
+
+根据[getSurroundingObservations](#getSurroundingObservations)方法，需要优先使用左边界点`beforeOrAt`：
+
+* 如果目标时间等于`beforeOrAt`时间，则直接返回该观测点的相关数据
+* 如果目标时间等于`atOrAfter`时间，则也返回相关数据
+* 如果目标时间介于`beforeOrAt`和`atOrAfter`之间，则需要根据时间比例计算相关值：
+  * `observationTimeDelta`为`beforeOrAt`和`atOrAfter`的时间差值（下面用$\Delta{t}$表示），`targetDelta`为`beforeOrAt`和`target`的时间差值
+  * 因为$\Delta{tickCumulative} = tick \cdot \Delta{t}$，则截止到`target`的值应为：$\frac{\Delta{tickCumulative}}{\Delta{t}} \cdot targetDelta$
+  * 同样，$\Delta{secondsPerLiquidityCumulativeX128} = \frac{\Delta{t}}{liquidity}$，则截止到`target`的值应为：$\frac{\Delta{secondsPerLiquidityCumulativeX128}}{\Delta{t}} \cdot targetDelta$
+
+#### observe
+
+批量获取指定时间的观测点数据。
+
+该方法主要调用[observeSingle](#observeSingle)获取单个指定时间的观测点数据，然后批量返回。
+
+```solidity
+/// @notice Returns the accumulator values as of each time seconds ago from the given time in the array of `secondsAgos`
+/// @dev Reverts if `secondsAgos` > oldest observation
+/// @param self The stored oracle array
+/// @param time The current block.timestamp
+/// @param secondsAgos Each amount of time to look back, in seconds, at which point to return an observation
+/// @param tick The current tick
+/// @param index The index of the observation that was most recently written to the observations array
+/// @param liquidity The current in-range pool liquidity
+/// @param cardinality The number of populated elements in the oracle array
+/// @return tickCumulatives The tick * time elapsed since the pool was first initialized, as of each `secondsAgo`
+/// @return secondsPerLiquidityCumulativeX128s The cumulative seconds / max(1, liquidity) since the pool was first initialized, as of each `secondsAgo`
+function observe(
+    Observation[65535] storage self,
+    uint32 time,
+    uint32[] memory secondsAgos,
+    int24 tick,
+    uint16 index,
+    uint128 liquidity,
+    uint16 cardinality
+) internal view returns (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s) {
+    require(cardinality > 0, 'I');
+
+    tickCumulatives = new int56[](secondsAgos.length);
+    secondsPerLiquidityCumulativeX128s = new uint160[](secondsAgos.length);
+    for (uint256 i = 0; i < secondsAgos.length; i++) {
+        (tickCumulatives[i], secondsPerLiquidityCumulativeX128s[i]) = observeSingle(
+            self,
+            time,
+            secondsAgos[i],
+            tick,
+            index,
+            liquidity,
+            cardinality
+        );
+    }
+}
 ```
