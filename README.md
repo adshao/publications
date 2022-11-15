@@ -1,6 +1,6 @@
 # Publications
 
-###### tags: `uniswap` `AMM`
+###### tags: `uniswap` `AMM` `artgobblers`
 
 ## Uniswap
 
@@ -11,6 +11,10 @@
 * [深入理解 Uniswap v3 合约代码（二）](https://hackmd.io/@adshao/HJ2oeEt79)
 * [Uniswap v3 Oracle 预言机](https://hackmd.io/@adshao/rJBY2JWB9)
 * [Flashloan fee of Uniswap v2](https://hackmd.io/@adshao/SJptXNaI9)
+
+## Art Gobblers
+
+* [VRGDA 算法浅析](https://hackmd.io/@adshao/HyAIBte8j)
 
 ## Links
 
