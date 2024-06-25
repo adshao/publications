@@ -373,19 +373,23 @@ Where $x_0$, $y_0$ are the balances of the two tokens before the swap, and $x_1$
 
 The mathematical derivation is as follows:
 
-$$
-y_{in} = 0\\
-x_1 = x_0 + x_{in}\\
-y_1 = y_0 - y_{out}\\
-(x_1 - 0.003 \cdot x_{in}) \cdot (y_1 - 0.003 \cdot y_{in}) = x_0 \cdot y_0\\
-(x_1 - 0.003 \cdot x_{in}) \cdot y_1 = x_0 \cdot y_0\\
-(x_0 + x_{in} - 0.003 \cdot x_{in}) \cdot (y_0 - y_{out}) = x_0 \cdot y_0\\
-(x_0 + 0.997 \cdot x_{in}) \cdot (y_0 - y_{out}) = x_0 \cdot y_0\\
-y_{out} = y_0 - \frac {x_0 \cdot y_0}{x_0 + 0.997 \cdot x_{in}}
-$$
-$$
-y_{out} = \frac {0.997 \cdot x_{in} \cdot y_0}{x_0 + 0.997 \cdot x_{in}}
-$$
+> $y_{in} = 0$
+>
+> $x_1 = x_0 + x_{in}$
+>
+> $y_1 = y_0 - y_{out}$
+>
+> $(x_1 - 0.003 \cdot x_{in}) \cdot (y_1 - 0.003 \cdot y_{in}) = x_0 \cdot y_0$
+>
+> $(x_1 - 0.003 \cdot x_{in}) \cdot y_1 = x_0 \cdot y_0$
+>
+> $(x_0 + x_{in} - 0.003 \cdot x_{in}) \cdot (y_0 - y_{out}) = x_0 \cdot y_0$
+>
+> $(x_0 + 0.997 \cdot x_{in}) \cdot (y_0 - y_{out}) = x_0 \cdot y_0$
+>
+> $y_{out} = y_0 - \frac {x_0 \cdot y_0}{x_0 + 0.997 \cdot x_{in}}$
+>
+> $y_{out} = \frac {0.997 \cdot x_{in} \cdot y_0}{x_0 + 0.997 \cdot x_{in}}$
 
 Since Solidity does not support floating-point numbers, the formula can be converted to:
 
@@ -395,12 +399,13 @@ $$
 
 This calculation result is the `amountOut` as shown in the `getAmountOut` method, where:
 
-$$
-amountIn = x_{in}\\
-reserveIn = x_0\\
-reserveOut = y_0\\
-amountOut = y_{out}
-$$
+> $amountIn = x_{in}$
+>
+> $reserveIn = x_0$
+>
+> $reserveOut = y_0$
+>
+> $amountOut = y_{out}$
 
 #### getAmountIn
 

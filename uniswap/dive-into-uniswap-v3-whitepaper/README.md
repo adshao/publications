@@ -48,7 +48,7 @@ where $x$ and $y$ are the balances of two tokens $X$ and $Y$, and $k$ is a const
 
 > Note: For instance, in the case of stablecoin trading pairs, the price fluctuates minimally most of the time. If, like in Uniswap v2, liquidity is dispersed across all price ranges $(0, \infty)$, it leads to low capital utilization since most of the liquidity's price range will never be utilized.
 
-Considering this, allowing LPs to concentrate their liquidity within narrower price ranges (rather than $(0, \infty)$) seems reasonable. We refer to liquidity concentrated within a finite range as a "position". A position only needs to maintain enough token balance to support trades within its range, thus it behaves like a constant function pool (within that price range) with a larger token balance (which we refer to as virtual balances).
+Considering this, allowing LPs to concentrate their liquidity within narrower price ranges, rather than $(0, \infty)$, seems reasonable. We refer to liquidity concentrated within a finite range as a "position". A position only needs to maintain enough token balance to support trades within its range, thus it behaves like a constant function pool (within that price range) with a larger token balance (which we refer to as virtual balances).
 
 > Note: A v3 pool's range can be thought of as a part of a v2 pool.
 
@@ -228,10 +228,10 @@ Implementing geometric mean prices in Uniswap v3 is relatively straightforward t
 >
 > As mentioned earlier, market prices themselves are a type of random Brownian motion. Theoretically, using a geometric mean is more accurate in tracking average prices because arithmetic means are more susceptible to distortion by extreme values.
 
-Uniswap v3 records the cumulative sum of the current tick number ($\log_{1.0001}{P}$, the logarithm of price $P$ with base 1.0001, which can detect a price change of one basis point, 0.01%) instead of the cumulative price $P$. The cumulative count at any moment equals the sum of the logarithmic prices ($\log_{1.0001}(P)$) per second up to that point:
+Uniswap v3 records the cumulative sum of the current tick number ($\log_{1.0001}{P}$, the logarithm of price $P$ with base 1.0001, which can detect a price change of one basis point, 0.01%) instead of the cumulative price $P$. The cumulative count at any moment equals the sum of the logarithmic prices ( $\log_{1.0001}(P)$ ) per second up to that point:
 
 $$
-a_t = \sum^{t}_{i=1} \log_{1.0001}(P_i) \tag{5.1}
+a_t = \sum_{i=1}^{t} \log_{1.0001}(P_i) \tag{5.1}
 $$
 
 > Note: Why can $\log_{1.0001}P$ detect a precision of price change as 0.01% (one basis point)?
@@ -249,6 +249,7 @@ $$
 > Note: Here, we revisit the definition of the geometric mean:
 >
 > Geometric Mean:
+>
 > $$ G(x_1,...,x_n) = \sqrt[n]{x_1 ... x_n} $$
 >
 > It's evident that $P_{t_1,t_2}$ is the geometric mean price for the period from $t_1$ to $t_2$.
@@ -256,7 +257,7 @@ $$
 To calculate this value, you can look at the cumulative price at moments $t_1$ and $t_2$, subtract the former from the latter, divide by the time difference (in seconds), and finally calculate $1.0001^x$ to get the time-weighted geometric mean price:
 
 $$
-\log_{1.0001}(P_{t_1,t_2}) = \frac{\sum^{t_2}_{i=t_1} \log_{1.0001}(P_i)}{t_2 - t_1} \tag{5.3}
+\log_{1.0001}(P_{t_1,t_2}) = \frac{\sum_{i=t_1}^{t_2} \log_{1.0001}(P_i)}{t_2 - t_1} \tag{5.3}
 $$
 
 $$
@@ -619,7 +620,7 @@ The contract maintains a mapping from the combination of user address, lower tic
 
 liquidity ($l$) represents the amount of virtual liquidity represented by the position at the time of the last update. Specifically, liquidity can be regarded as $\sqrt{x \cdot y}$, where $x$ and $y$ represent the liquidity added to the pool, as indicated by the virtual amounts of token0 and token1 when the position enters a price range at any given time. Unlike Uniswap v2, where each liquidity share grew over time due to fee income, v3's liquidity shares do not change because fees are accumulated separately; they always equal $\sqrt{x \cdot y}$, where $x$ and $y$ represent the amounts of token0 and token1, respectively.
 
-The liquidity amount does not represent the fees accumulated since the last interaction with the contract; uncollected fees are used for this purpose. To calculate uncollected fees for a position, additional information is stored in the position, such as feeGrowthInside0Last ($f_{r,0}(t_o)$) and feeGrowthInside1Last ($f_{r,1}(t_0)$), as described below.
+The liquidity amount does not represent the fees accumulated since the last interaction with the contract; uncollected fees are used for this purpose. To calculate uncollected fees for a position, additional information is stored in the position, such as feeGrowthInside0Last ( $f_{r,0}(t_o)$ ) and feeGrowthInside1Last ( $f_{r,1}(t_0)$ ), as described below.
 
 #### 6.4.1 setPosition
 

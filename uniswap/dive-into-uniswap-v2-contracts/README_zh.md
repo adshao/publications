@@ -373,37 +373,44 @@ $$
 (x_1 - 0.003 \cdot x_{in}) \cdot (y_1 - 0.003 \cdot y_{in}) \geq x_0 \cdot y_0
 $$
 
-其中，$x_0$, $y_0$为交换前的两种代币余额，$x_1$, $y_1$为交换后的两种代币余额，$x_{in}$为输入的代币A数量，因为只提供代币A，因此$y_{in}=0$；$y_{out}$为需要计算的代币B数量。
+其中， $x_0$ , $y_0$ 为交换前的两种代币余额， $x_1$ ,  $y_1$ 为交换后的两种代币余额， $x_{in}$ 为输入的代币A数量，因为只提供代币A，因此 $y_{in}=0$ ； $y_{out}$ 为需要计算的代币B数量。
 
 可推导数学公式如下：
 
-$$
-y_{in} = 0\\
-x_1 = x_0 + x_{in}\\
-y_1 = y_0 - y_{out}\\
-(x_1 - 0.003 \cdot x_{in}) \cdot (y_1 - 0.003 \cdot y_{in}) = x_0 \cdot y_0\\
-(x_1 - 0.003 \cdot x_{in}) \cdot y_1 = x_0 \cdot y_0\\
-(x_0 + x_{in} - 0.003 \cdot x_{in}) \cdot (y_0 - y_{out}) = x_0 \cdot y_0\\
-(x_0 + 0.997 \cdot x_{in}) \cdot (y_0 - y_{out}) = x_0 \cdot y_0\\
-y_{out} = y_0 - \frac {x_0 \cdot y_0}{x_0 + 0.997 \cdot x_{in}}
-$$
-$$
-y_{out} = \frac {0.997 \cdot x_{in} \cdot y_0}{x_0 + 0.997 \cdot x_{in}}
-$$
+> $y_{in} = 0$
+>
+> $x_1 = x_0 + x_{in}$
+>
+> $y_1 = y_0 - y_{out}$
+>
+> $(x_1 - 0.003 \cdot x_{in}) \cdot (y_1 - 0.003 \cdot y_{in}) = x_0 \cdot y_0$
+>
+> $(x_1 - 0.003 \cdot x_{in}) \cdot y_1 = x_0 \cdot y_0$
+>
+> $(x_0 + x_{in} - 0.003 \cdot x_{in}) \cdot (y_0 - y_{out}) = x_0 \cdot y_0$
+>
+> $(x_0 + 0.997 \cdot x_{in}) \cdot (y_0 - y_{out}) = x_0 \cdot y_0$
+>
+> $y_{out} = y_0 - \frac {x_0 \cdot y_0}{x_0 + 0.997 \cdot x_{in}}$
+>
+> $y_{out} = \frac {0.997 \cdot x_{in} \cdot y_0}{x_0 + 0.997 \cdot x_{in}}$
 
 由于Solidity不支持浮点数，因此可以换算成如下公式：
 
 $$
 y_{out} = \frac {997 \cdot x_{in} \cdot y_0}{1000 \cdot x_0 + 997 \cdot x_{in}}
 $$
-可以看出，该计算结果即为`getAmountOut`方法中的`amountOut`，其中，
 
-$$
-amountIn = x_{in}\\
-reserveIn = x_0\\
-reserveOut = y_0\\
-amountOut = y_{out}
-$$
+
+可以看出，该计算结果即为`getAmountOut`方法中的`amountOut`，其中：
+
+> $amountIn = x_{in}$
+>
+> $reserveIn = x_0$
+>
+> $reserveOut = y_0$
+>
+> $amountOut = y_{out}$
 
 #### getAmountIn
 
@@ -420,7 +427,7 @@ function getAmountIn(uint amountOut, uint reserveIn, uint reserveOut) internal p
 }
 ```
 
-`getAmountOut`是已知$x_{in}$，计算$y_{out}$；相对应地，`getAmountIn`则是已知$y_{out}$，计算$x_{in}$。根据上述公式可以推导出：
+`getAmountOut`是已知 $x_{in}$，计算 $y_{out}$；相对应地，`getAmountIn`则是已知 $y_{out}$，计算 $x_{in}$。根据上述公式可以推导出：
 
 $$
 (x_0 + 0.997 \cdot x_{in}) \cdot (y_0 - y_{out}) = x_0 \cdot y_0\\
@@ -431,12 +438,13 @@ $$
 x_{in} = \frac {x_0 \cdot y_{out}}{0.997 \cdot (y_0 - y_{out})} = \frac {1000 \cdot x_0 \cdot y_{out}}{997 \cdot (y_0 - y_{out})}
 $$
 
-$$
-amountIn = x_{in}\\
-reserveIn = x_0\\
-reserveOut = y_0\\
-amountOut = y_{out}
-$$
+> $amountIn = x_{in}$
+>
+> $reserveIn = x_0$
+>
+> $reserveOut = y_0$
+>
+> $amountOut = y_{out}$
 
 计算结果即为合约中代码所示，注意最后有一个`add(1)`，这是为了防止`amountIn`为小数的情况，加1可以保证输入的数（`amountIn`）不小于理论的最小值。
 
