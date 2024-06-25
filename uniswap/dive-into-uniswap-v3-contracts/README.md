@@ -2680,7 +2680,7 @@ Where: `tickCumulative: last.tickCumulative + int56(tick) * delta`.
 According to the whitepaper formulas 5.3-5.5:
 
 $$
-\log_{1.0001}(P_{t_1,t_2}) = \frac{\sum^{t_2}_{i=t_1} \log_{1.0001}(P_i)}{t_2 - t_1} \tag{5.3}
+\log_{1.0001}(P_{t_1,t_2}) = \frac{\sum_{i=t_1}^{t_2} \log_{1.0001}(P_i)}{t_2 - t_1} \tag{5.3}
 $$
 
 $$
@@ -2694,13 +2694,13 @@ $$
 Here, the saved `tickCumulative` is $a_{t_n}$, corresponding to the formula:
 
 $$
-tickCumulative = \sum^{t_n}_{i=0} \log_{1.0001}(P_i)
+tickCumulative = \sum_{i=0}^{t_n} \log_{1.0001}(P_i)
 $$
 
 Similarly, the cumulative seconds per liquidity `secondsPerLiquidityCumulative` is:
 
 $$
-secondsPerLiquidityCumulative = \sum^{n}_{i=0} \frac{t_i}{L_i}
+secondsPerLiquidityCumulative = \sum_{i=0}^{n} \frac{t_i}{L_i}
 $$
 
 #### initialize
@@ -3105,9 +3105,9 @@ According to [getSurroundingObservations](#getSurroundingObservations) method, i
 * If the target time equals `beforeOrAt` time, then directly return the related data of that observation point
 * If the target time equals `atOrAfter` time, then also return the related data
 * If the target time is between `beforeOrAt` and `atOrAfter`, it is necessary to calculate related values based on the time proportion:
-  * `observationTimeDelta` is the time difference between `beforeOrAt` and `atOrAfter` (\(\Delta{t}\) below), `targetDelta` is the time difference between `beforeOrAt` and `target`
-  * Because \(\Delta{tickCumulative} = tick \cdot \Delta{t}\), the value up to `target` should be: \(\frac{\Delta{tickCumulative}}{\Delta{t}} \cdot targetDelta\)
-  * Similarly, \(\Delta{secondsPerLiquidityCumulativeX128} = \frac{\Delta{t}}{liquidity}\), the value up to `target` should be: \(\frac{\Delta{secondsPerLiquidityCumulativeX128}}{\Delta{t}} \cdot targetDelta\)
+  * `observationTimeDelta` is the time difference between `beforeOrAt` and `atOrAfter` ( $\Delta{t}$ below), `targetDelta` is the time difference between `beforeOrAt` and `target`
+  * Because $\Delta{tickCumulative} = tick \cdot \Delta{t}$, the value up to `target` should be: $\frac{\Delta{tickCumulative}}{\Delta{t}} \cdot targetDelta$
+  * Similarly, $\Delta{secondsPerLiquidityCumulativeX128} = \frac{\Delta{t}}{liquidity}$, the value up to `target` should be: $\frac{\Delta{secondsPerLiquidityCumulativeX128}}{\Delta{t}} \cdot targetDelta$
 
 #### observe
 

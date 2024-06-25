@@ -650,11 +650,15 @@ $$
 如果价格从当前价格（ $P$ ）移动到高点或低点，需要存入的token0（ $\Delta{X}$ ）和token1（ $\Delta{Y}$ ）代币的数量可以被看作从头寸中卖出对应数量的代币。根据价格是否低于区间、在区间内或者高于区间，可以从6.14节和6.16节公式推出以下公式：
 
 $$
-\Delta{Y} = \begin{cases} 0 & \text{$i_c < i_l$}\\ \Delta{L} \cdot (\sqrt{P} - \sqrt{p(i_l)}) & \text{$i_l \leq i_c \leq i_u$}\\ \Delta{L} \cdot (\sqrt{p(i_u)} - \sqrt{p(i_l)}) & \text{$i_c \geq i_u$} \end{cases} \tag{6.29}
+\Delta{Y} = \begin{cases} 0 & \text{$i_c < i_l$}\\
+\Delta{L} \cdot (\sqrt{P} - \sqrt{p(i_l)}) & \text{$i_l \leq i_c \leq i_u$}\\
+\Delta{L} \cdot (\sqrt{p(i_u)} - \sqrt{p(i_l)}) & \text{$i_c \geq i_u$} \end{cases} \tag{6.29}
 $$
 
 $$
-\Delta{X} = \begin{cases} \Delta{L} \cdot (\frac{1}{\sqrt{p(i_l)}} - \frac{1}{\sqrt{p(i_u)}}) & \text{$i_c < i_l$}\\ \Delta{L} \cdot (\frac{1}{\sqrt{P}} - \frac{1}{\sqrt{p(i_u)}}) & \text{$i_l \leq i_c \leq i_u$}\\ 0 & \text{$i_c \geq i_u$} \end{cases} \tag{6.30}
+\Delta{X} = \begin{cases} \Delta{L} \cdot (\frac{1}{\sqrt{p(i_l)}} - \frac{1}{\sqrt{p(i_u)}}) & \text{$i_c < i_l$}\\
+\Delta{L} \cdot (\frac{1}{\sqrt{P}} - \frac{1}{\sqrt{p(i_u)}}) & \text{$i_l \leq i_c \leq i_u$}\\
+0 & \text{$i_c \geq i_u$} \end{cases} \tag{6.30}
 $$
 
 ## 引用文献
