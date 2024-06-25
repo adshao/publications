@@ -1,257 +1,259 @@
-# 深入理解 Uniswap v3 白皮书
+[English](./README.md) | [中文](./README_zh.md)
+
+# Deep Dive into Uniswap v3 Whitepaper
 
 ###### tags: `uniswap` `uniswap-v3` `whitepaper`
 
-## 概述
+## Overview
 
-Uniswap v3是一个基于以太坊虚拟机（EVM）实现的无监管自动做市商（AMM）。与之前的版本相比，Uniswap v3提高了资金利用率，赋予流动性提供者更多控制能力，改进了价格预言机的准确性和便利性，同时增加了更灵活的手续费结构。
+Uniswap v3 is an unregulated automated market maker (AMM) implemented on the Ethereum Virtual Machine (EVM). Compared to previous versions, Uniswap v3 improves capital efficiency, gives liquidity providers more control, enhances the accuracy and convenience of the price oracle, and introduces a more flexible fee structure.
 
-## 1 Introduction 介绍
+## 1 Introduction
 
-自动做市商（AMMs）是集中流动性，并基于算法将其开放给交易者的代理商。常值函数做市商（CFMMs）（Uniswap也是成员之一）作为AMM中的一个常见类别，已被广泛应用于去中心化金融场景，他们一般都在无需许可的区块链上以交易代币的智能合约的形式实现。
+Automated market makers (AMMs) are agents that pool liquidity and make it available to traders based on algorithms. Constant function market makers (CFMMs), a common category of AMMs that includes Uniswap, have been widely adopted in decentralized finance. They are typically implemented as smart contracts for trading tokens on permissionless blockchains.
 
-当前市场上的常值函数做市商大多存在资金利用率不高的问题。在Uniswap v1/v2使用的恒定乘积做市商公式中，对于给定价格，池子中仅部分资金参与做市。这显得十分低效，特别是当代币总是在特定价格附近交易时。
+Most existing CFMMs suffer from low capital efficiency. In the constant product market maker formula used by Uniswap v1/v2, only a fraction of the pool's funds are used for making markets at any given price. This is inefficient, especially when tokens trade within a narrow price range.
 
-> 注：以稳定币为例，USDC/USDT的波动范围极小，而根据v2的公式，流动性提供者实际上会将资金分布在价格区间(0, $\infty$)，即使这些价格几乎永远也无法使用到。因此在Uniswap v1/v2版本，资金利用效率较低，同时也导致交易滑点相对较高。
+> Note: Take stablecoins as an example, the price fluctuation range of USDC/USDT is extremely small. According to the v2 formula, liquidity providers essentially distribute funds across the price range (0, ∞), even though these prices will almost never be utilized. Thus, in Uniswap v1/v2 versions, capital efficiency is low, also leading to relatively higher slippage.
 
-在此之前，Curve和YieldSpace等一些产品尝试解决这个资金利用率问题，他们通过建立池子，并使用不同的函数描述代币之间的关系。这要求池子里的所有流动性提供者都遵守同一个公式，而如果他们希望在不同的价格区间提供流动性，将导致流动性分裂。
+Products like Curve and YieldSpace have attempted to address the issue of capital utilization by establishing pools using different functions to describe the relationship between tokens. This requires all liquidity providers in the pool to follow the same formula, leading to liquidity fragmentation if they wish to provide liquidity in different price ranges.
 
-在本文，我们将介绍Uniswap v3，一种新的自动做市商（AMM），它给予流动性提供者对资金被使用的价格区间更多控制权，并降低流动性分裂和gas消耗等问题的影响。该设计不依赖任何基于代币价格行为的共同假设。Uniswap v3仍然基于之前版本的常值函数曲线（即$x \cdot y = k$），但提供许多重要的新特性：
+This paper introduces Uniswap v3, a new AMM that allows liquidity providers more control over the price ranges where their capital is used, reducing the impact of liquidity fragmentation and gas consumption. This design does not rely on any assumptions about token price behavior. Uniswap v3 still utilizes the constant function curve from previous versions ($x \cdot y = k$) but introduces several new features:
 
-* *集中流动性*：流动性提供者（LP）将被赋予在任意价格区间集中流动性的能力。这将提高池子的资金利用率，并允许LP估算他们认可的价格曲线，同时又与池子里剩余资金一起提供高效聚合的流动性。我们将分别在第2节和第6节描述该特性及其实现。
+* *Concentrated liquidity*: Liquidity providers (LPs) can concentrate liquidity within any price range. This improves pool capital efficiency and allows LPs to simulate their preferred price curves while providing efficient aggregated liquidity with the remaining funds. This feature and its implementation are described in sections 2 and 6, respectively.
 
-* *灵活的手续费*：交易手续费将不再限定在0.30%。相反，手续费等级在每个池子初始化时设置，每一个交易对包含多个等级（池子）。默认支持手续费等级为0.05%，0.30%和1%。可以通过UNI治理增加新的手续费等级。
+* *Flexible fees*: Transaction fees are no longer fixed at 0.30%. Instead, the fee tier is set at the initialization of each pool, with multiple tiers (pools) available for each trading pair. Default supported fee tiers are 0.05%, 0.30%, and 1%. New fee tiers can be added through UNI governance.
   
-  > 注：UNI[第9号提案](https://app.uniswap.org/#/vote/2/9?chain=mainnet)申请引入新的手续费等级：0.01%，该提案已生效。0.01%的手续费适用于稳定币交易场景，使交易的滑点更小，这让Uniswap可以在稳定币交易领域直面Curve等市场龙头的竞争。
+  > Note: The [9th UNI proposal](https://app.uniswap.org/#/vote/2/9?chain=mainnet) to introduce a new fee tier of 0.01% has been implemented. The 0.01% fee tier is suitable for stablecoin trading scenarios, offering lower slippage and allowing Uniswap to compete directly with market leaders like Curve in the stablecoin trading domain.
 
-* *协议手续费治理*：UNI治理可以灵活设置协议手续费对交易手续费的分成占比（参考6.2.2节）。
+* *Protocol fee governance*: UNI governance can flexibly set the protocol's share of transaction fees (see section 6.2.2).
 
-* *改进的价格预言机*：Uniswap v3为用户提供了一种方式查询近期累计价格，从而避免了在计算TWAP（时间加权平均价格）的时间段开头和结尾手动记录累计价格。
+* *Improved price oracle*: Uniswap v3 provides a way to query recent cumulative prices, avoiding manual recording of cumulative prices at the start and end of the period for calculating TWAP (time-weighted average price).
 
-* *流动性预言机*：合约提供了一种时间加权平均流动性的预言机（参考5.3节）。
+* *Liquidity oracle*: The contract offers a time-weighted average liquidity oracle (see section 5.3).
 
-Uniswap v2 core合约被设计成不可升级的，因此Uniswap v3是在一组全新合约上实现。Uniswap v3合约同样是不可升级的，但允许一些参数被治理修改，我们将在第4节讨论。
+Uniswap v2 core contracts were designed to be non-upgradable, thus Uniswap v3 is implemented on a set of brand new contracts. Like v2, Uniswap v3 contracts are non-upgradable but allow some parameters to be modified by governance, as discussed in section 4.
 
-## 2 Concentrated Liquidity 集中流动性
+## 2 Concentrated Liquidity
 
-Uniswap v3的设计思想是*集中流动性*：流动性限制在某个价格区间。
+The central idea of Uniswap v3 is *concentrated liquidity*: limiting liquidity to a specific price range.
 
-在之前的版本中，流动性被均匀分布在以下曲线：
+In previous versions, liquidity was evenly distributed along the following curve:
 
 $$
 x \cdot y = k \tag{2.1}
 $$
 
-其中，$x$和$y$是两种代币$X$和$Y$的余额，$k$是一个常数。换句话说，之前版本被设计为给整个价格区间$(0, \infty)$提供流动性。这种方式容易实现，允许流动性被有效聚合，但也意味着池子中很多资产（流动性）永远不会被使用。
+where $x$ and $y$ are the balances of two tokens $X$ and $Y$, and $k$ is a constant. In other words, previous versions were designed to provide liquidity across the entire price range $(0, \infty)$. While this approach is easy to implement and allows for effective aggregation of liquidity, it means that many assets (liquidity) in the pool will never be utilized.
 
-> 注：比如稳定币交易对，大部分时候价格波动极小，如果像Uniswap v2一样将流动性分散到所有价格区间$(0, \infty)$，将导致资金利用率较低，因为大部分价流动性的价格区间永远不会被使用。
+> Note: For instance, in the case of stablecoin trading pairs, the price fluctuates minimally most of the time. If, like in Uniswap v2, liquidity is dispersed across all price ranges $(0, \infty)$, it leads to low capital utilization since most of the liquidity's price range will never be utilized.
 
-考虑到这个问题，允许LP将他们的流动性集中到更小的价格区间（而非$(0, \infty)$）是合理的。我们将集中到一个有限区间的流动性称为“头寸”。一个头寸只需要维持足够的代币余额以支持该区间的交易即可，因此它与一个拥有更大代币余额（我们称为虚拟余额）的常值函数池子（在该价格区间）的运作方式很像。
+Considering this, allowing LPs to concentrate their liquidity within narrower price ranges (rather than $(0, \infty)$) seems reasonable. We refer to liquidity concentrated within a finite range as a "position". A position only needs to maintain enough token balance to support trades within its range, thus it behaves like a constant function pool (within that price range) with a larger token balance (which we refer to as virtual balances).
 
-> 注：可以将一个v3池子的区间想象成一个v2池子的一部分。
+> Note: A v3 pool's range can be thought of as a part of a v2 pool.
 
-![](https://i.imgur.com/6XyH2px.jpg)
+![](./assets/v3-1.jpg)
 
-特别地，一个头寸只需要持有足够的代币$X$以支持价格移动到其上限，因为当价格向上方移动时需要消耗$X$代币。同样，只需要持有足够的代币$Y$以支持价格移动到下限。图1描述了在价格区间$\left[p_a, p_b\right]$的头寸与当前价格$p_c \in \left[ p_a, p_b \right]$的关系。$x_{real}$与$y_{real}$代表头寸的真实代币余额。
+Specifically, a position only needs to hold enough of token $X$ to support price movement to its upper limit, as $X$ tokens are consumed when the price moves upwards. Similarly, it only needs to hold enough of token $Y$ to support movement to its lower limit. Figure 1 describes the relationship between a position in the price range $\left[p_a, p_b\right]$ and the current price $p_c \in \left[ p_a, p_b \right]$. $x_{real}$ and $y_{real}$ represent the real token balances of the position.
 
-当价格离开头寸区间时，该头寸的流动性将不再活跃，同时无法获得手续费。在该价格点上，流动性将完全只由一种代币组成，因为另一种代币都被耗尽。如果价格重新进入区间，流动性将再次变得活跃。
+When the price moves out of the position's range, its liquidity becomes inactive, and it no longer earns fees. At this point, liquidity consists entirely of one token, as the other has been depleted. If the price re-enters the range, liquidity becomes active again.
 
-> 注：从图1可知，Uniswap常值函数池子的价格移动是以池子中两种代币余额的此消彼长来实现的，当价格（过高或过低）离开头寸区间，意味着其中一种代币被完全替换为另一种代币，因此此时区间中仅剩余一种代币。
+> Note: Figure 1 shows that the movement of market prices in a Uniswap constant function pool is achieved through the increase and decrease of the balances of the two tokens in the pool. When the price (too high or too low) leaves the position's range, it means one of the tokens has been completely replaced by the other, leaving only one token remaining in the range at that time.
 
-流动性数量可以用$L$衡量，其等价于$\sqrt{k}$。头寸的真实代币余额可以用以下曲线表示：
+The amount of liquidity can be measured by $L$, equivalent to $\sqrt{k}$. The real token balances of a position can be described by the following curve:
 
 $$
 (x + \frac{L}{\sqrt(p_b)})(y + L \sqrt{p_a}) = L^2 \tag{2.2}
 $$
 
-该曲线是公式2.1的变形，头寸只在自己的区间具有偿付能力（图2）。
+This curve is a variation of equation 2.1, with positions only having the ability to pay out within their range (Figure 2).
 
-![](https://i.imgur.com/cBGb3ra.jpg)
+![](./assets/v3-2.jpg)
 
-> 注：下面我们来推导公式2.2：
+> Note: Below, we derive equation 2.2:
 >
-> 由图2可知，v3区间流动性曲线（图中real reserves曲线）实际上是将v2流动性曲线（图中virtual reserves曲线）通过坐标平移而来。假设在$a$，$b$点的代币余额（reserves）（即坐标）分别为$(x_a, y_a)$，$(x_b, y_b)$，则需要将v2曲线沿横坐标平移：$-x_b$，沿纵坐标平移：$-y_a$。
+> From Figure 2, the v3 liquidity curve (the real reserves curve in the diagram) is actually obtained by translating the v2 liquidity curve (the virtual reserves curve in the diagram). Assuming the token balances (reserves) at points $a$ and $b$ are $(x_a, y_a)$ and $(x_b, y_b)$, respectively, the v2 curve needs to be translated along the x-axis by $-x_b$ and along the y-axis by $-y_a$.
 >
-> 已知v2的曲线为：
+> Given the v2 curve:
 >
 > $$x \cdot y = k$$
 > 
-> 则平移后的v3曲线为：
+> The translated v3 curve is:
 >
 > $$(x + x_b) \cdot (y + y_a) = k \tag{2.2.0}$$
 > 
-> $a$, $b$点的价格分别为：
+> The prices at points $a$ and $b$ are:
 >
 > $$p_a = \frac{y_a}{x_a} \tag{2.2.1}$$
 >
 > $$p_b = \frac{y_b}{x_b} \tag{2.2.2}$$
 > 
-> 又因为：
+> Also, given:
 >
 > $$x_a \cdot y_a = k \tag{2.2.3}$$
 > 
 > $$x_b \cdot y_b = k \tag{2.2.4}$$
 >
-> 因此，根据公式2.2.1和2.2.3可得：
+> Therefore, from equations 2.2.1 and 2.2.3, we get:
 >
 > $$y^2_a = k \cdot p_a$$
 >
 > $$y_a = \sqrt{k} \cdot \sqrt{p_a} = L \sqrt{p_a}$$
 >
-> 根据公式2.2.2和2.2.4可得：
+> From equations 2.2.2 and 2.2.4, we get:
 >
 > $$x^2_b = \frac{k}{p_b}$$
 >
 > $$x_b = \frac{\sqrt{k}}{\sqrt{p_b}} = \frac{L}{\sqrt{p_b}}$$
 >
-> 由于：$L = \sqrt{k}$，因此：$k = L^2$
+> Since $L = \sqrt{k}$, thus $k = L^2$
 >
-> 将$x_b$, $y_a$代入公式2.2.0，可得：
+> Substituting $x_b$ and $y_a$ into equation 2.2.0, we get:
 >
 > $$
 > (x + \frac{L}{\sqrt{p_b}})(y + L\sqrt{p_a}) = k = L^2
 > $$
 
-只要流动性提供者觉得合适，他们可以自由地创建任意数量的头寸，每个头寸拥有自己的价格区间。通过这种方式，LP可以模拟价格空间中任意有分布需求的流动性（图3列举了部分例子）。此外，这种方式可以让市场决定流动性应该分配在什么地方。理智的LP们可以通过在当前价格附近的狭窄区间集中流动性来减少资金成本，并且通过添加或移除代币来移动价格，以使他们的流动性始终保持活跃。
+Liquidity providers can freely create any number of positions, each with its price range. This way, LPs can simulate any liquidity distribution they deem necessary in the price space (Figure 3 illustrates some examples). Moreover, this approach allows the market to determine where liquidity should be allocated. Rational LPs can concentrate liquidity in narrow ranges near the current price to reduce capital costs, adjusting their positions as prices move to keep their liquidity active.
 
-![](https://i.imgur.com/yZqtzrF.jpg)
+![](./assets/v3-3.jpg)
 
-### 2.1 Range Orders 区间订单
+### 2.1 Range Orders
 
-在极小区间的头寸看起来非常像限价单，如果价格穿越区间，头寸将由完全为一种资产变成另一种资产（以及累计手续费）。区间订单与传统限价单有两点不同：
+Positions in extremely narrow ranges resemble limit orders, transforming entirely from one asset to another (plus accumulated fees) if the price crosses the range. Range orders differ from traditional limit orders in two main ways:
 
-* 一个头寸的最小区间是有限制的。当价格正好位于头寸之内时，该限价单可能只有部分成交。
+* There is a minimum limit to the range of a position. If the price is exactly within the range, the limit order might only be partially executed.
 
-* 当头寸被穿越后，需要手动取回。否则，当价格再次回到区间时，头寸将自动反向交易。
+* After being crossed, the position must be manually withdrawn. Otherwise, if the price returns to the range, the position will automatically trade in the reverse direction.
 
-> 注：如果价格反复穿越一个区间订单，头寸中的资产持仓将自动变化，从一种资产完全变成另一种资产，再反向变化，循环反复。而CEX的限价单在完全成交后，即使后期价格恢复，已成交的订单也不会回滚。
+> Note: If the price repeatedly crosses a range order, the asset holdings in the position will automatically change, transitioning completely from one asset to another and then reversing, in a cyclic manner. Unlike CEX limit orders, which once fully executed, remain so even if prices later revert, completed orders do not roll back.
 >
-> 因此，如果需要实现像传统交易所一样的限价单效果，当价格穿越限价区间后，流动性提供者需要手动执行取回操作，才能完全获得另一种代币。或者可以使用第三方应用提供的自动取回功能，比如[Gelato](https://www.gelato.network/)可以支持使用Uniswap v3的区间订单实现传统限价单的效果。
+> Therefore, to achieve the effect of traditional exchange limit orders, liquidity providers need to manually perform a withdrawal operation after the price crosses the limit range, to fully obtain the other token. Alternatively, automatic withdrawal functions provided by third-party applications, such as [Gelato](https://www.gelato.network/), can be used to implement traditional limit order effects with Uniswap v3 range orders.
 
-## 3 Architectural Changes 架构变动
+## 3 Architectural Changes
 
-Uniswap v3实现了许多架构改动，其中一部分改动是为了实现集中流动性而必须引入的，而另一部分则是独立的功能改进。
+Uniswap v3 implements several architectural changes, some of which are necessary for concentrated liquidity, while others are independent improvements.
 
-### 3.1 Multiple Pools Per Pair 多池交易对
+### 3.1 Multiple Pools Per Pair
 
-在Uniswap v1和v2，每个交易对对应一个独立的流动性池子，并针对所有交易统一收取0.30%的手续费。虽然历史数据表明默认的手续费等级对于大部分代币都是合理的，但对于部分池子可能太高了（比如稳定币池子），而对于另一部分池子又太低了（比如高波动性或者冷门代币）。
+In Uniswap v1 and v2, each trading pair corresponded to a separate liquidity pool, uniformly charging a 0.30% fee for all trades. Although historical data suggests the default fee level was reasonable for most tokens, it might have been too high for some pools (e.g., stablecoin pools) and too low for others (e.g., high volatility or niche tokens).
 
-Uniswap v3为每个交易对引入了多个池子，允许分别设置不同的交易手续费。所有池子都使用相同的工厂合约创建。默认允许创建三个手续费等级：0.05%，0.30%和1%。可以通过UNI治理添加更多手续费等级。
+Uniswap v3 introduces multiple pools for each trading pair, allowing different transaction fees to be set separately. All pools are created using the same factory contract. Three default fee tiers are allowed: 0.05%, 0.30%, and 1%. Additional fee tiers can be added through UNI governance.
 
-> 注：目前已经通过投票新增了一个0.01%的手续费等级。
+> Note: A new 0.01% fee tier has been introduced through voting, catering to stablecoin trading scenarios and offering lower slippage, allowing Uniswap to compete with leaders like Curve in the stablecoin trading market.
 
-### 3.2 Non-Fungible Liquidity 不可互换的流动性
+### 3.2 Non-Fungible Liquidity
 
-*3.2.1 非复利的手续费*。之前版本的手续费收入会被作为流动性持续存入池子。这意味着即使没有主动存入，池子流动性也会随着时间而增长，并且可以复利地获取手续费收入。
+*3.2.1 Non-compounding fees*. In previous versions, fee income was continuously deposited into the pool as liquidity. This meant that even without actively depositing, the pool's liquidity would grow over time, and fees could compound.
 
-在Uniswap v3，由于头寸的不可互换性，复利将变得不再可能。相反，手续费被独立保存，并且以支付手续费的代币形式持有（参考6.2.2）。
+In Uniswap v3, due to the non-fungibility of positions, compounding becomes impossible. Instead, fees are accumulated separately and held in the form of the fee-paying tokens (see section 3.2.1).
 
-> 注：由于每个头寸的价格区间都不一样，因此v3的流动性不再像v2一样分布在所有价格区间，也就是说，v2流动性是可互换的，因此可以使用ERC-20代币表示。而v3流动性实际上是一个NFT（不可互换代币），使用[ERC-721](https://eips.ethereum.org/EIPS/eip-721)表示。
+> Note: Since each position in v3 has its price range, v3's liquidity no longer spreads across all price ranges like in v2, meaning v2's liquidity is fungible and thus can be represented by ERC-20 tokens. In contrast, v3's liquidity essentially becomes an NFT (non-fungible token), represented using [ERC-721](https://eips.ethereum.org/EIPS/eip-721).
 
-*3.2.2 移除原生流动性代币*。在Uniswap v1和v2，交易对池子合约本身是一个ERC-20合约，它的代币表示池子持有的流动性。虽然这种表示方式很方便，但它仍然与Uniswap v2的所倡导的理念有点不一致，即：任何不需要放在core合约的东西，都应该放到periphery合约，使用一个“标准”ERC-20的实现，阻止了后续创建ERC-20代币的优化版本。按理说，ERC-20代币实现应该放到periphery合约，再作为一个流动性头寸的封装放到core合约。
+*3.2.2 Removal of native liquidity tokens*. In Uniswap v1 and v2, the pool contract itself was an ERC-20 contract, and its tokens represented the pool's held liquidity. Although this representation was convenient, it was somewhat inconsistent with Uniswap v2's philosophy that anything not necessary to the core contract should be placed in a periphery contract. Using a "standard" ERC-20 implementation in the core contract prevented the creation of optimized versions of ERC-20 tokens in the future. Ideally, the ERC-20 token implementation should be placed in a periphery contract, then wrapped in a core contract as a liquidity position.
 
-> 注：由于交易对合约的ERC-20实现在core合约中，并且是不可升级的，因此如果ERC-20的实现出现了bug，实际上会导致整个v2流动性受到影响。因此更好的方式是将ERC-20实现放到periphery合约中，而在core合约中仅存放一个wrapper引用，以便后续升级为新版本的ERC-20实现。
+> Note: Since the ERC-20 implementation of the pair contract was in the core contract and was non-upgradable, if there was a bug in the ERC-20 implementation, it would affect the entire v2 liquidity. Therefore, a better approach is to place the ERC-20 implementation in the periphery contract and only have a wrapper reference in the core contract for future upgrades to new versions of the ERC-20 implementation.
 
-Uniswap v3引入的改动让可互换的流动性代币变成不可能。由于自定义流动性的特性，现在手续费以独立的代币被池子收集并持有，而不是自动复投为池子的流动性。
+The changes introduced in Uniswap v3 make fungible liquidity tokens impossible. With the feature of custom liquidity supply, fees are now collected and held by the pool in separate tokens, rather than automatically reinvested as the pool's liquidity.
 
-因此，v3的池子合约没有实现ERC-20标准。任何人都可以在periphery创建一种ERC-20代币合约，以便让流动性头寸变得更可互换，但这需要额外的逻辑来处理手续费收入的分发或再投资。或者，任何人都可以创建一个periphery合约，使用一种ERC-721 NFT代币表示个人流动性头寸（包括累计手续费）。
+Therefore, v3's pool contract does not implement the ERC-20 standard. Anyone can create an ERC-20 token contract in the periphery to make liquidity positions more interchangeable, but this requires additional logic to handle the distribution or reinvestment of fee income. Alternatively, anyone can create a periphery contract using an ERC-721 NFT token to represent individual liquidity positions (including accumulated fees).
 
-## 4 Governance 治理
+## 4 Governance
 
-工厂合约拥有一个owner（所有者），该地址初始时被UNI代币持有者控制。owner没有权限暂停core合约的任何操作。
+The factory contract has an owner, initially controlled by UNI token holders. The owner has no authority to pause any operation of the core contract.
 
-> 注：在ETH主网，factory合约地址为[0x1F98431c8aD98523631AE4a59f267346ea31F984](https://etherscan.io/address/0x1f98431c8ad98523631ae4a59f267346ea31f984)，owner是一个TimeLock合约，地址为[0x1a9C8182C09F50C8318d769245beA52c32BE35BC](https://etherscan.io/address/0x1a9c8182c09f50c8318d769245bea52c32be35bc)
+> Note: On the ETH mainnet, the factory contract address is [0x1F98431c8aD98523631AE4a59f267346ea31F984](https://etherscan.io/address/0x1f98431c8ad98523631ae4a59f267346ea31f984), with the owner being a TimeLock contract at [0x1a9C8182C09F50C8318d769245beA52c32BE35BC](https://etherscan.io/address/0x1a9c8182c09f50c8318d769245bea52c32be35bc).
 
-与Uniswap v2相同，Uniswap v3也有可以被UNI治理打开的协议手续费。在Uniswap v3，UNI治理可以更灵活地设置协议获取的交易手续费比例，可以将协议手续费设置为$\frac{1}{N}$的交易手续费或者0，其中，$4 \leq N \leq 10$。该参数可以基于每个池子设置。
+Like Uniswap v2, Uniswap v3 also has a protocol fee that can be enabled by UNI governance. In Uniswap v3, UNI governance can set the protocol's share of transaction fees more flexibly, allowing the protocol fee to be set to $\frac{1}{N}$ of the transaction fees or 0, where $4 \leq N \leq 10$. This parameter can be set on a per-pool basis.
 
-> 注：Uniswap v2只能基于全局设置协议手续费，而Uniswap v3可以基于每个池子设置。
+> Note: Uniswap v2 could only set the protocol fee on a global basis, whereas Uniswap v3 allows it to be set for each pool individually.
 
-UNI治理可以添加额外的交易手续费等级。当添加一个手续费等级时，可以同时定义其对应的tickSpacing参数（参考6.1）。一旦手续费等级被添加进工厂合约，它就无法被移除（tickSpacing也无法被修改）。初始的手续费等级和tickSpacing分别为0.05%（tickSpacing为10，两个初始化tick之间约为0.10%），0.30%（tickSpacing为60，两个初始化tick之间约为0.60%），1%（tickSpacing为200，两个初始化tick之间约为2.02%）。
+UNI governance can add additional transaction fee tiers. When adding a fee tier, the corresponding tickSpacing parameter can also be defined (see section 6.1). Once a fee tier is added to the factory contract, it cannot be removed (nor can tickSpacing be modified). The initial fee tiers and tickSpacing are 0.05% (tickSpacing of 10, approximately 0.10% between two initialized ticks), 0.30% (tickSpacing of 60, approximately 0.60%), and 1% (tickSpacing of 200, approximately 2.02%).
 
-> 注：关于tick和tick spacing的概念，可以参考6.1节。
+> Note: Regarding the concept of ticks and tick spacing, please refer to section 6.1.
 >
-> 简单而言，每个tick（点）对应一个价格，为了聚合不同头寸的流动性，价格空间被划分为一个个可被初始化的tick，只有能被tickSpacing整除的tick才允许初始化；在tick内的交易机制与v2一样，当该tick的流动性被消耗以后，价格将进入下一个tick，并重复上述交易过程。因此tickSpacing越小意味着流动性越连续，交易滑点越小，但同时也带来了更大的gas消耗。
+> Simply put, each tick (point) corresponds to a price. To aggregate the liquidity of different positions, the price space is divided into ticks that can be initialized, with only ticks divisible by tickSpacing allowed to be initialized. Inside a tick, the trading mechanism is similar to v2; once the liquidity of that tick is consumed, the price moves to the next tick and repeats the process. Thus, smaller tickSpacing means more continuous liquidity and smaller slippage but also higher gas consumption.
 >
-> 因此，每个手续费等级的tickSpacing是一个权衡值，但总体而言，越高的手续费等级，其tickSpacing越大。因为手续费越高，代表交易对的波动性越大，交易者能够承受的滑点也越大。
+> Therefore, each fee tier's tickSpacing is a trade-off value. Generally, higher fee tiers have larger tickSpacing because higher fees indicate greater volatility of the trading pair, and traders can tolerate larger slippage.
 >
-> 我们可以通过[factory合约](https://etherscan.io/address/0x1f98431c8ad98523631ae4a59f267346ea31f984#readContract)查看链上手续费配置：feeAmountTickSpacing，目前支持的feeAmount和tickSpacing分别为：```{100: 1, 500: 10, 3000: 60, 10000: 200}```。
+> The current fee configuration on the chain can be checked through the [factory contract](https://etherscan.io/address/0x1f98431c8ad98523631ae4a59f267346ea31f984#readContract): feeAmountTickSpacing, with the supported feeAmount and tickSpacing being: ```{100: 1, 500: 10, 3000: 60, 10000: 200}```.
 >
-> 我们在6.1节会提到，两个相邻tick的最小价格误差为0.01%。
+> As mentioned in section 6.1, the minimum price difference between two adjacent ticks is 0.01%.
 
-最后，UNI治理有权利将owner转移给其他地址。
+Finally, UNI governance has the right to transfer ownership to another address.
 
-## 5 Oracle Upgrades 预言机升级
+## 5 Oracle Upgrades
 
-Uniswap v2引入了时间加权平均价格（TWAP）预言机功能，Uniswap v3的TWAP包括三个重要改动。
+Uniswap v2 introduced the Time-Weighted Average Price (TWAP) oracle feature. Uniswap v3's TWAP includes three significant changes.
 
-其中最重要的改动是Uniswap v3无需预言机用户在外部记录历史累计价格。Uniswap v2要求用户在需要计算TWAP的区间的开始和结束阶段分别记录累计价格。Uniswap v3将累计检查点放到core合约，允许外部合约直接计算最近一段时间的链上TWAP，无需额外保存累计价格。
+The most important change is that Uniswap v3 does not require oracle users to record historical cumulative prices externally. Uniswap v2 required users to manually record cumulative prices at the start and end of the period for calculating TWAP. Uniswap v3 moves the cumulative checkpoints to the core contract, allowing external contracts to directly calculate the recent on-chain TWAP without additional record-keeping.
 
-另一个改动是Uniswap v3不再使用累计价格之和计算算术平均数TWAP，而是通过记录$log$价格之和计算几何平均数TWAP。
+Another change is that Uniswap v3 no longer calculates the arithmetic mean TWAP using the sum of cumulative prices; instead, it records the sum of $\log$ prices to calculate the geometric mean TWAP.
 
-> 注：我们在《深入理解Uniswap v2白皮书》中提到，几何平均数相比算术平均数，受极端值的影响更小，并且无需为每种代币记录单独的累计价格，因为一个代币的几何平均数价格是另一个的倒数。
+> Note: As mentioned in the "Dive into Uniswap v2 Whitepaper," compared to the arithmetic mean, the geometric mean is less influenced by extreme values and does not require separate cumulative price records for each token, as the geometric mean price of one token is the reciprocal of the other.
 
-最后，除了价格累计数外，Uniswap v3还增加了一个流动性累计数，每秒累计$\frac{1}{L}$（即流动性倒数）。累计流动性对于那些基于Uniswap v3实现流动性挖矿的外部合约很有用。它也可以被其他合约用于判断一个交易对的哪个池子具有最可信的TWAP。
+Lastly, in addition to price accumulators, Uniswap v3 adds a liquidity accumulator, accumulating $\frac{1}{L}$ (the reciprocal of liquidity) every second. The cumulative liquidity is useful for external contracts implementing liquidity mining on Uniswap v3. It can also be used by other contracts to determine which pool has the most reliable TWAP.
 
-### 5.1 Oracle Observations 预言机观测
+### 5.1 Oracle Observations
 
-与Uniswap v2类似，Uniswap v3在每个区块开始记录累计价格，乘以自上一个区块到现在的时间（秒数）。
+Similar to Uniswap v2, Uniswap v3 records cumulative prices at the start of each block, multiplied by the time (in seconds) since the last block.
 
-Uniswap v2的池子仅保存累计价格的最新值，该值由最近一个发生交易的区块更新。当在Uniswap v2计算平均价格时，需要由外部调用者负责提供提供累计价格的历史数据。如果有很多外部用户，每个用户都需要独立维护记录累计价格历史值的方法，或者使用一个共享方法减少成本。另外，无法保证每个有交互的区块都能影响累计价格。
+Uniswap v2's pool only saves the latest value of cumulative prices, updated by the most recent transaction block. When calculating the average price in Uniswap v2, external callers are responsible for providing historical cumulative price data. If there are many external users, each must independently maintain a method to record historical cumulative prices or use a shared method to reduce costs. Moreover, there is no guarantee that every interactive block will affect the cumulative price.
 
-在Uniswap v3，池子保存累计价格的一系列历史（如5.3节所述，也包括累计流动性）。在每个区块与池子第一次交互时，合约会自动记录累计价格，并且循环地使用新值覆盖数组中的最旧值，类似于一个环形缓冲区。虽然初始时数组仅分配一个检查点的空间，但是任何人都能够初始化额外的存储槽来扩展该数组，最多可达65,536个检查点。任何扩展该交易对检查点的人需要支付一次性的gas消耗来为数组初始化额外的存储槽。
+In Uniswap v3, the pool saves a series of historical cumulative prices (and as described in section 5.3, including cumulative liquidity). During the first interaction with the pool in each block, the contract automatically records cumulative prices and cyclically overwrites the oldest value in the array with the new value, similar to a circular buffer. Although the array is initially allocated space for only one checkpoint, anyone can initialize additional storage slots to extend the array up to 65,536 checkpoints. Anyone extending the checkpoint space for a trading pair must pay a one-time gas cost to initialize additional storage slots for the array.
 
-> 注：扩展检查点空间的操作是一次性的，由发起操作的人支付。比如有人希望Uniswap v3的ETH-USDC交易对能够提供更多的历史价格检查点（检查点越多，意味着使用链上数据计算的预言机价格将越可信，因为攻击者要操纵这些价格所需的成本越高），以便通过链上可以获取预言机价格，他们就会调用ETH-USDC交易对的合约接口扩展检查点空间，并为此支付gas费用，因为该操作为交易对分配了额外的EVM存储槽空间。
+> Note: Expanding the checkpoint space is a one-time operation, paid by the initiator. For example, if someone wants the Uniswap v3 ETH-USDC trading pair to provide more historical price checkpoints (more checkpoints mean the oracle price calculated using on-chain data will be more reliable, as the cost for an attacker to manipulate these prices increases), they would call the ETH-USDC pair contract interface to expand the checkpoint space and pay the gas cost, as this operation allocates additional EVM storage slots for the trading pair.
 
-交易对池子不仅向用户提供历史观测数据数组，还封装了一个便利函数用于在观测点周期内寻找任意时间点的累计价格。
+The pool not only provides users with an array of historical observation data but also encapsulates a convenient function for finding the cumulative price at any point in the observation period.
 
-### 5.2 Geometric Mean Price Oracle 几何平均数价格预言机
+### 5.2 Geometric Mean Price Oracle
 
-Uniswap v2维护两个累计价格，一个是以token1表示的token0价格，另一个则是以token0表示的token1价格。用户可以计算任意时间段的时间加权算术平均数价格，通过将区间结尾的累计价格减去开始的累计价格，并除以区间的时间（秒数）得出。注意token0和token1的累计价格是分别跟踪的，因为两个算术平均数价格不是互为倒数关系。
+Uniswap v2 maintains two cumulative prices, one for the price of token0 in terms of token1, and the other for the price of token1 in terms of token0. Users can calculate the time-weighted arithmetic mean price for any period by subtracting the cumulative price at the end of the period from the cumulative price at the beginning and dividing by the time (in seconds). Note that cumulative prices for token0 and token1 are tracked separately because the two arithmetic mean prices are not reciprocals of each other.
 
-Uniswap v3使用时间加权的几何平均数价格，避免了为两个代币分别维护累计价格。一组比例数的几何平均数是该比例倒数的几何平均数的倒数。
+Uniswap v3 uses a time-weighted geometric mean price, eliminating the need to maintain separate cumulative prices for two tokens. The geometric mean of a set of ratios is the reciprocal of the geometric mean of their reciprocals.
 
-> 注：假设池子里以token1表示的token0价格为$x$，则以token0表示的token1价格为$\frac{1}{x}$。
+> Note: Suppose the price of token0 in terms of token1 is $x$, then the price of token1 in terms of token0 is $\frac{1}{x}$.
 >
-> token0的几何平均数价格为：
+> The geometric mean price of token0:
 > $$P_0 = \sqrt[n]{x_1 \cdot x_2 \cdot ... \cdot x_n}$$
 >
-> token1的几何平均数价格为：
+> The geometric mean price of token1:
 > $$P_1 = \sqrt[n]{\frac{1}{x_1} \cdot \frac{1}{x_2} \cdot ... \cdot \frac{1}{x_n}} = \frac{1}{\sqrt[n]{x_1 \cdot x_2 \cdot ... \cdot x_n}} = \frac{1}{P_0}$$
 >
-> 因此，两种代币的几何平均数价格互为倒数，Uniswap v3合约中只需要保存一种代币的累计价格即可。
+> Thus, the geometric mean prices of two tokens are reciprocals of each other, and Uniswap v3's contract only needs to save the cumulative price of one token.
 
-由于自定义流动性供应的实现机制（参考第6节），在Uniswap v3实现几何平均数比较简单。此外，累计数能够用更少的比特位表示，因为它只记录$\log{P}$而不是$P$，$\log{P}$可以用相同精度表示更大范围的价格。最后，理论证明时间加权的几何平均数价格更能反映真实的平均价格。
+Implementing geometric mean prices in Uniswap v3 is relatively straightforward thanks to the custom liquidity supply mechanism (see section 6). Additionally, the accumulator can be represented with fewer bits because it only records $\log{P}$ instead of $P$, allowing a wider range of prices to be represented with the same precision. Lastly, theoretical proofs show that a time-weighted geometric mean price more accurately reflects the true average price.
 
-> 注：为了以可接受的精度表示所有可能的价格，Uniswap v2使用224位比特的定点数表示价格。Uniswap v3仅需使用24位比特的有符号整数表示$log_{1.0001}{P}$，同时可以识别一个基点即0.01%的价格变动。
+> Note: To represent all possible prices with acceptable precision, Uniswap v2 used a 224-bit fixed-point number for price representation. Uniswap v3 only needs a 24-bit signed integer to represent $\log_{1.0001}{P}$, which can detect a price change of one basis point, 0.01%.
 >
-> 如前文所述，市场价格本身是一种随机布朗运动，理论上使用几何平均数更能准确跟踪平均价格，因为算术平均数更容易受到极端值的影响而产生偏差。
+> As mentioned earlier, market prices themselves are a type of random Brownian motion. Theoretically, using a geometric mean is more accurate in tracking average prices because arithmetic means are more susceptible to distortion by extreme values.
 
-Uniswap v3记录当前tick序号的累计和（$\log_{1.0001}{P}$，即以1.0001为底的价格$P$对数，它可以识别1个基点即0.01%的价格变化），而不是记录累计价格$P$。任意时间点的累计数等价于该合约截止当前时间每秒对数价格（$\log_{1.0001}(P)$）之和：
+Uniswap v3 records the cumulative sum of the current tick number ($\log_{1.0001}{P}$, the logarithm of price $P$ with base 1.0001, which can detect a price change of one basis point, 0.01%) instead of the cumulative price $P$. The cumulative count at any moment equals the sum of the logarithmic prices ($\log_{1.0001}(P)$) per second up to that point:
 
 $$
 a_t = \sum^{t}_{i=1} \log_{1.0001}(P_i) \tag{5.1}
 $$
 
-> 注：为什么$log_{1.0001}P$能够识别的价格变化精度为0.01%（即1个基点）呢？
+> Note: Why can $\log_{1.0001}P$ detect a precision of price change as 0.01% (one basis point)?
 >
-> 因为Uniswap v3使用int24（24位有符号整数）表示tick，假设当前tick为$i$，对应的价格为$P_1$；下一个最近的tick为$i + 1$，对应的价格$P_2 = P_1 \cdot 1.0001$，其相对$P_1$的价格变化精度为：
+> Since Uniswap v3 uses int24 (24-bit signed integer) to represent ticks, suppose the current tick is $i$, corresponding to price $P_1$; the next closest tick is $i + 1$, with corresponding price $P_2 = P_1 \cdot 1.0001$, its relative change in price to $P_1$ is:
 >
 > $$\frac{P_2 - P_1}{P_1} = \frac{P_1 \cdot 1.0001 - P_1}{P_1} = 1.0001 - 1 = 0.0001 = 0.01\%$$
 
-任意时间段$t_1$到$t_2$的几何平均价格（时间加权平均价格）$(p_{t_1,t_2})$为：
+The geometric mean price (time-weighted average price) $(p_{t_1,t_2})$ for any period from $t_1$ to $t_2$ is:
 
 $$
 P_{t_1,t_2} = \left(\prod^{t_2}_{i=t_1} P_i \right)^{\frac{1}{t_2 - t_1}} \tag{5.2}
 $$
 
-> 注：这里我们回顾一下几何平均数的定义：
+> Note: Here, we revisit the definition of the geometric mean:
 >
-> 几何平均数 Geometric Mean：
+> Geometric Mean:
 > $$ G(x_1,...,x_n) = \sqrt[n]{x_1 ... x_n} $$
 >
-> 可以看出$P_{t_1,t_2}$即为$t_1$至$t_2$时间段的几何平均价格。
+> It's evident that $P_{t_1,t_2}$ is the geometric mean price for the period from $t_1$ to $t_2$.
 
-为了计算这个值，你可以分别查看$t_1$和$t_2$时刻的累计价格，将后者减去前者，并除以时间差（秒数），最后计算$1.0001^x$得出时间加权几何平均价格：
+To calculate this value, you can look at the cumulative price at moments $t_1$ and $t_2$, subtract the former from the latter, divide by the time difference (in seconds), and finally calculate $1.0001^x$ to get the time-weighted geometric mean price:
 
 $$
 \log_{1.0001}(P_{t_1,t_2}) = \frac{\sum^{t_2}_{i=t_1} \log_{1.0001}(P_i)}{t_2 - t_1} \tag{5.3}
@@ -265,76 +267,75 @@ $$
 P_{t_1,t_2} = 1.0001^{\frac{a_{t_2} - a_{t_1}}{t_2 - t_1}} \tag{5.5}
 $$
 
-### 5.3 Liquidity Oracle 流动性预言机
+### 5.3 Liquidity Oracle
 
-除了每秒加权的累计数$\log_{1.0001}price$，Uniswap v3在每个区块的开头还记录了一个每秒加权的流动性倒数$\frac{1}{L}$（当前区间的虚拟流动性倒数）累计数：secondsPerLiquidityCumulative($s_{pl}$)。
+In addition to the weighted cumulative count of $\log_{1.0001}price$ per second, Uniswap v3 also records a weighted cumulative count of liquidity's reciprocal ($\frac{1}{L}$, the reciprocal of the virtual liquidity in the current range) per second: secondsPerLiquidityCumulative($s_{pl}$).
 
-这个计数可以被外部流动性挖矿合约使用，以便公平地分配奖励。如果一个外部合约希望以每秒$R$个代币的平均速率分配给合约中所有活跃的流动性，假设一个头寸从$t_0$到$t_1$的活跃流动性为$L$，则其在该时间段应该获得的奖励为：$R \cdot L \cdot (s_{pl}(t_1) - s_{pl}(t_0))$。
+This count can be used by external liquidity mining contracts to distribute rewards fairly. If an external contract wishes to distribute rewards at an average rate of $R$ tokens per second across all active liquidity in the contract, assuming a position's active liquidity from $t_0$ to $t_1$ is $L$, the reward for that period should be: $R \cdot L \cdot (s_{pl}(t_1) - s_{pl}(t_0))$.
 
-> 注：$s_{pl}(t)$表示：截止到$t$时刻，（池子）平均每份流动性持续的总时长（秒数）。
+> Note: $s_{pl}(t)$ represents the total duration (in seconds) each unit of liquidity has persisted up to moment $t$.
 >
-> $(s_{pl}(t_1) - s_{pl}(t_0))$表示：$t_0$至$t_1$这个时间段，（池子）平均每份流动性持续的总时长（秒数）。
+> $(s_{pl}(t_1) - s_{pl}(t_0))$ represents the total duration (in seconds) each unit of liquidity has persisted during the period from $t_0$ to $t_1$.
 >
-> $R \cdot (s_{pl}(t_1) - s_{pl}(t_0))$表示：在$t_0$至$t_1$时间段，平均每份流动性获得的奖励。
+> $R \cdot (s_{pl}(t_1) - s_{pl}(t_0))$ represents the reward for each unit of liquidity during the period from $t_0$ to $t_1$.
 >
-> 由于该头寸的活跃流动性为$L$，因此，其在$t_0$至$t_1$时间段获得的奖励为：
+> Since the active liquidity of that position is $L$, the reward for the period from $t_0$ to $t_1$ is:
 >
 > $$R \cdot L \cdot (s_{pl}(t_1) - s_{pl}(t_0))$$
 
-为了扩展这个公式，实现仅当流动性在头寸区间时才能获得奖励，Uniswap v3在每次tick被穿越时会保存一个基于该值计算后的检查点，我们将在第6.3节介绍。
+To extend this formula to only reward liquidity within a position's range, Uniswap v3 saves a checkpoint based on this value each time a tick is crossed, as described in section 6.3.
 
-链上合约可以使用该累计数，以使他们的预言机更健壮（比如用于评估哪个手续费等级的池子更适合被作为预言机数据源）。
+On-chain contracts can use this cumulative count to make their oracles more robust (e.g., to evaluate which fee tier pool is better suited as an oracle data source).
 
-## 6 Implementing Concentrated Liquidity 实现集中流动性
+## 6 Implementing Concentrated Liquidity
 
-本文剩余部分将介绍集中流动性供应的实现机制，同时简要介绍其在合约是如何实现的。
+The remaining sections of this paper will discuss the implementation mechanism of concentrated liquidity supply and its implementation in contracts.
 
-### 6.1 Ticks and Ranges 点和区间
+### 6.1 Ticks and Ranges
 
-为了实现自定义流动性供应，可能的价格空间被离散的点（tick）划分。流动性提供者可以在任意两个（无需是临近的）tick定义的区间提供流动性。
+To implement custom liquidity supply, the possible price space is discretized into ticks. Liquidity providers can supply liquidity between any two ticks (not necessarily adjacent).
 
-每个区间可以被一对（有符号整数）tick序号（*tick indices*）定义：一个低点（$i_l$）和一个高点（$i_u$）。tick表示能够被合约虚拟流动性修改的价格。我们将假设价格总是以token1表示的token0的形式。token0和token1的赋值是任意的，不影响合约的逻辑（除了可能的舍入误差）。
+Each range can be defined by a pair of tick indices (signed integers): a lower tick ($i_l$) and an upper tick ($i_u$). Ticks represent prices at which the contract's virtual liquidity can be modified. We assume prices are always expressed as the price of token0 in terms of token1. The assignment of token0 and token1 is arbitrary and does not affect the contract's logic (except for possible rounding errors).
 
-从概念上，每当价格$p$等于1.0001的整数次方时就存在1个tick（点）。我们使用整数$i$表示tick（点），使得该点的价格可以表示为：
+Conceptually, a tick exists whenever the price $p$ equals an integer power of 1.0001. We use integer $i$ to represent a tick, such that the tick's price can be expressed as:
 
 $$
 p(i) = 1.0001^i \tag{6.1}
 $$
 
-根据定义，两个相邻的tick之间的价格移动精度为0.01%（1个基点）。
+By definition, the precision of price movement between two adjacent ticks is 0.01% (one basis point).
 
-> 注：见5.2节的公式推导。
+> Note: Refer to the derivation in section 5.2.
 
-由于6.2.1节中描述的技术原因，交易对池子实际上使用开根号价格$\sqrt{price}$来跟踪tick（点），该值等于$\sqrt{1.0001}$的整数次方。可将上述等式转换为等价的开根号价格形式：
+Due to technical reasons described in section 6.2.1, the pool contract actually tracks ticks using the square root of the price, $\sqrt{price}$, equal to an integer power of $\sqrt{1.0001}$. The equation above can be converted to an equivalent square root price form:
 
 $$
 \sqrt{p}(i) = \sqrt{1.0001}^i = 1.0001^{\frac{i}{2}} \tag{6.2}
 $$
 
-举个例子，$\sqrt{p}(0)$（tick 0的开根号价格）等于1，$\sqrt{p}(0)$等于$\sqrt{1.0001} \approx 1.00005$ ，$\sqrt{p}(-1)$等于$\frac{1}{\sqrt{1.0001}} \approx 0.99995$。
+For example, $\sqrt{p}(0)$ (the square root price of tick 0) equals 1, $\sqrt{p}(1)$ equals $\sqrt{1.0001} \approx 1.00005$, and $\sqrt{p}(-1)$ equals $\frac{1}{\sqrt{1.0001}} \approx 0.99995$.
 
-当流动性加入一个区间，如果其中一个或全部tick都没有被已存在的头寸用作边界点，该tick将被初始化。
+When liquidity is added to a range, if one or both ticks are not already used as boundaries by existing positions, that tick is initialized.
 
-不是每个tick都能被初始化。交易对池子在初始化时有一个参数tickSpacing($t_s$)；只有那些序号能够被tickSpacing整除的tick才能被初始化。比如，如果tickSpacing是2，则只有偶数tick (...-4, -2, 0, 2, 4...)能被初始化。小的tickSpacing允许更严格和更精确的区间，但可能导致每次交易消耗更多gas（因为每次交易穿越一个初始化的tick时，都需要给操作方带来gas消耗）。
+Not every tick can be initialized. Each pool pair is initialized with a parameter tickSpacing ($t_s$); only ticks whose indices are divisible by tickSpacing can be initialized. For example, if tickSpacing is 2, only even ticks (...-4, -2, 0, 2, 4...) can be initialized. Smaller tickSpacing allows for tighter and more precise ranges but may result in higher gas consumption per transaction (because crossing an initialized tick incurs a gas cost for the transactor).
 
-任何时候价格穿越一个初始化的tick时，虚拟流动性将被加入或者移除。穿越一个初始化的tick所带来的gas消耗是固定的，与在该tick添加或移除虚拟流动性的头寸数量无关。
+Whenever the price crosses an initialized tick, virtual liquidity is added or removed. The gas cost incurred by crossing an initialized tick is fixed and independent of the number of positions adding or removing virtual liquidity at that tick.
 
-为了确保当价格穿越tick时，能够添加和移除正确数量的流动性；同时也为了确保当头寸在价格区间内时，能够正确获取对应比例的手续费收入，交易对池子需要一些记账工作。交易对合约使用存储变量来分别记录全局（每个池子）级别、每个tick级别和每个头寸级别的状态。
+To ensure the correct amount of liquidity is added and removed when the price crosses a tick and to ensure position holders receive their proportionate share of fees while within a price range, the pool contract needs to perform some accounting. The contract uses storage variables to record global (per pool), tick-level, and position-level states.
 
-### 6.2 Global State 全局状态
+### 6.2 Global State
 
-合约的全局状态包括7个与交换和流动性供应相关的存储变量。（它也有其他一些存储变量用于预言机，如第5节描述。）
+The contract's global state includes seven storage variables related to swapping and liquidity supply. (It also has other variables for the oracle, as described in section 5.)
 
-![](https://i.imgur.com/GXC3N2R.jpg)
+![](./assets/v3-4.jpg)
 
+#### 6.2.1 Price and Liquidity
 
-#### 6.2.1 Price and Liquidity 价格和流动性
+In Uniswap v2, each pool contract recorded the current token balances of the pool: $x$ and $y$. In Uniswap v3, the contract can be thought of as having virtual balances of $x$ and $y$ used to describe the contract's behavior (within two adjacent ticks) as if it still follows the constant function.
 
-在Uniswap v2，每个池子合约记录池子当前的代币余额：$x$和$y$。而在Uniswap v3，合约可以被当作拥有虚拟余额，$x$和$y$值用于描述合约行为（在两个相邻的tick之间），就好像它仍遵循常值函数。
+> Note: In reality, v3 operates according to the constant function only within a specific price range.
 
-> 注：Uniswap v3实际上只在一段价格区间内遵循常值函数。
-
-交易对合约记录两个不同值：流动性liquidity（$L$）和开根号价格sqrtPrice（$\sqrt{P}$），而不是虚拟余额。这两个值可根据虚拟余额计算如下：
+The contract records two different values: liquidity ($L$) and the square root of the price (sqrtPrice), $\sqrt{P}$, instead of virtual balances. These two values can be calculated from the virtual balances as follows:
 
 $$
 L = \sqrt{xy} \tag{6.3}
@@ -344,7 +345,7 @@ $$
 \sqrt{P} = \sqrt{\frac{y}{x}} \tag{6.4}
 $$
 
-反过来，两种代币的虚拟余额也可以使用这两个值计算得出：
+Conversely, the virtual balances of the two tokens can also be calculated using these two values:
 
 $$
 x = \frac{L}{\sqrt{P}} \tag{6.5}
@@ -354,71 +355,71 @@ $$
 y = L \cdot \sqrt{P} \tag{6.6}
 $$
 
-使用$L$和$\sqrt{P}$（而不是$x$和$y$）计算比较方便，因为一个时刻只有其中一个值会变化。当在一个tick内交易时，只有价格（即$\sqrt{P}$）发生变化；当穿越一个tick或者铸造/销毁流动性时，只有流动性（即$L$）发生变化。这避免了在记录虚拟余额时可能遇到的舍入误差问题。
+Using $L$ and $\sqrt{P}$ for calculation is convenient because at any given moment, only one of these values changes. When trading within a tick, only the price (i.e., $\sqrt{P}$) changes; when crossing a tick or minting/burning liquidity, only the liquidity ($L$) changes. This avoids the rounding error issues that might occur when recording virtual balances.
 
-你可能注意到（基于代币虚拟余额的）流动性公式（即公式6.3）与Uniswap v2用于初始化流动性代币数量的公式类似（当还没有任何手续费收入时）。流动性可以被看作虚拟流动性代币。
+You might notice that the liquidity formula (based on the virtual balances of the tokens) is similar to the formula Uniswap v2 used for initializing the quantity of liquidity tokens (when no fee income has yet been accumulated). Liquidity can be considered as virtual liquidity tokens.
 
-同样，流动性也可以被看作token1的（无论是真实还是虚拟的）数量变化与价格$\sqrt{P}$变化的比例：
+Similarly, liquidity can also be regarded as the proportion of the change in the number of token1 ($\Delta{Y}$) to the change in price $\sqrt{P}$:
 
 $$
 L = \frac{\Delta{Y}}{\Delta{\sqrt{P}}} \tag{6.7}
 $$
 
-> 注：根据公式6.6，假设$t_0$和$t_1$时刻，对应的$y_0$和$y_1$分别为：
+> Note: Based on equation 6.6, suppose at moments $t_0$ and $t_1$, the corresponding $y_0$ and $y_1$ are:
 >
 > $y_0 = L \cdot \sqrt{P_0}$
 >
 > $y_1 = L \cdot \sqrt{P_1}$
 >
-> 因此：
+> Thus:
 >
 > $y_1 - y_0 = L \cdot (\sqrt{P_1} - \sqrt{P_0})$
 >
-> 转换后即可得出公式6.7：
+> We can get the equation 6.7:
 >
 > $$
 > L = \frac{y_1 - y_0}{\sqrt{P_1} - \sqrt{P_0}} = \frac{\Delta{Y}}{\Delta{\sqrt{P}}}
 > $$
 
-我们记录$\sqrt{P}$而不是$P$正式为了利用上述公式，如6.2.3节描述，这样也可以避免当计算交易时进行任何开根号运算。
+We record $\sqrt{P}$ instead of $P$ in order to utilize the formula mentioned above, as described in Section 6.2.3, thereby avoiding any square root calculations during trading.
 
-全局状态记录当前tick序号为$tick(i_c)$，一个表示当前tick的有符号整数（更准确地说，是低于当前价格的最接近的tick）。这是一种优化策略（也是一种避免对数精度问题的方法），因为在任意时刻，你需要能够基于当前的开根号价格$sqrtPrice$计算出对应的tick。在任意时间点，以下等式总是成立：
+The global state records the current tick index as $tick(i_c)$, a signed integer representing the closest tick below the current price. This is an optimization strategy (and a way to avoid logarithmic precision issues) because at any moment, you need to be able to calculate the corresponding tick based on the current square root price $\sqrt{P}$. At any point, the following equation always holds:
 
 $$
 i_c = \lfloor \log_{\sqrt{1.0001}} \sqrt{P} \rfloor \tag{6.8}
 $$
 
-> 注：根据公式6.2:
+> Note: According to equation 6.2:
 >
 > $\sqrt{p}(i) = \sqrt{1.0001}^i$，
 >
-> 因此：
+> Thus:
 >
 > $i = \log_{\sqrt{1.0001}} \sqrt{P}$
 >
-> 而i是整数，所以还需要（向下）取整。
+> Since $i$ is an integer, it needs to be rounded down.
 
-#### 6.2.2 Fees 手续费
+#### 6.2.2 Fees
 
-每个交易对池子初始化时会设置一个不可修改的手续费（$\gamma$），表示交易者需要支付的手续费，以百分之一基点为一个单位（0.0001%）。
+Each trading pair pool is initialized with an immutable transaction fee ($\gamma$), representing the fee traders need to pay, in hundredths of a basis point (0.0001%).
 
-> 注：默认的手续费值为500，3000，10000，分别表示的手续费为：500 x 0.0001\% = 0.05\%, 3000 x 0.0001\% = 0.30\%, 1000 x 0.0001\% = 1\%。
+> Note: The default fee values are 500, 3000, and 10000, representing fees of 500 x 0.0001% = 0.05%, 3000 x 0.0001% = 0.30%, and 1000 x 0.0001% = 1%, respectively.
 
-另一个变量为协议手续费$\phi$，初始时设置为0，但是可以通过UNI治理修改。该数字表示交易者支付手续费的部分比例将分给协议，而不是流动性提供者。$\phi$只允许被设置为以下几个合法值：0, 1/4, 1/5, 1/6, 1/7, 1/8, 1/9 或者 1/10。
+Another variable, the protocol fee ($\phi$), initially set to 0, can be modified by UNI governance. This number represents the portion of the transaction fees paid by traders that goes to the protocol rather than liquidity providers. $\phi$ is only allowed to be set to specific legal values: 0, 1/4, 1/5, 1/6, 1/7, 1/8, 1/9, or 1/10.
 
-> 注：协议手续费开关无法在创建交易对的时候自动打开，只能由UNI治理针对具体池子单独执行手续费设置，并且可以针对不同池子分别设置协议手续费。
+> Note: The protocol fee switch cannot be automatically turned on when creating the pair; it must be executed by UNI governance for specific pools and can be set differently for different pools.
 
-全局状态还记录两个值：feeGrowthGlobal0 ($f_{g,0}$)和feeGrowthGlobal1 ($f_{g,1}$)。他们表示该合约到现在为止，每一份虚拟流动性（$L$）获取的手续费。你可以把他们理解为当合约第一次初始化时，每一份添加的非边界的流动性所获取的所有手续费。使用无符号定点数（128x128格式）表示。注意，在Uniswap v3，手续费是以原生代币形式收集，而不是流动性代币的形式（请参考3.2.1节）。
+The global state also records two values: feeGrowthGlobal0 ($f_{g,0}$) and feeGrowthGlobal1 ($f_{g,1}$). They represent the accumulated fees per unit of virtual liquidity ($L$) earned by the contract up to now. Think of them as the total fees that would have been earned by each unit of non-boundary liquidity added when the contract was first initialized. They are represented as unsigned fixed-point numbers (128x128 format). Note that in Uniswap v3, fees are collected in the form of native tokens, not liquidity tokens (refer to section 3.2.1).
 
-最后，全局状态记录以每种代币表示的累计未被领取的协议手续费：protocolFees0 ($f_{p,0}$)和protocolFees1 ($f_{p,1}$)。该变量以无符号uint128类型表示。累计协议手续费可以通过UNI治理领取，通过调用collectProtocol方法。
+Lastly, the global state records cumulative unclaimed protocol fees for each token: protocolFees0 ($f_{p,0}$) and protocolFees1 ($f_{p,1}$), represented as unsigned uint128 types. Cumulative protocol fees can be claimed by UNI governance through the collectProtocol method.
 
-#### 6.2.3 Swapping Within a Single Tick 在一个Tick内交易
+#### 6.2.3 Swapping Within a Single Tick
 
-对于那些无法使价格变化超过一个tick（点）的小额交易，该合约像一个 $x \cdot y = k$ 池子一样工作。
+For small trades that do not cause the price to cross a tick, the contract operates like an $x \cdot y = k$ pool.
 
-假设 $\gamma$ 是交易手续费，比如0.003，$y_{in}$ 是传入的token1代币数量。
+Suppose $\gamma$ is the transaction fee, such as 0.003, and $y_{in}$ is the amount of token1 being traded.
 
-首先，feeGrowthGlobal1和protocolFees1将增加：
+First, feeGrowthGlobal1 and protocolFees1 increase by:
 
 $$
 \Delta{f_{g,1}} = y_{in} \cdot \gamma \cdot (1 - \phi) \tag{6.9}
@@ -428,31 +429,31 @@ $$
 \Delta{f_{p,1}} = y_{in} \cdot \gamma \cdot \phi \tag{6.10}
 $$
 
-> 注：$\phi$是协议手续费占手续费的比例，因此协议手续费比例为：$\gamma \cdot \phi$，协议手续费收入为公式6.10。
+> Note: $\phi$ is the protocol fee as a percentage of the transaction fee, so the protocol fee proportion is: $\gamma \cdot \phi$, with the protocol fee income given by equation 6.10.
 >
-> 剩余的手续费分给流动性提供者，即扣除协议手续费后的交易手续费，其比例为：$\gamma \cdot (1 - \phi)$，交易手续费收入为公式6.9。
+> The remaining fees are distributed to liquidity providers, which is the transaction fee minus the protocol fee, with its proportion being: $\gamma \cdot (1 - \phi)$, and the transaction fee income given by equation 6.9.
 
-$\Delta y$是$y$的增加量（当手续费扣除后）。
+$\Delta y$ is the increase in $y$ (after deducting the fee).
 
 $$
 \Delta{y} = y_{in} \cdot (1 - \gamma) \tag{6.11}
 $$
 
-如果你用经过计算的虚拟余额（$x$和$y$）为token0和token1的数量，以下公式可以计算出交易后的token0的代币数量：
+Using the virtual balances ($x$ and $y$) calculated for token0 and token1, the token0 amount after the trade can be calculated with the following formula:
 
 $$
 x_{end} = \frac{x \cdot y}{y + \Delta{y}} \tag{6.12}
 $$
 
-> 注：因为在1个tick内，交易符合k常值函数，即：
+> Note: Because within a tick, the trade conforms to the $k$ constant function, i.e.,
 >
 > $$x_{end} \cdot y_{end} = x \cdot y$$
 >
-> 因此可推出：
+> Thus, it can be deduced:
 >
 > $$x_{end} = \frac{x \cdot y}{y_{end}} = \frac{x \cdot y}{y + \Delta{y}}$$
 
-但是请注意，在v3，合约使用流动性（$L$）和开根号价格（$\sqrt{P}$）代替$x$和$y$。我们可以使用这两个值计算$x$和$y$，然后计算交易的成交价格。但是，对于给定的$L$，我们可以推导出简洁的等式描述$\Delta{\sqrt{P}}$和$\Delta{y}$的关系（可根据公式6.7推出）：
+However, please note, in v3, the contract uses liquidity ($L$) and square root price ($\sqrt{P}$) instead of $x$ and $y$. We could use these two values to calculate $x$ and $y$ and then compute the transaction price. However, for a given $L$, we can derive a concise equation that describes the relationship between $\Delta{\sqrt{P}}$ and $\Delta{y}$ (which can be derived from equation 6.7):
 
 $$
 \Delta{\sqrt{P}} = \frac{\Delta{y}}{L} \tag{6.13}
@@ -462,7 +463,7 @@ $$
 \Delta{y} = \Delta{\sqrt{P}} \cdot L \tag{6.14}
 $$
 
-同时可以推导出$\Delta{\frac{1}{\sqrt{P}}}$和$\Delta{x}$的关系：
+Similarly, we can derive the relationship between $\Delta{\frac{1}{\sqrt{P}}}$ and $\Delta{x}$:
 
 $$
 \Delta{\frac{1}{\sqrt{P}}} = \frac{\Delta{x}}{L} \tag{6.15}
@@ -472,53 +473,51 @@ $$
 \Delta{x} = \Delta{\frac{1}{\sqrt{P}}} \cdot L \tag{6.16}
 $$
 
-> 注：根据公式6.5，假设$t_0$和$t_1$时刻，对应的$x_0$和$x_1$分别为：
+> Note: According to equation 6.5, suppose at moments $t_0$ and $t_1$, the corresponding $x_0$ and $x_1$ are:
 >
 > $x_0 = \frac{L}{\sqrt{P_0}}$
 >
 > $x_1 = \frac{L}{\sqrt{P_1}}$
 >
-> 因此：
+> Thus:
 >
 > $x_1 - x_0 = L \cdot (\frac{1}{\sqrt{P_1}} - \frac{1}{\sqrt{P_0}})$
 >
-> 转换后即可得公式6.16：
+> Rearranging gives equation 6.16:
 >
 > $$
 > \Delta{x} = L \cdot \Delta{\frac{1}{\sqrt{P}}}
 > $$
 
-当使用一种代币交换另一种时，交易对合约可以先根据公式6.13或6.15计算新的开根号价格$\sqrt{P}$，接着根据公式6.14或6.16计算需要转出的token0和token1代币数量。
+When exchanging one token for another, the trading pair contract can first calculate the new square root price $\sqrt{P}$ using Formula 6.13 or 6.15, and then calculate the amount of token0 and token1 tokens to be transferred based on Formula 6.14 or 6.16.
 
-对于任意交易，只要交易后的开根号价格$\sqrt{P}$没有进入下一个初始化的tick所在的价格，上述公式都可以正常工作。如果计算后的$\Delta{\sqrt{P}}$将使得$\sqrt{P}$进入下一个初始化的tick，合约将完成当前tick（仅占一部分交易），再继续进入下一个tick完成剩余的交易，参考6.3.1节。
+For any trade, as long as the square root price $\sqrt{P}$ after the trade does not enter the price of the next initialized tick, the formulas above work well. If the calculated $\Delta{\sqrt{P}}$ will cause $\sqrt{P}$ to enter the next initialized tick, the contract will complete the current tick (only a portion of the trade) and then continue into the next tick to complete the remainder of the trade, as described in section 6.3.1.
 
-![](https://i.imgur.com/4oIYwDE.jpg)
+![](./assets/v3-7.jpg)
 
+#### 6.2.4 Initialized Tick Bitmap
 
-#### 6.2.4 Initialized Tick Bitmap 初始化Tick的位图
+Ticks that are not used as boundaries for liquidity positions (i.e., not initialized) can be skipped during trades.
 
-如果一个tick没有被用作流动性区间的边界点（即如果该tick没有被初始化），那么在交易过程中可以跳过这个tick。
+To efficiently find the next initialized tick, the contract uses a bitmap, tickBitmap, to record initialized ticks. If a tick is initialized, the bit corresponding to that tick index in the bitmap is set to 1; otherwise, it is 0.
 
-为了更高效寻找下一个已初始化的tick，合约使用一个位图tickBitmap记录已初始化的tick。如果tick已被初始化，位图中对应于该tick序号的位置设置为1，否则为0。
+When a new position uses a tick as a boundary and it is not used by any other liquidity, it is initialized, and the corresponding bit in the bitmap is set to 1. When all liquidity associated with that tick is removed, the initialized tick reverts to uninitialized, and the corresponding bit in the bitmap is set to 0.
 
-当tick被一个新头寸用作边界点，并且该tick没有被任何其他流动性使用，那么它将被初始化，位图中对应的比特位置为1。当该点关联的流动性都被移除时，已初始化的tick将重新变成未初始化，位图中对应的比特位置为0。
+### 6.3 Tick-Indexed State
 
-### 6.3 Tick-Indexed State Tick索引状态
+To keep track of the total liquidity to be added and removed when a tick is fully crossed and the fees earned while above and below that tick, the contract needs to store additional information for each tick.
 
-为了记录每个tick被穿越时需要添加和移除的净流动性，以及在大于和小于该tick时所挣取的手续费，合约需要额外保存每个tick相关的信息。
+The contract maintains a mapping from each tick index to the following seven variables:
 
-合约保存一个映射表，每个tick序号对应以下7个变量：
+![](./assets/v3-5.jpg)
 
-![](https://i.imgur.com/nackvVF.jpg)
+Each tick records $\Delta{L}$, the total amount of liquidity to be added and removed when the tick is fully crossed. Ticks only need to record one signed integer: the liquidity to be injected into the tick when it moves from left to right (and negatively, when moving from right to left, indicating the removal of liquidity). This value does not need to be updated every time the price crosses a tick (only when a position using the tick as a boundary updates).
 
+We want to be able to uninitialize a tick when there is no longer any liquidity referencing that tick. In addition to the net liquidity change $\Delta{L}$, the total liquidity associated with that tick, liquidityGross, is also recorded. This ensures that even if the net liquidity is zero, we know at least one position is associated with the tick, deciding whether to update the tick bitmap.
 
-每个tick记录$\Delta{L}$，表示当该tick被完全穿越时需要加入和移除的总流动性数量。Tick只需要记录一个有符号整数：当交易促使tick值从左到右移动时，需要往该tick注入的流动性（反之，当tick值从右到左移动时，该值为负，表示移除流动性）。该值无需在每次价格穿越tick时更新（只需在使用该tick作为边界点的头寸更新时才更新）。
+feeGrowthOutside{0, 1} tracks the total fees accumulated outside a given range. Since the formulas for collecting fees for token0 and token1 are the same, we will omit the (token0 and token1) subscript in the remaining formulas in this section.
 
-当tick没有流动性关联时，我们希望对其取消初始化。因为$\Delta{L}$是一个净值，还需要记录该tick关联的总流动性：liquidityGross。该值确保即使净流动性为0，我们仍能知道该tick是否被至少一个头寸关联，以此决定是否更新tick位图。
-
-feeGrowthOutside{0, 1}用于记录一个给定区间总共累计多少手续费。因为token0和token1收集手续费的公式相同，我们在本节剩余的公式中将忽略（token0和token1）下标。
-
-根据当前价格是否在区间内，你可以使用一个公式计算每份流动性在tick $i$之上（$f_a$）和之下（$f_b$）获取的手续费（根据当前tick序号$i_c$是否大于等于$i$）：
+Depending on whether the current price is inside the range, you can use one formula to calculate the fees accumulated above ($f_a$) and below ($f_b$) tick $i$ (based on whether the current tick index $i_c$ is greater than or equal to $i$):
 
 $$
 f_a(i) = \begin{cases} f_g - f_o(i) & \text{$i_c \geq i$}\\ f_o(i) & \text{$i_c < i$} \end{cases} \tag{6.17}
@@ -528,52 +527,51 @@ $$
 f_b(i) = \begin{cases} f_o(i) & \text{$i_c \geq i$}\\ f_g - f_o(i) & \text{$i_c < i$}\end{cases} \tag{6.18}
 $$
 
-> 注：
-> 首先回顾一下每个变量的含义，$f_g$是（每个流动性）全局累计手续费；$f_o(i)$是在指定tick $i$之外（每个流动性）累计的手续费，需特别注意，该值随着当前tick $i_c$变化后会改变表示的方向。
+> Note: First, let's recall what each variable means. $f_g$ is the global accumulated fees per liquidity; $f_o(i)$ is the accumulated fees outside a specified tick $i$, and it's important to note that this value changes its meaning of direction with the current tick $i_c$.
 >
-> 当 $i_c < i$ 时，
+> When $i_c < i$,
 >
 > $$
 > \underbrace{\overbrace{i_c, ..., i - 1}^{f_b(i) = f_g - f_o(i)}, i, \overbrace{i + 1, ...}^{f_a(i)=f_o(i)}}_{f_g}
 > $$
 >
-> 当 $i_c \geq i$ 时，
+> When $i_c \geq i$,
 >
 > $$
 > \underbrace{\overbrace{..., i - 1}^{f_b(i) = f_o(i)}, i, \overbrace{i + 1, ..., i_c}^{f_a(i)=f_g - f_o(i)}}_{f_g}
 > $$
 
-我们可以使用上述函数计算任意两个tick（低点tick $i_l$和高点tick $i_u$）区间内，每个流动性累计的全部手续费$f_r$：
+Using the above functions, we can calculate the total fees accumulated for every liquidity unit between two ticks (the lower tick $i_l$ and the upper tick $i_u$) as $f_r$:
 
 $$
 f_r = f_g - f_b(i_l) - f_a(i_u) \tag{6.19}
 $$
 
-> 注：根据上述推论，我们可以画出几个手续费的逻辑关系如下：
+> Note: According to the above derivation, we can diagram several fee relationships as follows:
 >
 > $$
 > \underbrace{\overbrace{..., i_l - 1}^{f_b(i_l)}, \overbrace{i_l, i_l + 1, ..., i_u - 1, i_u}^{f_r}, \overbrace{i_u + 1, ...}^{f_a(i_u)}}_{f_g}
 > $$
 
-$f_o$需要在每次tick穿越时被更新。特别地，当tick被反方向穿越时，其对应的$f_o$（token0和token1）需要按照如下方式更新：
+$f_o$ needs to be updated every time a tick is crossed. Specifically, when a tick is crossed in the opposite direction, its corresponding $f_o$ (for both token0 and token1) needs to be updated as follows:
 
 $$
 f_o(i) := f_g - f_o(i) \tag{6.20}
 $$
 
-只有被至少一个头寸作为边界端点的tick才需要$f_o$。因此，出于效率考虑，$f_o$不会被初始化（当tick被穿越时无需被更新），只有当使用该tick作为边界点创建头寸时才会初始化。当tick $i$的$f_o$初始化时，它的初始值被设置成当前所有的手续费都由小于该tick时收取：
+Only ticks used as boundary points by at least one position need $f_o$. Therefore, for efficiency, $f_o$ is not initialized (does not need to be updated when a tick is crossed) until a position using the tick as a boundary is created. When $f_o$ of tick $i$ is initialized, its initial value is set to assume all fees were collected while the tick was below the current tick:
 
 $$
 f_o := \begin{cases} f_g & \text{$i_c \geq i$}\\ 0 & \text{$i_c < i$} \end{cases} \tag{6.21}
 $$
 
-注意，因为不同tick的$f_0$值可以在不同时刻初始化，因此比较他们的$f_0$是无意义的，实际上无法保证$f_0$值不变。但这不会导致每个头寸的统计问题，如下文描述，所有的头寸只需要知道从上一次交互后，区间内的$g$值增长即可。
+Note that since $f_o$ for different ticks can be initialized at different times, comparing their $f_o$ values is meaningless, and it is not guaranteed that $f_o$ values remain constant. But this does not create a problem for each position, as described below, since all positions need to know how much $g$ has grown inside their range since the last interaction.
 
-最后，合约同时为每个tick保存secondsOutside ($s_o$)，secondsPerLiquidityOutside和tickCumulativeOutside。这些变量不会被合约内部使用，而是帮助外部合约（如基于v3的流动性挖矿合约）更方便地获取合约信息。
+Lastly, the contract also saves for each tick secondsOutside ($s_o$), secondsPerLiquidityOutside, and tickCumulativeOutside. These variables are not used internally by the contract but help external contracts (such as those implementing liquidity mining based on v3) more easily obtain contract information.
 
-这三个变量于上文提到的手续费增长变量类似。但是不同于feeGrowthOutside{0, 1}跟踪feeGrowthGlobal{0, 1}，secondsOutside跟踪seconds（也就是当前时间戳），secondsPerLiquidityOutside跟踪5.3节中描述的${1}/{L}$累计数（secondsPerLiquidityCumulative）；tickCumulativeOutside跟踪第5.2节中描述的$\log_{1.0001}P$累计数。
+These three variables are similar to the fee growth variables mentioned above. However, unlike feeGrowthOutside{0, 1} tracking feeGrowthGlobal{0, 1}, secondsOutside tracks the current timestamp, secondsPerLiquidityOutside tracks the cumulative count of ${1}/{L}$ described in section 5.3 (secondsPerLiquidityCumulative), and tickCumulativeOutside tracks the cumulative count of $\log_{1.0001}P$ described in section 5.2.
 
-比如，对于一个给定的tick，根据当前价格是否在区间内，$s_a$与$s_b$分别为大于与小于tick $i$时持续的时长（秒数），$s_r$为区间内持续的秒数，其计算方式分别为：
+For example, for a given tick, depending on whether the current price is inside the range, $s_a$ and $s_b$ are the durations (in seconds) spent above and below tick $i$, respectively, and $s_r$ is the duration within the range, calculated as follows:
 
 $$
 t_a(i) = \begin{cases} t - t_o(i) & \text{$i_c \geq i$}\\ t_o(i) & \text{$i_c < i$} \end{cases} \tag{6.22}
@@ -587,21 +585,21 @@ $$
 t_r(i_l, i_u) = t - t_b(i_l) - t_a(i_u) \tag{6.24}
 $$
 
-在$t_1$到$t_2$时间段内，头寸在价格区间内的持续时间可以通过记录$t_1$和$t_2$时间点的$s_r(i_l, i_u)$值，并将后者减去前者得到。
+The duration a position is within a price range from $t_1$ to $t_2$ can be determined by recording the $s_r(i_l, i_u)$ value at moments $t_1$ and $t_2$ and subtracting the former from the latter.
 
-和$f_o$类似，对于不是头寸边界点的tick无需记录$s_o$。因此，只有使用该tick作为边界点的头寸创建时，才需要初始化$s_o$。为了方便，初始的默认值为截止到当前时间的秒数，并都发生在小于该tick的时候：
+Like $f_o$, $s_o$ for ticks not used as boundary points is not recorded. Therefore, it is only initialized when a position using the tick as a boundary is created. For convenience, the initial default value is the number of seconds up to the current moment, assuming all durations occurred while the tick was below the current one:
 
 $$
 t_o(i) := \begin{cases} t & \text{$i_c \geq i$}\\ 0 & \text{$i_c < i$} \end{cases} \tag{6.25}
 $$
 
-与$f_o$值类似，比较不同tick的$t_o$值也是无意义的。仅当计算一个时间段（起始时间需在两个tick的$t_0$初始化之后）的指定价格区间的流动性持续时间时，$t_0$才是有意义的。
+Similar to $f_o$, comparing $t_o$ values for different ticks is meaningless. $t_o$ is only meaningful when calculating the duration a specific price range's liquidity was active during a period (the start time must be after both ticks' $t_0$ initialization).
 
-#### 6.3.1 Crossing a Tick 穿越一个Tick
+#### 6.3.1 Crossing a Tick
 
-如6.2.3节描述，当在初始化的tick之间交易时，Uniswap v3可以像$k$常值函数一样工作。但是，当交易穿越一个已初始化的tick时，合约需要添加或移除流动性，以确保没有流动性提供者会破产。这意味着$\Delta{L}$是从tick中提取，并应用到全局$L$中。
+As described in section 6.2.3, when trading between initialized ticks, Uniswap v3 can operate like a $k$ constant function pool. However, when a trade crosses an initialized tick, the contract needs to add or remove liquidity to ensure no liquidity provider goes bankrupt. This means that $\Delta{L}$ is drawn from the tick and applied to the global $L$.
 
-为了记录在价格区间内时，该tick作为边界点的手续费收入（和持续时间），合约需要更新tick的状态。feeGrowthOutside{0, 1}和secondsOutside被更新到反映当前值，当与该tick关联的交易方向改变时，按照下述公式更新：
+To record the fees accumulated inside the range while the tick serves as a boundary point during price movement (and the duration), the contract needs to update the tick's state. feeGrowthOutside{0, 1} and secondsOutside are updated to reflect current values when the direction of trade associated with the tick changes, updated as follows:
 
 $$
 f_o := f_g - f_o \tag{6.26}
@@ -611,50 +609,49 @@ $$
 t_o := t - t_o \tag{6.27}
 $$
 
-当一个tick被穿越后，如6.2.3节描述，交易将继续直到碰到下一个已初始化的tick。
+After a tick is crossed, as described in section 6.2.3, the trade continues until it encounters the next initialized tick.
 
-### 6.4 Position-Indexed State 头寸索引状态
+### 6.4 Position-Indexed State
 
-合约记录一个映射表，从用户地址，头寸低点（左边界，一个tick序号，int24类型）和高点（右边界，一个tick序号，int24类型）到具体头寸信息的映射关系。每个头寸记录三个值：
+The contract maintains a mapping from the combination of user address, lower tick (left boundary, a tick index of type int24), and upper tick (right boundary, a tick index of type int24) to the details of a specific position. Each position records three values:
 
-![](https://i.imgur.com/M33yNaC.jpg)
+![](./assets/v3-6.jpg)
 
+liquidity ($l$) represents the amount of virtual liquidity represented by the position at the time of the last update. Specifically, liquidity can be regarded as $\sqrt{x \cdot y}$, where $x$ and $y$ represent the liquidity added to the pool, as indicated by the virtual amounts of token0 and token1 when the position enters a price range at any given time. Unlike Uniswap v2, where each liquidity share grew over time due to fee income, v3's liquidity shares do not change because fees are accumulated separately; they always equal $\sqrt{x \cdot y}$, where $x$ and $y$ represent the amounts of token0 and token1, respectively.
 
-liquidity（$l$）表示上一次头寸更新时，该头寸所表示的虚拟流动性数量。特别地，liquidity可以被看作$\sqrt{x \cdot y}$，其中$x$和$y$分别表示在任意时刻该头寸进入价格区间时，由对应的虚拟token0和token1数量表示的加入池子的流动性。与Uniswap v2不同（每个流动性份额随时间增长），v3的流动性份额并不改变，因为手续费是单独累计；它总是等价于$\sqrt{x \cdot y}$，其中，$x$和$y$分别表示token0和token1的数量。
+The liquidity amount does not represent the fees accumulated since the last interaction with the contract; uncollected fees are used for this purpose. To calculate uncollected fees for a position, additional information is stored in the position, such as feeGrowthInside0Last ($f_{r,0}(t_o)$) and feeGrowthInside1Last ($f_{r,1}(t_0)$), as described below.
 
-liquidity（流动性）数量不代表从合约上次交互后的累计手续费，uncollected fees才用于表示未领取的手续费。为了计算未领取的手续费，需要在头寸保存额外信息，如feeGrowthInside0ast（$f_{r,0}(t_o)$）和feeGrowthInside1Last($f_{r,1}(t_0)$)，如下文所述。
+#### 6.4.1 setPosition
 
-#### 6.4.1 setPosition 设置头寸
+The setPosition method allows liquidity providers to update their positions.
 
-setPosition方法允许流动性提供者更新他们的头寸。
+The setPosition parameters, lowerTick and upperTick, combined with the caller msg.sender, form the identifier for the position.
 
-setPosition的两个参数：lowerTick和upperTick，与调用者msg.sender一起组成了头寸的信息。
+An additional parameter, liquidityDelta, specifies the amount of virtual liquidity the user wants to add (or remove, if negative).
 
-该方法接受一个额外参数：liquidityDelta，用于指定用户希望添加或移除（负值）的虚拟流动性。
+First, the method calculates the position's uncollected fees ($f_u$) (in both tokens). The fee income for the position owner, minus the user-added or removed virtual liquidity, constitutes the net income.
 
-首先，该方法计算头寸的未领取手续费（$f_u$）（分别以两种代币表示）。头寸所有者获取的手续费，将其减去用户添加或移除虚拟流动性，即为净收入。
-
-为了计算一个代币的未领取手续费，你需要知道自从上一次领取手续费后，该头寸对应的区间获得多少手续费$f_r$（如6.3描述，使用区间$i_l$, $i_r$计算）。从$t_0$到$t_1$时间段，区间内每份流动性的的手续费增长为：$f_r(t_1) - f_r(t_0)$（其中，$f_r(t_0)$在头寸中以feeGrowthInside{0, 1}Last保存，$f_r(t_1)$能够从当前tick状态中计算）。将其乘以头寸的流动性，即为以token0表示的该头寸未领取的手续费：
+To calculate the uncollected fees for a token, it is necessary to know how much fee income $f_r$ has been accumulated for the position's range since the last fee collection (calculated using the range $i_l$, $i_r$ as described in section 6.3). From $t_0$ to $t_1$, the fee growth per liquidity unit within the range is $f_r(t_1) - f_r(t_0)$ (where $f_r(t_0)$ is stored in the position as feeGrowthInside{0, 1}Last, and $f_r(t_1)$ can be calculated from the current tick state). Multiplying this by the position's liquidity yields the uncollected fees in token0 for that position:
 
 $$
 f_u = l \cdot (f_r(t_1) - f_r(t_0)) \tag{6.28}
 $$
 
-接着，合约将liquidityDelta加到头寸的liquidity（流动性）。在tick区间低点，它同时将liquidityDelta加到liquidityNet（注：tick从左到右，表示加入流动性）；而在头寸的高点，则从liquidityNet减去liquidityDelta（注：tick从右到左，表示移除流动性）。如果池子当前价格在头寸区间内，合约也会将liquidity加到全局的globalLiquidity。
+Next, the method adds liquidityDelta to the position's liquidity. At the lower tick, it also adds liquidityDelta to liquidityNet (indicating adding liquidity as the tick moves from left to right); at the position's upper tick, it subtracts liquidityDelta from liquidityNet (indicating removing liquidity as the tick moves from right to left). If the pool's current price is within the position's range, the contract also adds the liquidity to the global liquidity.
 
-最后，根据销毁或铸造的流动性数量，池子将代币从用户转出（如果liquidityDelta是负值，则将代币转给用户）。
+Finally, depending on the amount of liquidity destroyed or created, the pool transfers tokens from the user (if liquidityDelta is negative, it transfers tokens to the user).
 
-如果价格从当前价格（$P$）移动到高点或低点，需要存入的token0（$\Delta{X}$）和token1（$\Delta{Y}$）代币的数量可以被看作从头寸中卖出对应数量的代币。根据价格是否低于区间、在区间内或者高于区间，可以从6.14节和6.16节公式推出以下公式：
-
-$$
-\Delta{Y} = \begin{cases} 0 & \text{$i_c < i_l$}\\ \Delta{L} \cdot (\sqrt{P} - \sqrt{p(i_l)}) & \text{$i_l \leq i_c \leq i_u$}\\ \Delta{L} \cdot (\sqrt{p(i_u)} - \sqrt{p(i_l)}) & \text{$i_c \geq i_u$} \end{cases} \tag{6.29}
-$$
+The amount of token0 ($\Delta{X}$) and token1 ($\Delta{Y}$) tokens required if the price moves to the upper or lower boundary can be seen as selling the corresponding amount of tokens from the position. Depending on whether the price is below the range, within the range, or above the range, the required amounts of token0 and token1 can be derived from equations 6.14 and 6.16 as follows:
 
 $$
-\Delta{X} = \begin{cases} \Delta{L} \cdot (\frac{1}{\sqrt{p(i_l)}} - \frac{1}{\sqrt{p(i_u)}}) & \text{$i_c < i_l$}\\ \Delta{L} \cdot (\frac{1}{\sqrt{P}} - \frac{1}{\sqrt{p(i_u)}}) & \text{$i_l \leq i_c \leq i_u$}\\ 0 & \text{$i_c \geq i_u$} \end{cases} \tag{6.30}
+\Delta{Y} = \begin{cases} 0 & \text{$i_c < i_l$}\\ \Delta{L} \cdot (\sqrt{P} - \sqrt{p(i_l)}) & \text{$i_l \leq i_c \leq i_u$}\\ \Delta{L} \cdot (\sqrt{p(i_u)} - \sqrt{p(i_l)}) & \text{$i_c > i_u$} \end{cases} \tag{6.29}
 $$
 
-## 引用文献
+$$
+\Delta{X} = \begin{cases} \Delta{L} \cdot (\frac{1}{\sqrt{p(i_l)}} - \frac{1}{\sqrt{p(i_u)}}) & \text{$i_c < i_l$}\\ \Delta{L} \cdot (\frac{1}{\sqrt{P}} - \frac{1}{\sqrt{p(i_u)}}) & \text{$i_l \leq i_c \leq i_u$}\\ 0 & \text{$i_c > i_u$} \end{cases} \tag{6.30}
+$$
+
+## References
 
 * [1] Hayden Adams, Noah Zinsmeister, and Dan Robinson. 2020. Uniswap v2 Core. Retrieved Feb 24, 2021 from https://uniswap.org/whitepaper.pdf
 * [2] Guillermo Angeris and Tarun Chitra. 2020. Improved Price Oracles: Constant Function Market Makers. In Proceedings of the 2nd ACM Conference on Advances in Financial Technologies (AFT ’20). Association for Computing Machinery, New York,NY,UnitedStates, 80–91. https://doi.org/10.1145/3419614.3423251

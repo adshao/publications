@@ -1,24 +1,23 @@
 # Publications
 
-###### tags: `uniswap` `AMM` `artgobblers`
+###### tags: `uniswap` `AMM` `artgobblers` `VRGDA`
 
 ## Uniswap
 
-* [深入理解 Uniswap v2 白皮书](https://hackmd.io/@adshao/HkZwPZNf9)
-* [深入理解 Uniswap v2 合约代码](https://hackmd.io/@adshao/rk7nI-EG9)
-* [深入理解 Uniswap v3 白皮书](https://hackmd.io/@adshao/B1OQXbVf9)
-* [深入理解 Uniswap v3 合约代码（一）](https://hackmd.io/@adshao/SJT0-bVz9)
-* [深入理解 Uniswap v3 合约代码（二）](https://hackmd.io/@adshao/HJ2oeEt79)
-* [Uniswap v3 Oracle 预言机](https://hackmd.io/@adshao/rJBY2JWB9)
+* [Deep Dive into Uniswap v2 Whitepaper](./uniswap/dive-into-uniswap-v2-whitepaper/README.md)
+* [Deep Dive into Uniswap v2 Smart Contracts](./uniswap/dive-into-uniswap-v2-contracts/README.md)
+* [Deep Dive into Uniswap v3 Whitepaper](./uniswap/dive-into-uniswap-v3-whitepaper/README.md)
+* [Deep Dive into Uniswap v3 Smart Contracts (Part 1)](./uniswap/dive-into-uniswap-v3-contracts/README.md)
+* [Deep Dive Into Uniswap v3 Smart Contracts (Part 2)](./uniswap/dive-into-uniswap-v3-contracts-2/README.md)
 * [Flashloan fee of Uniswap v2](https://hackmd.io/@adshao/SJptXNaI9)
 
 ## Art Gobblers
 
-* [VRGDA 算法浅析](https://hackmd.io/@adshao/HyAIBte8j)
+* [VRGDA 算法浅析](./artgobblers/vrgda/README.md)
 
 ## Links
 
-* [HackMD](https://hackmd.io/@adshao)
+* [X](https://x.com/AdamShao)
 * [Github](https://github.com/adshao)
+* [HackMD](https://hackmd.io/@adshao)
 * [Mirror](https://mirror.xyz/adshao.eth)
-* [Twitter](https://twitter.com/AdamShao)

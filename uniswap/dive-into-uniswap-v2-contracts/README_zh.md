@@ -1,37 +1,40 @@
 [English](./README.md) | [中文](./README_zh.md)
 
-# Deep Dive into Uniswap v2 Smart Contracts
+# 深入理解 Uniswap v2 智能合约
 
 ###### tags: `uniswap` `uniswap-v2` `solidity` `AMM`
 
-Following the introduction to the [Dive into Uniswap v2 Whitepaper](../dive-into-uniswap-v2-whitepaper/README.md), today we'll explore the Uniswap v2 contract code.
+上文介绍了《[深入理解 Uniswap v2 白皮书](../dive-into-uniswap-v2-whitepaper/README_zh.md)》，今天我们来讲解Uniswap v2合约代码。
 
-> This article won't cover the contract code line-by-line but will focus on the contract architecture and key methods. For detailed code explanations, I recommend reading Ethereum's official blog: [Uniswap v2 contract walk-through](https://ethereum.org/en/developers/tutorials/uniswap-v2-annotated-code/#introduction).
+> 本文不会逐行介绍合约代码，而是关注合约架构和重点方法，如果需要详细的代码说明，推荐阅读以太坊官方的[Uniswap v2代码走读](https://ethereum.org/en/developers/tutorials/uniswap-v2-annotated-code/#introduction)。
 
-## Contract Architecture
+## 合约架构
 
-Uniswap v2 contracts are primarily divided into two categories: core and periphery contracts. The core contracts contain only the most basic trading functionalities, with core code about 200 lines, ensuring minimization to avoid introducing bugs as users' funds are stored in these contracts. The periphery contracts provide various encapsulated methods tailored to user scenarios, such as supporting native ETH trades (automatically converted to WETH), multi-path swaps (executing A→B→C trades in one method), etc., all calling upon the core contracts. Operations on the [app.uniswap.org](https://app.uniswap.org/) interface utilize the periphery contracts.
+Uniswap v2的合约主要分为两类：core合约和periphery合约。其中，core合约仅包含最基础的交易功能，核心代码仅200行左右，由于用户资金都存储在core合约里，因此需要保证core合约最简化，避免引入bug；periphery合约则针对用户使用场景提供多种封装方法，比如支持原生ETH交易（自动转为WETH），多路径交换（一个方法同时执行A→B→C交易）等，其底层调用的是core合约。我们在[app.uniswap.org](https://app.uniswap.org/)界面操作时用的就是periphery合约。
 
 ![](./assets/uniswap-v2.png)
 
-Let's introduce the functionalities of a few main contracts:
+
+我们先介绍几个主要合约的功能：
 
 * uniswap-v2-core
-  * UniswapV2Factory: Factory contract for creating Pair contracts (and setting protocol fee recipient addresses)
-  * UniswapV2Pair: Pair (trading pair) contract, defining several basic methods related to trading, such as swap/mint/burn, price oracle, etc., itself being an ERC20 contract inheriting UniswapV2ERC20
-  * UniswapV2ERC20: Implements the ERC20 standard methods
+
+  * UniswapV2Factory：工厂合约，用于创建Pair合约（以及设置协议手续费接收地址）
+  * UniswapV2Pair：Pair（交易对）合约，定义和交易有关的几个最基础方法，如swap/mint/burn，价格预言机等功能，其本身是一个ERC20合约，继承UniswapV2ERC20
+  * UniswapV2ERC20：实现ERC20标准方法
 
 * uniswap-v2-periphery
-  * UniswapV2Router02: The latest version of the router contract, compared to UniswapV2Router01, it adds support for FeeOnTransfer tokens; implements Uniswap v2's most commonly used interfaces, such as adding/removing liquidity, swapping tokens A for B, swapping ETH for tokens, etc.
-  * UniswapV1Router01: The older version of Router implementation, similar to Router02, but does not support FeeOnTransferTokens, and is no longer in use
+
+  * UniswapV2Router02：最新版的路由合约，相比UniswapV2Router01增加了对FeeOnTransfer代币的支持；实现Uniswap v2最常用的接口，比如添加/移除流动性，使用代币A交换代币B，使用ETH交换代币等
+  * UniswapV1Router01：旧版本Router实现，与Router02类似，但不支持FeeOnTransferTokens，目前已不使用
 
 ## uniswap-v2-core
 
-[Github](https://github.com/Uniswap/v2-core)
+[代码地址](https://github.com/Uniswap/v2-core)
 
 ### UniswapV2Factory
 
-The most important method in the factory contract is `createPair`:
+在工厂合约中最重要的是createPair方法：
 
 ```solidity
 function createPair(address tokenA, address tokenB) external returns (address pair) {
@@ -52,42 +55,42 @@ function createPair(address tokenA, address tokenB) external returns (address pa
 }
 ```
 
-Firstly, `token0` and `token1` are sorted to ensure `token0`'s literal address is less than `token1`'s. Then, a contract is created using `assembly` + `create2`. [`assembly`](https://docs.soliditylang.org/en/develop/assembly.html#inline-assembly) allows for direct EVM manipulation in Solidity using the [Yul](https://docs.soliditylang.org/en/develop/yul.html#yul) language, representing a lower-level method of operation. As discussed in the whitepaper, `create2` is mainly used to create deterministic trading pair contract addresses, meaning the pair address can be computed directly from the two token addresses without on-chain contract queries.
+首先将 `token0` 和 `token1` 按照顺序排序，确保 `token0` 字面地址小于 `token1`。接着使用`assembly` + `create2`创建合约。[assembly](https://docs.soliditylang.org/en/develop/assembly.html#inline-assembly)可以在Solidity中使用[Yul](https://docs.soliditylang.org/en/develop/yul.html#yul)语言直接操作EVM，是较底层的操作方法。我们在《深入理解 Uniswap v2 白皮书》中讲到，`create2`主要用于创建确定性的交易对合约地址，目的是根据两个代币地址直接计算pair地址，而无需调用链上合约查询。
 
-`CREATE2` comes from [EIP-1014](https://eips.ethereum.org/EIPS/eip-1014), according to which, the final generated address is influenced by the custom `salt` value provided during pair contract generation. For a trading pair of two tokens, the `salt` value should be consistent; naturally, using the trading pair's two token addresses comes to mind. To ensure order does not affect the pair, the contract starts by sorting the two tokens to generate the `salt` value in ascending order.
+`CREATE2`出自[EIP-1014](https://eips.ethereum.org/EIPS/eip-1014)，根据规范，这里能够影响最终生成地址的是用户自定义的`salt`值，只需要保证每次生成交易对合约时提供的`salt`值不同即可，对于同一个交易对的两种代币，其`salt`值应该一样；这里很容易想到应该使用交易对的两种代币地址，我们希望提供A/B地址的时候可以直接算出pair(A,B)，而两个地址又受顺序影响，因此在合约开始时先对两种代币进行排序，确保其按照从小到大的顺序生成`salt`值。
 
-In the latest EVM versions, passing the `salt` parameter directly to the `new` method is supported, shown as:
+实际上在最新版的EMV中，已经直接支持给`new`方法传递`salt`参数，如下所示：
 
 ```solidity
 pair = new UniswapV2Pair{salt: salt}();
 ```
 
-Due to the lack of this functionality during the development of Uniswap v2 contracts, `assembly create2` was used.
+因为 Uniswap v2 合约在开发时还没有这个功能，所以使用`assembly create2`。
 
-According to the [Yul specification](https://docs.soliditylang.org/en/develop/yul.html#yul), `create2` is defined as follows:
+根据[Yul规范](https://docs.soliditylang.org/en/develop/yul.html#yul)，`create2`的定义如下：
 
 > create2(v, p, n, s)
-> 
+>
 > create new contract with code mem[p…(p+n)) at address keccak256(0xff . this . s . keccak256(mem[p…(p+n))) and send v wei and return the new address, where 0xff is a 1 byte value, this is the current contract’s address as a 20 byte value and s is a big-endian 256-bit value; returns 0 on error
 
-In the source code, the `create2` method call:
+源码中调用`create2`方法：
 
 ```solidity
 pair := create2(0, add(bytecode, 32), mload(bytecode), salt)
 ```
 
-The parameters are interpreted as follows:
+因此，这几个参数含义如下：
 
-- v=0: The amount of ETH tokens (in wei) sent to the newly created pair contract
-- p=add(bytecode, 32): The starting position of the contract bytecode
-  > Why add 32? Because the `bytecode` type is `bytes`, and per the ABI specification, `bytes` is a variable length type. The first 32 bytes store the length of the `bytecode`, followed by the actual content, making the start of the actual contract bytecode at `bytecode+32` bytes.
-- n=mload(bytecode): The total byte length of the contract bytecode
-  > As mentioned, the first 32 bytes of `bytecode` store the actual length of the contract bytecode (in bytes), and `mload` fetches the value of the first 32 bytes of the passed parameter, making `mload(bytecode)` equal to `n`.
-- s=salt: The custom `salt`, which is the combination of `token0` and `token1` addresses encoded together.
+* v=0：向新创建的pair合约中发送的ETH代币数量（单位wei）
+* p=add(bytecode, 32)：合约字节码的起始位置
+  > 此处为什么要add 32呢？因为`bytecode`类型为`bytes`，根据ABI规范，`bytes`为变长类型，在编码时前32个字节存储`bytecode`的长度，接着才是`bytecode`的真正内容，因此合约字节码的起始位置在`bytecode+32`字节
+* n=mload(bytecode)：合约字节码总字节长度
+  > 根据上述说明，`bytecode`前32个字节存储合约字节码的真正长度（以字节为单位），而`mload`的作用正是读出传入参数的前32个字节的值，因此`mload(bytecode)`就等于`n`
+* s=salt：s为自定义传入的`salt`，即`token0`和`token1`合并编码
 
 ### UniswapV2ERC20
 
-This contract mainly defines UniswapV2's ERC20 standard implementation, with relatively straightforward code. Here, we'll introduce the `permit` method:
+这个合约主要定义了UniswapV2的ERC20标准实现，代码比较简单。这里介绍下permit方法：
 
 ```solidity
 function permit(address owner, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
@@ -105,15 +108,15 @@ function permit(address owner, address spender, uint value, uint deadline, uint8
 }
 ```
 
-The `permit` method implements the "Meta transactions for pool shares" feature introduced in section 2.5 of the whitepaper. [EIP-712](https://eips.ethereum.org/EIPS/eip-712) defines the standard for offline signatures, i.e., the format of `digest` that a user signs. The signature's content is the authorization (`approve`) by the owner to allow a contract (`spender`) to spend a certain amount (`value`) of tokens (Pair liquidity tokens) before a deadline. Applications (periphery contracts) can use the original information and the generated v, r, s signatures to call the Pair contract's `permit` method to obtain authorization. The `permit` method uses `ecrecover` to restore the signing address to the token owner; if verification passes, the approval is granted.
+`permit`方法实现的就是白皮书2.5节中介绍的“Meta transactions for pool shares 元交易”功能。[EIP-712](https://eips.ethereum.org/EIPS/eip-712)定义了离线签名的规范，即`digest`的格式定义，用户签名的内容是其（owner）授权（approve）某个合约（spender）可以在截止时间（deadline）之前花掉一定数量（value）的代币（Pair流动性代币），应用（periphery合约）拿着签名的原始信息和签名后生成的v, r, s，可以调用Pair合约的`permit`方法获得授权，permit方法使用`ecrecover`还原出签名地址为代币所有人，验证通过则批准授权。
 
 ### UniswapV2Pair
 
-The Pair contract primarily implements three methods: `mint` (adding liquidity), `burn` (removing liquidity), and `swap` (exchange).
+Pair合约主要实现了三个方法：`mint`（添加流动性）、`burn`（移除流动性）、`swap`（兑换）。
 
 #### mint
 
-This method implements the functionality of adding liquidity.
+该方法实现添加流动性功能。
 
 ```solidity
 // this low-level function should be called from a contract which performs important safety checks
@@ -141,9 +144,9 @@ function mint(address to) external lock returns (uint liquidity) {
 }
 ```
 
-Initially, ```getReserves()``` fetches the cached balances of the two tokens. As mentioned in the whitepaper, caching balances is meant to prevent manipulation of the price oracle. It is also used here to calculate protocol fees by subtracting the cached balance from the current balance to determine the amount of transferred tokens.
+首先，```getReserves()``` 获取两种代币的缓存余额。在白皮书中提到，保存缓存余额是为了防止攻击者操控价格预言机。此处还用于计算协议手续费，并通过当前余额与缓存余额相减获得转账的代币数量。
 
-_mintFee calculates protocol fees:
+_mintFee用于计算协议手续费：
 
 ```solidity
 // if fee is on, mint liquidity equivalent to 1/6th of the growth in sqrt(k)
@@ -168,13 +171,13 @@ function _mintFee(uint112 _reserve0, uint112 _reserve1) private returns (bool fe
 }
 ```
 
-For calculations on protocol fees, please refer to the whitepaper.
+关于协议手续费的计算公式可以参考白皮书。
 
-The `mint` method determines that if it's the first time providing liquidity for the trading pair, liquidity tokens are generated based on the square root of xy and MINIMUM_LIQUIDITY (i.e., 1000 wei) is burned; otherwise, liquidity tokens are minted based on the ratio of the transferred token value to the current liquidity value.
+`mint`方法中判断，如果是首次提供该交易对的流动性，则根据根号xy生成流动性代币，并销毁其中的MINIMUM_LIQUIDITY（即1000wei）；否则根据转入的代币价值与当前流动性价值比例铸造流动性代币。
 
 #### burn
 
-This method implements the functionality of removing liquidity.
+该方法实现移除流动性功能。
 
 ```solidity
 // this low-level function should be called from a contract which performs important safety checks
@@ -203,15 +206,15 @@ function burn(address to) external lock returns (uint amount0, uint amount1) {
 }
 ```
 
-Similar to `mint`, the `burn` method also calculates protocol fees.
+与`mint`类似，`burn`方法也会先计算协议手续费。
 
-Refer to the whitepaper, for saving transaction fees, Uniswap v2 only collects accumulated protocol fees when minting/burning liquidity.
+参考白皮书，为了节省交易手续费，Uniswap v2只在mint/burn流动性时收取累计的协议手续费。
 
-After removing liquidity, the proportion of destroyed liquidity tokens to the total determines the corresponding amounts of the two tokens the user will receive.
+移除流动性后，根据销毁的流动性代币占总量的比例获得对应的两种代币。
 
 #### swap
 
-This method implements the functionality of exchanging (trading) two tokens.
+该方法实现两种代币的交换（交易）功能。
 
 ```solidity
 // this low-level function should be called from a contract which performs important safety checks
@@ -246,11 +249,11 @@ function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data)
 }
 ```
 
-To accommodate flash loan functionality and not rely on a specific token's transfer method, the entire `swap` method does not use parameters like `amountIn`, but rather calculates the amount of transferred tokens by comparing the current balance with the cached balance.
+为了兼容闪电贷功能，以及不依赖特定代币的`transfer`方法，整个`swap`方法并没有类似`amountIn`的参数，而是通过比较当前余额与缓存余额的差值来得出转入的代币数量。
 
-Since the `swap` method will check the balances (after subtracting fees) to comply with the constant product formula constraint (refer to the whitepaper formula), the contract can first transfer the tokens the user wishes to receive, if the user did not previously transfer tokens to the contract for the trade, it is equivalent to borrowing tokens (i.e., a flash loan); if using a flash loan, it is necessary to return the borrowed tokens in the custom `uniswapV2Call` method, otherwise, the transaction will revert.
+由于在`swap`方法最后会检查余额（扣掉手续费后）符合k常值函数约束（参考白皮书公式），因此合约可以先将用户希望获得的代币转出，如果用户之前并没有向合约转入用于交易的代币，则相当于借币（即闪电贷）；如果使用闪电贷，则需要在自定义的`uniswapV2Call`方法中将借出的代币归还。
 
-The `swap` method updates the cumulative price required by the price oracle using the cached balance and finally updates the cached balance to the current balance at the end of the method.
+在`swap`方法最后会使用缓存余额更新价格预言机所需的累计价格，最后更新缓存余额为当前余额。
 
 ```solidity
 // update reserves and, on the first call per block, price accumulators
@@ -258,7 +261,7 @@ function _update(uint balance0, uint balance1, uint112 _reserve0, uint112 _reser
     require(balance0 <= uint112(-1) && balance1 <= uint112(-1), 'UniswapV2: OVERFLOW');
     uint32 blockTimestamp = uint32(block.timestamp % 2**32);
     uint32 timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
-    if (timeElapsed > 0 and _reserve0 != 0 and _reserve1 != 0) {
+    if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
         // * never overflows, and + overflow is desired
         price0CumulativeLast += uint(UQ112x112.encode(_reserve1).uqdiv(_reserve0)) * timeElapsed;
         price1CumulativeLast += uint(UQ112x112.encode(_reserve0).uqdiv(_reserve1)) * timeElapsed;
@@ -270,31 +273,32 @@ function _update(uint balance0, uint balance1, uint112 _reserve0, uint112 _reser
 }
 ```
 
-Note, both the block timestamp and cumulative prices are overflow-safe. (For detailed derivation, please refer to the whitepaper)
+注意，其中区块时间戳和累计价格都是溢出安全的。（具体推导过程请参考白皮书）
 
 ## uniswap-v2-periphery
 
-Since UniswapV2Router01 has a bug in handling FeeOnTransferTokens, it is no longer used. Here, we will only introduce the latest version of the UniswapV2Router02 contract.
+由于UniswapV2Router01在处理FeeOnTransferTokens时有bug，目前已不再使用。此处我们仅介绍最新版的UniswapV2Router02合约。
 
-[Code Address](https://github.com/Uniswap/v2-periphery)
+[代码地址](https://github.com/Uniswap/v2-periphery)
 
 ### UniswapV2Router02
 
-Router02 encapsulates the most commonly used trading interfaces; to accommodate the need for native ETH trades, most interfaces are provided in ETH versions. Compared to Router01, some interfaces have added support for FeeOnTransferTokens.
+Router02封装了最常用的几个交易接口；为了满足原生ETH交易需求，大部分接口都支持ETH版本；同时，相比Router01，部分接口增加了FeeOnTrasnferTokens的支持。
 
 ![](./assets/router02.png)
 
-We will mainly introduce the ERC20 version of the code, as the logic for the ETH version is identical, only involving conversion between ETH and WETH.
 
-Before delving into specific ERC20 methods, let's first introduce several common methods from the Library contract and their mathematical derivations.
+我们将主要介绍ERC20版本的代码，因为ETH版本只是将ETH与WETH做转换，逻辑与ERC20一致。
+
+在介绍具体ERC20方法前，我们先介绍Library合约中的几个常用方法，以及它们的数学公式推导。
 
 ### Library
 
-[Code Address](https://github.com/Uniswap/v2-periphery/blob/master/contracts/libraries/UniswapV2Library.sol)
+[代码地址](https://github.com/Uniswap/v2-periphery/blob/master/contracts/libraries/UniswapV2Library.sol)
 
 #### pairFor
 
-Input the factory address and two token addresses to calculate the address of their trading pair.
+输入工厂地址和两个代币地址，计算这两个代币的交易对地址。
 
 ```solidity
 // calculates the CREATE2 address for a pair without making any external calls
@@ -309,19 +313,19 @@ function pairFor(address factory, address tokenA, address tokenB) internal pure 
 }
 ```
 
-As mentioned previously, since the `CREATE2` opcode is used, the pair address can be directly computed without on-chain contract queries.
+上文提到，由于使用CREATE2操作码，交易对地址可以直接根据规范算出，而无需调用链上合约进行查询。
 
 > create2(v, p, n, s)
 >
 > create new contract with code mem[p…(p+n)) at address keccak256(0xff . this . s . keccak256(mem[p…(p+n))) and send v wei and return the new address, where 0xff is a 1 byte value, this is the current contract’s address as a 20 byte value and s is a big-endian 256-bit value; returns 0 on error
 
-The new pair contract's address is calculated as `keccak256(0xff + this + salt +  keccak256(mem[p…(p+n)))`:
+其中，新创建的pair合约的地址计算方法为：keccak256(0xff + this + salt +  keccak256(mem[p…(p+n)))：
 
-* this: Factory contract address
-* salt: `keccak256(abi.encodePacked(token0, token1))`
-* `keccak256(mem[p…(p+n))`: `0x96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f`
+* this：工厂合约地址
+* salt：keccak256(abi.encodePacked(token0, token1))
+* keccak256(mem[p…(p+n))： 0x96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f
 
-Since every trading pair uses the UniswapV2Pair contract for creation, the init code hash is the same. We can write a Solidity method in the UniswapV2Factory to calculate the hash:
+由于每个交易对都使用UniswapV2Pair合约创建，因此init code hash都是一样的。我们可以在UniswapV2Factory写一个Solidty方法计算hash：
 
 ```solidity
 function initCodeHash() external pure returns (bytes32) {
@@ -336,7 +340,7 @@ function initCodeHash() external pure returns (bytes32) {
 
 #### quote
 
-The `quote` method converts a certain amount (`amountA`) of token A into an equivalent amount of token B based on the reserves in the contract. Fees are not considered here, as this is merely a unit conversion.
+quote方法将数量为amountA的代币A，按照合约中两种代币余额比例，换算成另一个代币B。此时不考虑手续费，因为仅是计价单位的换算。
 
 ```solidity
 // given some amount of an asset and pair reserves, returns an equivalent amount of the other asset
@@ -349,7 +353,7 @@ function quote(uint amountA, uint reserveA, uint reserveB) internal pure returns
 
 #### getAmountOut
 
-This method calculates how much of token B (`amountOut`) can be obtained for a given amount of token A (`amountIn`), based on the reserves in the pool.
+该方法计算：输入一定数量（amountIn）代币A，根据池子中代币余额，能得到多少数量（amountOut）代币B。
 
 ```solidity
 // given an input amount of an asset and pair reserves, returns the maximum output amount of the other asset
@@ -363,15 +367,15 @@ function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut) internal p
 }
 ```
 
-To derive the mathematical formula for this method, let's revisit the constraint for token balances after a swap as discussed in the whitepaper and the core contracts:
+为了推导该方法的数学公式，我们需要先回顾白皮书以及core合约中对于swap交换后两种代币的约束：
 
 $$
 (x_1 - 0.003 \cdot x_{in}) \cdot (y_1 - 0.003 \cdot y_{in}) \geq x_0 \cdot y_0
 $$
 
-Where $x_0$, $y_0$ are the balances of the two tokens before the swap, and $x_1$, $y_1$ are the balances after the swap, $x_{in}$ is the amount of token A provided, since token A is provided, $y_{in}=0$; $y_{out}$ is the amount of token B to be calculated.
+其中，$x_0$, $y_0$为交换前的两种代币余额，$x_1$, $y_1$为交换后的两种代币余额，$x_{in}$为输入的代币A数量，因为只提供代币A，因此$y_{in}=0$；$y_{out}$为需要计算的代币B数量。
 
-The mathematical derivation is as follows:
+可推导数学公式如下：
 
 $$
 y_{in} = 0\\
@@ -387,13 +391,12 @@ $$
 y_{out} = \frac {0.997 \cdot x_{in} \cdot y_0}{x_0 + 0.997 \cdot x_{in}}
 $$
 
-Since Solidity does not support floating-point numbers, the formula can be converted to:
+由于Solidity不支持浮点数，因此可以换算成如下公式：
 
 $$
 y_{out} = \frac {997 \cdot x_{in} \cdot y_0}{1000 \cdot x_0 + 997 \cdot x_{in}}
 $$
-
-This calculation result is the `amountOut` as shown in the `getAmountOut` method, where:
+可以看出，该计算结果即为`getAmountOut`方法中的`amountOut`，其中，
 
 $$
 amountIn = x_{in}\\
@@ -404,7 +407,7 @@ $$
 
 #### getAmountIn
 
-This method calculates how much of token A (`amountIn`) is required to obtain a specified amount of token B (`amountOut`).
+该方法计算当希望获得一定数量（`amountOut`）的代币B时，应该输入多少数量（`amoutnIn`）的代币A。
 
 ```solidity
 // given an output amount of an asset and pair reserves, returns a required input amount of the other asset
@@ -417,7 +420,7 @@ function getAmountIn(uint amountOut, uint reserveIn, uint reserveOut) internal p
 }
 ```
 
-`getAmountOut` calculates $y_{out}$ given $x_{in}$; correspondingly, `getAmountIn` calculates $x_{in}$ given $y_{out}$. The derived formula is as follows:
+`getAmountOut`是已知$x_{in}$，计算$y_{out}$；相对应地，`getAmountIn`则是已知$y_{out}$，计算$x_{in}$。根据上述公式可以推导出：
 
 $$
 (x_0 + 0.997 \cdot x_{in}) \cdot (y_0 - y_{out}) = x_0 \cdot y_0\\
@@ -435,11 +438,11 @@ reserveOut = y_0\\
 amountOut = y_{out}
 $$
 
-The calculation result shown in the contract code corresponds to the formula above. Note the final `add(1)` is to ensure that the input amount (`amountIn`) is not less than the theoretical minimum due to rounding, effectively requiring at least 1 more unit of the input token.
+计算结果即为合约中代码所示，注意最后有一个`add(1)`，这是为了防止`amountIn`为小数的情况，加1可以保证输入的数（`amountIn`）不小于理论的最小值。
 
 #### getAmountsOut
 
-This method calculates, for a given amount (`amountIn`) of the first token, how much of the last token in a sequence (`amounts`) can be obtained using multiple trading pairs. The first element in the `amounts` array represents `amountIn`, and the last element represents the quantity of the target token. This method essentially loops through the `getAmountIn` method.
+该方法用于计算在使用多个交易对时，输入一定数量（`amountIn`）的第一种代币，最终能收到多少数量的最后一种代币（`amounts`）。`amounts`数组中的第一个元素表示`amountIn`，最后一个元素表示该目标代币对应的数量。该方法实际上是循环调用`getAmountIn`方法。
 
 ```solidity
 // performs chained getAmountOut calculations on any number of pairs
@@ -456,7 +459,7 @@ function getAmountsOut(address factory, uint amountIn, address[] memory path) in
 
 #### getAmountsIn
 
-As opposed to `getAmountsOut`, `getAmountsIn` calculates the amounts of intermediary tokens required when a specific amount (`amountOut`) of the target token is desired. It iteratively calls the `getAmountIn` method.
+与`getAmountsOut`相对，`getAmountsIn`用于计算当希望收到一定数量（`amountOut`）的目标代币，应该分别输入多少数量的中间代币。计算方法也是循环调用`getAmountIn`。
 
 ```solidity
 // performs chained getAmountIn calculations on any number of pairs
@@ -473,7 +476,7 @@ function getAmountsIn(address factory, uint amountOut, address[] memory path) in
 
 ### ERC20-ERC20
 
-#### addLiquidity Adding Liquidity
+#### addLiquidity 添加流动性
 
 ```solidity
 function addLiquidity(
@@ -494,20 +497,20 @@ function addLiquidity(
 }
 ```
 
-Since Router02 directly interacts with users, the interface is designed with user scenarios in mind. `addLiquidity` provides 8 parameters:
+由于Router02是直接与用户交互的，因此接口设计需要从用户使用场景考虑。`addLiquidity`提供了8个参数：
 
-* `address tokenA`: Token A
-* `address tokenB`: Token B
-* `uint amountADesired`: Desired amount of token A to deposit
-* `uint amountBDesired`: Desired amount of token B to deposit
-* `uint amountAMin`: Minimum amount of token A to deposit
-* `uint amountBMin`: Minimum amount of token B to deposit
-* `address to`: Recipient address for liquidity tokens
-* `uint deadline`: Expiration time for the request
+* `address tokenA`：代币A
+* `address tokenB`：代币B
+* `uint amountADesired`：希望存入的代币A数量
+* `uint amountBDesired`：希望存入的代币B数量
+* `uint amountAMin`：最少存入的代币A数量
+* `uint amountBMin`：最少存入的代币B数量
+* `address to`：流动性代币接收地址
+* `uint deadline`：请求失效时间
 
-Transactions submitted by users can be packed by miners at an uncertain time, hence the token price at the time of submission might differ from the price at the time of transaction packing. `amountMin` controls the price fluctuation range to prevent being exploited by miners or bots; similarly, `deadline` ensures the transaction expires after the specified time.
+用户提交交易后，该交易被矿工打包的时间是不确定的，因此提交时的代币价格与交易打包时的价格可能不同，通过`amountMin`可以控制价格的浮动范围，防止被矿工或机器人套利；同样，`deadline`可以确保该交易在超过指定时间后将失效。
 
-If the token price provided by users when adding liquidity differs from the actual price, they will only receive liquidity tokens at a lower exchange rate, with the surplus tokens contributing to the entire pool. `_addLiquidity` helps calculate the optimal exchange rate. If it's the first time adding liquidity, a trading pair contract will be created first; otherwise, the best token amounts to inject are calculated based on the current pool balances.
+在core合约中提到，如果用户提供流动性时的代币价格与实际价格有差距，则只会按照较低的汇率得到流动性代币，多余的代币将贡献给整个池子。`_addLiquidity`可以帮助计算最佳汇率。如果是首次添加流动性，则会先创建交易对合约；否则根据当前池子余额计算应该注入的最佳代币数量。
 
 ```solidity
 // **** ADD LIQUIDITY ****
@@ -524,7 +527,7 @@ function _addLiquidity(
         IUniswapV2Factory(factory).createPair(tokenA, tokenB);
     }
     (uint reserveA, uint reserveB) = UniswapV2Library.getReserves(factory, tokenA, tokenB);
-    if (reserveA == 0 and reserveB == 0) {
+    if (reserveA == 0 && reserveB == 0) {
         (amountA, amountB) = (amountADesired, amountBDesired);
     } else {
         uint amountBOptimal = UniswapV2Library.quote(amountADesired, reserveA, reserveB);
@@ -541,11 +544,11 @@ function _addLiquidity(
 }
 ```
 
-Finally, the core contract's `mint` method is called to mint liquidity tokens.
+最后调用core合约mint方法铸造流动性代币。
 
-#### removeLiquidity Removing Liquidity
+#### removeLiquidity 移除流动性
 
-Firstly, liquidity tokens are sent to the pair contract. Based on the proportion of received liquidity tokens to the total tokens, the corresponding amounts of the two tokens represented by the liquidity are calculated. After destroying the liquidity tokens, the user receives the corresponding proportion of tokens. If it's lower than the user's set minimum expectations (amountAMin/amountBMin), the transaction reverts.
+首先将流动性代币发送到pair合约，根据收到的流动性代币占全部代币比例，计算该流动性代表的两种代币数量。合约销毁流动性代币后，用户将收到对应比例的代币。如果低于用户设定的最低预期（amountAMin/amountBMin），则回滚交易。
 
 ```solidity
 // **** REMOVE LIQUIDITY ****
@@ -568,14 +571,14 @@ function removeLiquidity(
 }
 ```
 
-#### removeLiquidityWithPermit Removing Liquidity with Signature
+#### removeLiquidityWithPermit 使用签名移除流动性
 
-Normally, to remove liquidity, users need to perform two operations:
+用户正常移除流动性时，需要两个操作：
 
-* `approve`: Authorizing the Router contract to spend their liquidity tokens
-* `removeLiquidity`: Calling the Router contract to remove liquidity
+* `approve`：授权Router合约花费自己的流动性代币
+* `removeLiquidity`：调用Router合约移除流动性
 
-Unless the maximum token amount was authorized during the first authorization, each liquidity removal would require two interactions, meaning users would need to pay gas fees twice. By using the `removeLiquidityWithPermit` method, users can authorize the Router contract to spend their tokens through a signature without separately calling `approve`, only needing to call the liquidity removal method once to complete the operation, saving gas costs. Additionally, since offline signatures do not incur gas fees, each signature can authorize only a specific amount of tokens, enhancing security.
+除非第一次授权了最大限额的代币，否则每次移除流动性都需要两次交互，这意味着用户需要支付两次手续费。而使用removeLiquidityWithPermit方法，用户可以通过签名方式授权Router合约花费自己的代币，无需单独调用approve，只需要调用一次移除流动性方法即可完成操作，节省了gas费用。同时，由于离线签名不需要花费gas，因此可以每次签名仅授权一定额度的代币，提高安全性。
 
 ```solidity
 function removeLiquidityWithPermit(
@@ -597,12 +600,12 @@ function removeLiquidityWithPermit(
 
 #### swapExactTokensForTokens
 
-There are two common scenarios for trading:
+交易时的两个常见场景：
 
-1. Using a specified amount of token A (input) to exchange for the maximum amount of token B (output)
-1. Receiving a specified amount of token B (output) using the minimum amount of token A (input)
+1. 使用指定数量的代币A（输入），尽可能兑换最多数量的代币B（输出）
+1. 获得指定数量的代币B（输出），尽可能使用最少数量的代币A（输入）
 
-This method implements the first scenario, exchanging for the maximum output token based on a specified input token.
+本方法实现第一个场景，即根据指定的输入代币，获得最多的输出代币。
 
 ```solidity
 function swapExactTokensForTokens(
@@ -621,9 +624,9 @@ function swapExactTokensForTokens(
 }
 ```
 
-First, the `getAmountsOut` method from the Library contract is used to calculate the output token amounts for each trade based on the exchange path, ensuring the amount received from the last trade (`amounts[amounts.length - 1]`) is not less than the expected minimum output (`amountOutMin`). Tokens are then sent to the first trading pair address to start the entire exchange process.
+首先使用Library合约中的`getAmountsOut`方法，根据兑换路径计算每一次交易的输出代币数量，确认最后一次交易得到的数量（`amounts[amounts.length - 1]`）不小于预期最少输出（`amountOutMin`）；将代币发送到第一个交易对地址，开始执行整个兑换交易。
 
-Assuming a user wants to swap WETH for DYDX, and the best exchange path calculated off-chain is WETH → USDC → DYDX, then `amountIn` is the WETH amount, `amountOutMin` is the minimum expected DYDX amount, `path` is [WETH address, USDC address, DYDX address], and `amounts` are [amountIn, USDC amount, DYDX amount]. During the execution of `_swap`, the tokens received from each intermediary trade are sent to the next trading pair address, and so on, until the final trade is completed, and the `_to` address receives the output tokens from the last trade.
+假设用户希望使用WETH兑换DYDX，链下计算的最佳兑换路径为WETH → USDC → DYDX，则`amountIn`为WETH数量，`amountOutMin`为希望获得最少DYDX数量，`path`为[WETH address, USDC address, DYDX address]，`amounts`为[amountIn, USDC amount, DYDX amount]。在`_swap`执行交易的过程中，每次中间交易获得的中间代币将被发送到下一个交易对地址，以此类推，直到最后一个交易完成，`_to`地址将收到最后一次交易的输出代币。
 
 ```solidity
 // requires the initial amount to have already been sent to the first pair
@@ -643,7 +646,7 @@ function _swap(uint[] memory amounts, address[] memory path, address _to) intern
 
 #### swapTokensForExactTokens
 
-This method implements the second trading scenario, exchanging the minimum input token for a specified output token.
+该方法实现交易的第二个场景，根据指定的输出代币，使用最少的输入代币完成兑换。
 
 ```solidity
 function swapTokensForExactTokens(
@@ -662,17 +665,17 @@ function swapTokensForExactTokens(
 }
 ```
 
-Similar to the above, here the `getAmountsIn` method from the Library is first used to reverse calculate the minimum input token amounts required for each exchange, ensuring the calculated amount (after deducting fees) for the first token is not greater than the maximum amount the user is willing to provide (`amountInMax`). Tokens are then sent to the first trading pair address to initiate the entire exchange process.
+与上面类似，这里先使用Library的`getAmountsIn`方法反向计算每一次兑换所需的最少输入代币数量，确认计算得出的（扣除手续费后）第一个代币所需的最少代币数不大于用户愿意提供的最大代币数（`amountInMax`）；将代币发送到第一个交易对地址，调用_swap开始执行整个兑换交易。
 
 ### ERC20-ETH
 
 #### ETH Support
 
-Since the core contracts only support ERC20 token trades, the periphery contracts need to convert between ETH and WETH to support ETH trades. Most methods are provided in ETH versions to accommodate this. Exchange mainly involves two operations:
+由于core合约只支持ERC20代币交易，为了支持ETH交易，periphery合约需要将ETH与WETH做转换；并为大部分方法提供了ETH版本。兑换主要涉及两种操作：
 
-* Address conversion: Since ETH does not have a contract address, the deposit and withdraw methods of the WETH contract are used to convert between ETH and WETH
-* Token amount conversion: ETH amounts are obtained through `msg.value`, and the corresponding WETH amounts can be calculated, after which standard ERC20 interfaces can be used
+* 地址转换：由于ETH没有合约地址，因此需要使用WETH合约的deposit和withdraw方法完成ETH与WETH的兑换
+* 代币数量转换：ETH的代币需要通过`msg.value`获取，可根据该值计算对应的WETH数量，而后使用标准ERC20接口即可
 
 #### FeeOnTransferTokens
 
-Some tokens deduct fees during the transfer process, resulting in a difference between the transferred amount and the actual received amount. Therefore, it's not straightforward to calculate the required token amounts for intermediary exchanges. In such cases, the `balanceOf` method (rather than the `transfer` method) should be used to determine the actual received token amounts. Router02 introduced support for Inclusive Fee On Transfer Tokens. For more detailed explanations, refer to the [official documentation](https://docs.uniswap.org/protocol/V2/reference/smart-contracts/common-errors#inclusive-fee-on-transfer-tokens).
+由于某些代币会在转账（transfer）过程中收取手续费，转账数量与实际收到的数量有差异，因此无法直接通过计算得出中间兑换过程中所需的代币数量，此时应该通过balanceOf方法（而非transfer方法）判断实际收到的代币数量。Router02新增了对Inclusive Fee On Transfer Tokens的支持，更具体说明可以参考[官方文档](https://docs.uniswap.org/protocol/V2/reference/smart-contracts/common-errors#inclusive-fee-on-transfer-tokens)。

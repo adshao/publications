@@ -1,33 +1,33 @@
 [English](./README.md) | [中文](./README_zh.md)
 
-# Deep Dive Into Uniswap v3 Smart Contracts (Part 2)
+# 深入理解 Uniswap v3 智能合约 （二）
 
 ###### tags: `uniswap` `solidity` `logarithm` `uniswap-v3` `tick` `periphery` `contract`
 
 ## Uniswap-v3-periphery
 
-The [Uniswap-v3-core](../dive-into-uniswap-v3-contracts/README.md) contract defines the basic methods, while the Uniswap-v3-periphery contract is the one we directly interact with.
+[Uniswap-v3-core](https://hackmd.io/TDPPCAIgRRqVDPwsSm6Kfw)合约定义的是基础方法，而Uniswap-v3-periphery合约才是我们平常直接交互的合约。
 
-For example, it is well known that Uniswap v3 positions are NFTs. These NFTs are created and managed in the periphery contract, without any concept of NFTs in the core contract.
+比如，众所周知Uniswap v3头寸是一个NFT，这个NFT就是在periphery合约中创建和管理的，在core合约中并没有任何NFT的概念。
 
 ### NonfungiblePositionManager.sol
 
-Position management contract, globally unique, responsible for managing positions of all trading pairs, mainly including the following methods:
+头寸管理合约，全局仅有一个，负责管理所有交易对的头寸，主要包括以下几个方法：
 
-* [createAndInitializePoolIfNecessary](#createAndInitializePoolIfNecessary): Create and initialize the contract
-* [mint](#mint): Create a position
-* [increaseLiquidity](#increaseLiquidity): Increase liquidity
-* [decreaseLiquidity](#decreaseLiquidity): Decrease liquidity
-* [burn](#burn): Burn the position
-* [collect](#collect): Retrieve tokens
+* [createAndInitializePoolIfNecessary](#createAndInitializePoolIfNecessary)：创建并初始化合约
+* [mint](#mint)：创建头寸
+* [increaseLiquidity](#increaseLiquidity)：添加流动性
+* [decreaseLiquidity](#decreaseLiquidity)：减少流动性
+* [burn](#burn)：销毁头寸
+* [collect](#collect)：取回代币
 
-It is important to note that this contract inherits from `ERC721` and can mint NFTs. Since each Uniswap v3 position (determined by `owner`, `tickLower`, and `tickUpper`) is unique, it is highly suitable for representation as an NFT.
+需要特别注意，该合约继承了`ERC721`，可以mint NFT。因为每个Uniswap v3的头寸（由`owner`、`tickLower`和`tickUpper`确定）是唯一的，因此非常适合用NFT表示。
 
 #### createAndInitializePoolIfNecessary
 
-As mentioned in [Uniswap-v3-core](../dive-into-uniswap-v3-contracts/README.md), after a trading pair contract is created, it needs to be initialized before use.
+我们在[Uniswap-v3-core](../dive-into-uniswap-v3-contracts/README_zh.md)中提到，一个交易对合约被创建后，需要初始化才能使用。
 
-This method combines a series of operations into one: create and initialize the trading pair.
+本方法就把这一系列操作合并成一个方法：创建并初始化交易对。
 
 ```solidity
 /// @inheritdoc IPoolInitializer
@@ -52,33 +52,33 @@ function createAndInitializePoolIfNecessary(
 }
 ```
 
-First, the `pool` object is obtained based on the trading pair tokens (`token0` and `token1`) and `fee`:
+首先根据交易对代币（`token`和`token1`）和手续费`fee`获取`pool`对象：
 
-* If it does not exist, call the Uniswap-v3-core factory contract `createPool` to create and initialize the trading pair
-* If it already exists, determine whether it has been initialized (price) based on the extra `slot0`; if not, call the Uniswap-v3-core `initialize` method to initialize it.
+* 如果不存在，则调用Uniswap-v3-core工厂合约`createPool`创建该交易对并初始化
+* 如果已存在，则根据额`slot0`判断是否已经初始化（价格），如果没有则调用Uniswap-v3-core的`initialize`方法进行初始化。
 
 #### mint
 
-Create a new position, with parameters as follows:
+创建新头寸，方法接受的参数如下：
 
-* `token0`: Token 0
-* `token1`: Token 1
-* `fee`: Fee level (must match the fee levels defined in the factory contract)
-* `tickLower`: Lower price limit
-* `tickUpper`: Upper price limit
-* `amount0Desired`: Desired amount of token 0 to deposit
-* `amount1Desired`: Desired amount of token 1 to deposit
-* `amount0Min`: Minimum amount of `token0` to deposit (to prevent front-running)
-* `amount1Min`: Minimum amount of `token1` to deposit (to prevent front-running)
-* `recipient`: Position recipient
-* `deadline`: Deadline (requests are invalid after this time) (to prevent replay attacks)
+* `token0`：代币0
+* `token1`：代币1
+* `fee`：手续费等级（需符合工厂合约中定义的手续费等级）
+* `tickLower`：价格区间低点
+* `tickUpper`：价格区间高点
+* `amount0Desired`：希望存入的代币0数量
+* `amount1Desired`：希望存入的代币1数量
+* `amount0Min`：最少存入的`token0`数量（防止被frontrun）
+* `amount1Min`：最少存入的`token1`数量（防止被frontrun）
+* `recipient`：头寸接收者
+* `deadline`：截止时间（超过该时间后请求无效）（防止重放攻击）
 
-Returns:
+返回：
 
-* `tokenId`: Each position is assigned a unique `tokenId`, representing the NFT
-* `liquidity`: The position's liquidity
-* `amount0`: The amount of `token0`
-* `amount1`: The amount of `token1`
+* `tokenId`：每个头寸会分配一个唯一的`tokenId`，代表NFT
+* `liquidity`：头寸的流动性
+* `amount0`：`token0`的数量
+* `amount1`：`token1`的数量
 
 ```solidity
 /// @inheritdoc INonfungiblePositionManager
@@ -111,13 +111,13 @@ function mint(MintParams calldata params)
     );
 ```
 
-First, liquidity is added through the [addLiquidity](#addLiquidity) method to obtain the actual `liquidity`, consumed `amount0`, `amount1`, and trading pair `pool`.
+首先通过[addLiquidity](#addLiquidity)方法完成流动性添加，获得实际得到的流动性`liquidity`，消耗的`amount0`、`amount1`，以及交易对`pool`。
 
 ```solidity
     _mint(params.recipient, (tokenId = _nextId++));
 ```
 
-Through the `ERC721` contract's `_mint` method, mint an NFT to the recipient `recipient`, with `tokenId` incrementing from 1.
+通过`ERC721`合约的`_mint`方法，向接收者`recipient`铸造NFT，`tokenId`从1开始递增。
 
 ```solidity
     bytes32 positionKey = PositionKey.compute(address(this), params.tickLower, params.tickUpper);
@@ -147,20 +147,20 @@ Through the `ERC721` contract's `_mint` method, mint an NFT to the recipient `re
 }
 ```
 
-Finally, save the position information to `_positions`.
+最后，保存头寸信息到`_positions`中。
 
 #### increaseLiquidity
 
-Add liquidity to a position. Note that you can change the amount of tokens in the position, but you cannot change the price range.
+为一个头寸添加流动性。需注意，可以修改头寸的代币数量，但是不能修改价格区间。
 
-Parameters as follows:
+参数如下：
 
-* `tokenId`: The `tokenId` returned when creating the position, i.e., the NFT's `tokenId`
-* `amount0Desired`: The desired amount of `token0` to add
-* `amount1Desired`: The desired amount of `token1` to add
-* `amount0Min`: The minimum amount of `token0` to add (to prevent front-running)
-* `amount1Min`: The minimum amount of `token1` to add (to prevent front-running)
-* `deadline`: Deadline (requests are invalid after this time) (to prevent replay attacks)
+* `tokenId`：创建头寸时返回的`tokenId`，即NFT的`tokenId`
+* `amount0Desired`：希望添加的`token0`数量
+* `amount1Desired`：希望添加的`token1`数量
+* `amount0Min`：最少添加的`token0`数量（防止被frontrun）
+* `amount1Min`：最少添加的`token1`数量（防止被frontrun）
+* `deadline`：截止时间（超过该时间后请求无效）（防止重放攻击）
 
 ```solidity
 /// @inheritdoc INonfungiblePositionManager
@@ -196,7 +196,7 @@ function increaseLiquidity(IncreaseLiquidityParams calldata params)
     );
 ```
 
-First, get the position information based on `tokenId`; like in the [mint](#mint) method, here, liquidity is added through the [addLiquidity](#addLiquidity), returning the added `liquidity`, consumed `amount0` and `amount1`, and the trading pair contract `pool`.
+首先根据`tokenId`获取头寸信息；与[mint](#mint)方法一样，这里调用[addLiquidity](#addLiquidity)添加流动性，返回添加成功的流动性`liquidity`，所消耗的`amount0`和`amount1`，以及交易对合约`pool`。
 
 ```solidity
     bytes32 positionKey = PositionKey.compute(address(this), position.tickLower, position.tickUpper);
@@ -227,19 +227,19 @@ First, get the position information based on `tokenId`; like in the [mint](#mint
 }
 ```
 
-Update the contract's position state based on the latest position information in the `pool` object, such as `tokensOwed0` and `tokensOwed1` for `token0` and `token1` to be retrieved, and the position's current liquidity, etc.
+根据`pool`对象里的最新头寸信息，更新本合约的头寸状态，比如`token0`和`token1`的可取回代币数`tokensOwed0`和`tokensOwed1`，以及头寸当前流动性等。
 
 #### decreaseLiquidity
 
-Remove liquidity, which can be partial or full. After removal, the tokens will be recorded as tokens to be retrieved, and the [collect](#collect) method must be called again to retrieve the tokens.
+移除流动性，可以移除部分或者所有流动性，移除后的代币将以待取回代币形式记录，需要再次调用[collect](#collect)方法取回代币。
 
-Parameters as follows:
+参数如下：
 
-* `tokenId`: The `tokenId` returned when creating the position, i.e., the NFT's `tokenId`
-* `liquidity`: The amount of liquidity to remove
-* `amount0Min`: The minimum amount of `token0` to remove (to prevent front-running)
-* `amount1Min`: The minimum amount of `token1` to remove (to prevent front-running)
-* `deadline`: Deadline (requests are invalid after this time) (to prevent replay attacks)
+* `tokenId`：创建头寸时返回的`tokenId`，即NFT的`tokenId`
+* `liquidity`：希望移除的流动性数量
+* `amount0Min`：最少移除的`token0`数量（防止被frontrun）
+* `amount1Min`：最少移除的`token1`数量（防止被frontrun）
+* `deadline`：截止时间（超过该时间请求无效）（防止重放攻击）
 
 ```solidity
 /// @inheritdoc INonfungiblePositionManager
@@ -253,7 +253,7 @@ function decreaseLiquidity(DecreaseLiquidityParams calldata params)
 {
 ```
 
-Note, here the `isAuthorizedForToken` modifer is used:
+注意，这里使用`isAuthorizedForToken` modifer：
 
 ```solidity
 modifier isAuthorizedForToken(uint256 tokenId) {
@@ -262,7 +262,7 @@ modifier isAuthorizedForToken(uint256 tokenId) {
 }
 ```
 
-To confirm that the current user has the right to operate the `tokenId`, otherwise, removal is prohibited.
+确认当前用户具备操作该`tokenId`的权限，否则禁止移除。
 
 ```solidity
     require(params.liquidity > 0);
@@ -272,7 +272,7 @@ To confirm that the current user has the right to operate the `tokenId`, otherwi
     require(positionLiquidity >= params.liquidity);
 ```
 
-To confirm that the position liquidity is greater than or equal to the liquidity to be removed.
+确认头寸流动性大于等于待移除流动性。
 
 ```solidity
     PoolAddress.PoolKey memory poolKey = _poolIdToPoolKey[position.poolId];
@@ -282,7 +282,7 @@ To confirm that the position liquidity is greater than or equal to the liquidity
     require(amount0 >= params.amount0Min && amount1 >= params.amount1Min, 'Price slippage check');
 ```
 
-Call the Uniswap-v3-core's [burn](../dive-into-uniswap-v3-contracts/README.md#burn) method to destroy liquidity, returning the corresponding `token0` and `token1` token amounts `amount0` and `amount1`, and confirm that they meet the `amount0Min` and `amount1Min` restrictions.
+调用Uniswap-v3-core的[burn](../dive-into-uniswap-v3-contracts/README_zh.md#burn)方法销毁流动性，返回该流动性对应的`token0`和`token1`的代币数量`amount0`和`amount1`，确认其符合`amount0Min`和`amount1Min`的限制。
 
 ```solidity
     bytes32 positionKey = PositionKey.compute(address(this), position.tickLower, position.tickUpper);
@@ -317,13 +317,13 @@ Call the Uniswap-v3-core's [burn](../dive-into-uniswap-v3-contracts/README.md#bu
 }
 ```
 
-Similar to [increaseLiquidity](#increaseLiquidity), here it calculates the position's tokens to be retrieved, etc.
+与[increaseLiquidity](#increaseLiquidity)相同，此处计算头寸的待取回代币等信息。
 
 #### burn
 
-Destroy the position NFT. Only when the position's liquidity is 0, and the amount of tokens to be retrieved is 0, can the NFT be destroyed.
+销毁头寸NFT。仅当该头寸的流动性为0，并且待取回代币数量都是0时，才能销毁NFT。
 
-Likewise, calling this method requires verifying that the current user owns the `tokenId`.
+同样，调用该方法需要验证当前用户拥有`tokenId`的权限。
 
 ```solidity
 /// @inheritdoc INonfungiblePositionManager
@@ -337,14 +337,14 @@ function burn(uint256 tokenId) external payable override isAuthorizedForToken(to
 
 #### collect
 
-Retrieve tokens to be collected.
+取回待领取代币。
 
-Parameters as follows:
+参数如下：
 
-* `tokenId`: The `tokenId` returned when creating the position, i.e., the NFT's `tokenId`
-* `recipient`: Token recipient
-* `amount0Max`: The maximum amount of `token0` tokens to collect
-* `amount1Max`: The maximum amount of `token1` tokens to collect
+* `tokenId`：创建头寸时返回的`tokenId`，即NFT的`tokenId`
+* `recipient`：代币接收者
+* `amount0Max`：最多领取的`token0`代币数量
+* `amount1Max`：最多领取的`token1`代币数量
 
 ```solidity
 /// @inheritdoc INonfungiblePositionManager
@@ -368,7 +368,7 @@ function collect(CollectParams calldata params)
     (uint128 tokensOwed0, uint128 tokensOwed1) = (position.tokensOwed0, position.tokensOwed1);
 ```
 
-Obtain the number of tokens to be retrieved.
+获取待取回代币数量。
 
 ```solidity
     // trigger an update of the position fees owed and fee growth snapshots if it has any liquidity
@@ -397,7 +397,7 @@ Obtain the number of tokens to be retrieved.
     }
 ```
 
-If the position contains liquidity, trigger an update of the position state. Here, 0 liquidity is used to trigger. This is because Uniswap-v3-core only updates the position state during `mint` and `burn`, and the `collect` method may be called after `swap`, which may result in the position state not being the latest.
+如果该头寸含有流动性，则触发一次头寸状态的更新，这里使用`burn` 0流动性来触发。这是因为Uniswap-v3-core只在`mint`和`burn`时才更新头寸状态，而`collect`方法可能在`swap`之后被调用，可能会导致头寸状态不是最新的。
 
 ```solidity
     // compute the arguments to give to the pool#collect method
@@ -424,41 +424,41 @@ If the position contains liquidity, trigger an update of the position state. Her
 }
 ```
 
-Call Uniswap-v3-core's `collect` method to retrieve tokens and update the position's tokens to be retrieved.
+调用Uniswap-v3-core的`collect`方法取回代币，并更新头寸的待取回代币数量。
 
 ### SwapRouter.sol
 
-Swap tokens, including the following methods:
+交换代币，包括以下几个方法：
 
-* [exactInputSingle](#exactInputSingle): Single-step swap, specifying the amount of input tokens to get as many output tokens as possible
-* [exactInput](#exactInput): Multi-step swap, specifying the amount of input tokens to get as many output tokens as possible
-* [exactOutputSingle](#exactOutputSingle): Single-step swap, specifying the amount of output tokens to provide as few input tokens as possible
-* [exactOutput](#exactOutput): Multi-step swap, specifying the amount of output tokens to provide as few input tokens as possible
+* [exactInputSingle](#exactInputSingle)：单步交换，指定输入代币数量，尽可能多地获得输出代币
+* [exactInput](#exactInput)：多步交换，指定输入代币数量，尽可能多地获得输出代币
+* [exactOutputSingle](#exactOutputSingle)：单步交换，指定输出代币数量，尽可能少地提供输入代币
+* [exactOutput](#exactOutput)：多步交换，指定输出代币数量，尽可能少地提供输入代币
 
-Additionally, the contract also implements:
+另外，该合约也实现了：
 
-* [uniswapV3SwapCallback](#uniswapV3SwapCallback): Swap callback method
-* [exactInputInternal](#exactInputInternal): Single-step swap, internal method, specifying the amount of input tokens to get as many output tokens as possible
-* [exactOutputInternal](#exactOutputInternal): Single-step swap, internal method, specifying the amount of output tokens to provide as few input tokens as possible
+* [uniswapV3SwapCallback](#uniswapV3SwapCallback)：交换回调方法
+* [exactInputInternal](#exactInputInternal)：单步交换，内部方法，指定输入代币数量，尽可能多地获得输出代币
+* [exactOutputInternal](#exactOutputInternal)：单步交换，内部方法，指定输出代币数量，尽可能少地提供输入代币
 
 #### exactInputSingle
 
-Single-step swap, specifying the amount of input tokens to get as many output tokens as possible.
+单步交换，指定输入代币数量，尽可能多地获得输出代币。
 
-Parameters as follows:
+参数如下：
 
-* `tokenIn`: Input token address
-* `tokenOut`: Output token address
-* `fee`: Fee level
-* `recipient`: Output token recipient
-* `deadline`: Deadline, requests are invalid after this time
-* `amountIn`: The amount of input tokens
-* `amountOutMinimum`: The minimum amount of output tokens to receive
-* `sqrtPriceLimitX96`: (Highest or lowest) limit price
+* `tokenIn`：输入代币地址
+* `tokenOut`：输出代币地址
+* `fee`：手续费等级
+* `recipient`：输出代币接收者
+* `deadline`：截止时间，超过该时间请求无效
+* `amountIn`：输入的代币数量
+* `amountOutMinimum`：最少收到的输出代币数量
+* `sqrtPriceLimitX96`：（最高或最低）限制价格
 
-Returns:
+返回：
 
-* `amountOut`: The amount of output tokens
+* `amountOut`：输出代币数量
 
 ```solidity
 /// @inheritdoc ISwapRouter
@@ -479,25 +479,25 @@ function exactInputSingle(ExactInputSingleParams calldata params)
 }
 ```
 
-This method actually calls [exactInputInternal](#exactInputInternal), finally ensuring the output token amount `amountOut` meets the minimum output token requirement `amountOutMinimum`.
+该方法实际上调用[exactInputInternal](#exactInputInternal)，最后确认输出代币数量`amountOut`符合最小输出代币要求`amountOutMinimum`。
 
-Note, `SwapCallbackData` in the `path` is encoded according to the format defined in [Path.sol](#Pathsol).
+注意，`SwapCallbackData`中的`path`按照[Path.sol](#Pathsol)中定义的格式编码。
 
 #### exactInput
 
-Multi-step swap, specifying the amount of input tokens to get as many output tokens as possible.
+多步交换，指定输入代币数量，尽可能多地获得输出代币。
 
-Parameters as follows:
+参数如下：
 
-* `path`: Swap path, format see: [Path.sol](#Pathsol)
-* `recipient`: Output token recipient
-* `deadline`: Transaction deadline
-* `amountIn`: The amount of input tokens
-* `amountOutMinimum`: The minimum amount of output tokens
+* `path`：交换路径，格式请参考：[Path.sol](#Pathsol)
+* `recipient`：输出代币收款人
+* `deadline`：交易截止时间
+* `amountIn`：输入代币数量
+* `amountOutMinimum`：最少输出代币数量
 
-Returns:
+返回：
 
-* `amountOut`: The amount of output tokens
+* `amountOut`：输出代币
 
 ```solidity
 /// @inheritdoc ISwapRouter
@@ -538,36 +538,36 @@ function exactInput(ExactInputParams memory params)
 }
 ```
 
-In a multi-step swap, it needs to be split into multiple single-step swaps according to the swap path and proceed in a loop until the path ends.
+在多步交换中，需要按照交换路径，拆成多个单步交换，循环进行，直到路径结束。
 
-If it is the first step of the swap, then `payer` is the contract caller; otherwise, `payer` is the current `SwapRouter` contract.
+如果是第一步交换，则`payer`为合约调用方，否则，`payer`为当前`SwapRouter`合约。
 
-In the loop, first determine whether there are 2 or more pools left in the `path` according to [hasMultiplePools](#hasMultiplePools). If yes, then the intermediate swap steps' recipient address is set to the current `SwapRouter` contract; otherwise, it is set to the entrance parameter `recipient`.
+在循环中首先根据[hasMultiplePools](#hasMultiplePools)判断路径`path`中是否剩余2个及以上的池子。如果有，则中间交换步骤的收款地址设置为当前`SwapRouter`合约，否则设置为入口参数`recipient`。
 
-After each step of the swap, remove the first 20+3 bytes from the current `path`, i.e., pop the front token+fee information, enter the next swap, and use the output of each step as the input for the next swap.
+每一步交换后，将当前交换路径`path`的前20+3个字节删除，即弹出（pop）最前面的token+fee信息，进入下一次交换，并将每一步交换的输出作为下一次交换的输入。
 
-Each step of the swap calls [exactInputInternal](#exactInputInternal) for execution.
+每一步交换调用[exactInputInternal](#exactInputInternal)进行。
 
-After multiple steps of swapping, confirm that the final `amountOut` meets the minimum output token requirement `amountOutMinimum`.
+多步交换后，确认最后的`amountOut`满足最小输出代币要求`amountOutMinimum`。
 
 #### exactOutputSingle
 
-Single-step swap, specifying the amount of output tokens to provide as few input tokens as possible.
+单步交换，指定输出代币数量，尽可能少地提供输入代币。
 
-Parameters as follows:
+参数如下：
 
-* `tokenIn`: Input token address
-* `tokenOut`: Output token address
-* `fee`: Fee level
-* `recipient`: Output token recipient
-* `deadline`: Request deadline
-* `amountOut`: The amount of output tokens
-* `amountInMaximum`: The maximum amount of input tokens
-* `sqrtPriceLimitX96`: The maximum or minimum token price
+* `tokenIn`：输入代币地址
+* `tokenOut`：输出代币地址
+* `fee`：手续费等级
+* `recipient`：输出代币收款人
+* `deadline`：请求截止时间
+* `amountOut`：输出代币数量
+* `amountInMaximum`：最大输入代币数量
+* `sqrtPriceLimitX96`：最大或最小代币价格
 
-Returns:
+返回：
 
-* `amountIn`: The actual amount of input tokens
+* `amountIn`：实际输入代币数量
 
 ```solidity
 /// @inheritdoc ISwapRouter
@@ -592,19 +592,19 @@ function exactOutputSingle(ExactOutputSingleParams calldata params)
 }
 ```
 
-Call [exactOutputInternal](#exactOutputInternal) to complete the single-step swap, and ensure the actual input token amount `amountIn` is less than or equal to the maximum input token amount `amountInMaximum`.
+调用[exactOutputInternal](#exactOutputInternal)完成单步交换，并确认实际输入代币数量`amountIn`小于等于最大输入代币数量`amountInMaximum`。
 
 #### exactOutput
 
-Multi-step swap, specifying the amount of output tokens to provide as few input tokens as possible.
+多步交换，指定输出代币数量，尽可能少地提供输入代币。
 
-Parameters as follows:
+参数如下：
 
-* `path`: Swap path, format see: [Path.sol](#Path)
-* `recipient`: Output token recipient
-* `deadline`: Request deadline
-* `amountOut`: The specified amount of output tokens
-* `amountInMaximum`: The maximum amount of input tokens
+* `path`：交换路径，格式请参考：[Path.sol](#Path)
+* `recipient`：输出代币收款人
+* `deadline`：请求截止时间
+* `amountOut`：指定输出代币数量
+* `amountInMaximum`：最大输入代币数量
 
 ```solidity
 /// @inheritdoc ISwapRouter
@@ -630,13 +630,13 @@ function exactOutput(ExactOutputParams calldata params)
 }
 ```
 
-Call [exactOutputInternal](#exactOutputInternal) to complete the swap. Note, this method will continue the next step of the swap in the callback method, so it does not need a loop trade like [exactInput](#exactInput).
+调用[exactOutputInternal](#exactOutputInternal)完成交换，注意，该方法会在回调方法中继续完成下一步交换，因此不需要像[exactInput](#exactInput)使用循环交易。
 
-Finally, ensure the actual input token amount `amountIn` is less than or equal to the maximum input token amount `amountInMaximum`.
+最后确认实际输入代币数量`amountIn`小于等于最大输入代币数量`amountInMaximum`。
 
 #### exactInputInternal
 
-Single-step swap, internal method, specifying the amount of input tokens to get as many output tokens as possible.
+单步交换，内部方法，指定输入代币数量，尽可能多地获得输出代币。
 
 ```solidity
 /// @dev Performs a single exact input swap
@@ -650,19 +650,19 @@ function exactInputInternal(
     if (recipient == address(0)) recipient = address(this);
 ```
 
-If `recipient` is not specified, then the default is the current `SwapRouter` contract address. This is because, in multi-step swaps, intermediate tokens need to be saved in the current `SwapRouter` contract.
+如果没有指定`recipient`，则默认为当前`SwapRouter`合约地址。这是因为在多步交换时，需要将中间代币保存在当前`SwapRouter`合约。
 
 ```solidity
     (address tokenIn, address tokenOut, uint24 fee) = data.path.decodeFirstPool();
 ```
 
-Decode the first pool information in `path` according to [decodeFirstPool](#decodeFirstPool).
+根据[decodeFirstPool](#decodeFirstPool)解析`path`中第一个池子的信息。
 
 ```solidity
     bool zeroForOne = tokenIn < tokenOut;
 ```
 
-Since Uniswap v3 pools have `token0` address less than `token1`, determine whether the current swap is from `token0` to `token1` based on the two token addresses. Note, `tokenIn` can be either `token0` or `token1`.
+因为Uniswap v3池子`token0`地址小于`token1`，根据两个代币地址判断当前是否由`token0`交换到`token1`。注意，`tokenIn`可以是`token0`或`token1`。
 
 ```solidity
     (int256 amount0, int256 amount1) =
@@ -677,19 +677,19 @@ Since Uniswap v3 pools have `token0` address less than `token1`, determine wheth
         );
 ```
 
-Call the [swap](#swap) method, getting the required `amount0` and `amount1` to complete this swap. If swapping from `token0` to `token1`, then `amount1` is negative; otherwise, `amount0` is negative.
+调用[swap](#swap)方法，获得完成本次交换所需的`amount0`和`amount1`。如果是从`token0`交换`token1`，则`amount1`是负数；反之，`amount0`是负数。
 
-If `sqrtPriceLimitX96` is not specified, then default to the lowest or highest price, because in multi-step swaps, it's not possible to specify the price for each step.
+如果没有指定`sqrtPriceLimitX96`，则默认为最低或最高价格，因为在多步交换中，无法指定每一步的价格。
 
 ```solidity
     return uint256(-(zeroForOne ? amount1 : amount0));
 ```
 
-Returns `amountOut`.
+返回`amountOut`。
 
 #### exactOutputInternal
 
-Single-step swap, private method, specifying the amount of output tokens to provide as few input tokens as possible.
+单步交换，内部方法，指定输出代币数量，尽可能少地提供输入代币。
 
 ```solidity
 /// @dev Performs a single exact output swap
@@ -707,7 +707,7 @@ function exactOutputInternal(
     bool zeroForOne = tokenIn < tokenOut;
 ```
 
-This part of the code is similar to [exactInputInternal](#exactInputInternal).
+这部分代码与[exactInputInternal](#exactInputInternal)类似。
 
 ```solidity
     (int256 amount0Delta, int256 amount1Delta) =
@@ -722,8 +722,8 @@ This part of the code is similar to [exactInputInternal](#exactInputInternal).
         );
 ```
 
-Call the Uniswap-v3-core's `swap` method to complete a single-step swap. Note, since the amount of output tokens is specified, here, `-amountOut.toInt256()` is used.
-The returned `amount0Delta` and `amount1Delta` are the required `token0` amount and the actual output `token1` amount.
+调用Uniswap-v3-core的`swap`方法完成单步交换，注意，因为是指定输出代币数量，此处需要使用`-amountOut.toInt256()`。
+返回的`amount0Delta`和`amount1Delta`为完成本次交换所需的`token0`数量和实际输出的`token1`数量。
 
 ```solidity
     uint256 amountOutReceived;
@@ -738,13 +738,13 @@ The returned `amount0Delta` and `amount1Delta` are the required `token0` amount 
 
 #### uniswapV3SwapCallback
 
-Swap's callback method, implementing the `IUniswapV3SwapCallback.uniswapV3SwapCallback` interface.
+swap的回调方法，实现`IUniswapV3SwapCallback.uniswapV3SwapCallback`接口。
 
-Parameters as follows:
+参数如下：
 
-* `amount0Delta`: The `amount0` generated by this swap (corresponding to the `token0`); for the contract, if greater than 0, it indicates that the token should be input; if less than 0, it indicates that the token should be received
-* `amount1Delta`: The `amount1` generated by this swap (corresponding to the `token1`); for the contract, if greater than 0, it indicates that the token should be input; if less than 0, it indicates that the token should be received
-* `_data`: Callback parameters, here of type `SwapCallbackData`
+* `amount0Delta`：本次交换产生的`amount0`（对应代币为`token0`）；对于合约而言，如果大于0，则表示应输入代币；如果小于0，则表示应收到代币
+* `amount1Delta`：本次交换产生的`amount1`（对应代币为`token1`）；对于合约而言，如果大于0，则表示应输入代币；如果小于0，则表示应收到代币
+* `_data`：回调参数，这里为`SwapCallbackData`类型
 
 ```solidity
 /// @inheritdoc IUniswapV3SwapCallback
@@ -759,7 +759,7 @@ function uniswapV3SwapCallback(
     CallbackValidation.verifyCallback(factory, tokenIn, tokenOut, fee);
 ```
 
-Decode the callback parameter `_data` and get the information of the first trading pair on the trading path.
+解析回调参数`_data`，根据[decodeFirstPool](#decodeFirstPool)获得交易路径上的第一个交易对信息。
 
 ```solidity
     (bool isExactInput, uint256 amountToPay) =
@@ -768,14 +768,14 @@ Decode the callback parameter `_data` and get the information of the first tradi
             : (tokenOut < tokenIn, uint256(amount1Delta));
 ```
 
-Based on different inputs, there are several trading combinations:
+根据不同输入，有以下几种交易组合：
 
-|Scenario|Explanation|amount0Delta > 0|amount1Delta > 0|tokenIn < tokenOut|isExactInput|amountToPay|
+|场景|说明|amount0Delta > 0|amount1Delta > 0|tokenIn < tokenOut|isExactInput|amountToPay|
 |---|---|---|---|---|---|---|
-|1|Specify `token0` amount input, output as much `token1` as possible|true|false|true|true|amount0Delta|
-|2|Provide as few `token0` as possible, output specified `token1` amount|true|false|true|false|amount0Delta|
-|3|Specify `token1` amount input, output as much `token0` as possible|false|true|false|true|amount1Delta|
-|4|Provide as few `token1` as possible, output specified `token0` amount|false|true|false|false|amount1Delta|
+|1|输入指定数量`token0`，输出尽可能多`token1`|true|false|true|true|amount0Delta|
+|2|输入尽可能少`token0`，输出指定数量`token1`|true|false|true|false|amount0Delta|
+|3|输入指定数量`token1`，输出尽可能多`token0`|false|true|false|true|amount1Delta|
+|4|输入尽可能少`token1`，输出指定数量`token0`|false|true|false|false|amount1Delta|
 
 ```solidity
     if (isExactInput) {
@@ -793,22 +793,22 @@ Based on different inputs, there are several trading combinations:
     }
 ```
 
-* If `isExactInput`, i.e., specify input token scenario, scenarios 1 and 3 in the table above, then directly transfer `amount0Delta` (scenario 1) or `amount1Delta` (scenario 3) (both are positive numbers) to the `SwapRouter` contract.
-* If it is a specify output token scenario
-    - If it is a multi-step swap, then remove the first 23 characters (pop the front token+fee), use the required input as the output for the next step, and enter the next step of the swap
-    - If it is a single-step swap (or the last step), then swap `tokenIn` and `tokenOut`, and transfer to the `SwapRouter` contract
+* 如果`isExactInput`，即指定输入代币的场景，上表中的场景1和场景3，则直接向`SwapRouter`合约转账`amount0Delta`（场景1）或`amount1Delta`（场景3）（都是正数）。
+* 如果是指定输出代币的场景
+    - 如果是多步交换，则移除前23的字符（pop最前面的token+fee），将需要的输入作为下一步的输出，进入下一步交换
+    - 如果是单步交换（或最后一步），则`tokenIn`与`tokenOut`交换，并向`SwapRouter`合约转账
 
 ### LiquidityManagement.sol
 
 #### uniswapV3MintCallback
 
-Callback method for adding liquidity.
+添加流动性的回调方法。
 
-Parameters as follows:
+参数如下：
 
-* `amount0Owed`: The amount of `token0` to be transferred
-* `amount1Owed`: The amount of `token1` to be transferred
-* `data`: Callback parameters passed in the `mint` method
+* `amount0Owed`：应转账的`token0`数量
+* `amount1Owed`：应转账的`token1`数量
+* `data`：在`mint`方法中传入的回调参数
 
 ```solidity
 /// @inheritdoc IUniswapV3MintCallback
@@ -825,13 +825,13 @@ function uniswapV3MintCallback(
 }
 ```
 
-First, decode the callback parameter `MintCallbackData` in reverse and confirm that this method is called by the specified trading pair contract, because this method is an `external` method and can be called externally, thus needing to confirm the caller.
+首先反向解析回调参数`MintCallbackData`，并确认该方法是被指定的交易对合约调用，因为该方法是一个`external`方法，可以被外部调用，因此需要确认调用方。
 
-Finally, transfer the specified token amounts to the caller.
+最后，向调用方转入指定的代币数量。
 
 #### addLiquidity
 
-Add liquidity to an initialized trading pair (pool).
+给已初始化的交易对（池子）添加流动性。
 
 ```solidity
 /// @notice Add liquidity to an initialized pool
@@ -850,7 +850,7 @@ function addLiquidity(AddLiquidityParams memory params)
     pool = IUniswapV3Pool(PoolAddress.computeAddress(factory, poolKey));
 ```
 
-Get the trading pair `pool` based on `factory`, `token0`, `token1`, and `fee`.
+根据`factory`、`token0`、`token1`和`fee`获取交易对`pool`。
 
 ```solidity
     // compute the liquidity amount
@@ -869,9 +869,9 @@ Get the trading pair `pool` based on `factory`, `token0`, `token1`, and `fee`.
     }
 ```
 
-From `slot0`, get the current price `sqrtPriceX96`, calculate the lowest price `sqrtRatioAX96` and highest price `sqrtRatioBX96` based on `tickLower` and `tickUpper`.
+从`slot0`获取当前价格`sqrtPriceX96`，根据`tickLower`和`tickUpper`计算区间的最低价格`sqrtRatioAX96`和最高价格`sqrtRatioBX96`。
 
-Calculate the maximum liquidity that can be obtained according to [getLiquidityForAmounts](#getLiquidityForAmounts).
+根据[getLiquidityForAmounts](#getLiquidityForAmounts)计算能够获得的最大流动性。
 
 ```solidity
     (amount0, amount1) = pool.mint(
@@ -883,29 +883,29 @@ Calculate the maximum liquidity that can be obtained according to [getLiquidityF
     );
 ```
 
-Use the Uniswap-v3-core's `mint` method to add liquidity and return the actual consumed `amount0` and `amount1`.
+使用Uniswap-v3-core的`mint`方法添加流动性，并返回实际消耗的`amount0`和`amount1`。
 
-In the Uniswap-v3-core's `mint` method mentioned, the caller needs to implement [uniswapV3MintCallback](#LiquidityManagement.uniswapV3MintCallback) interface. Here, `MintCallbackData` is passed as a callback parameter, which can be decoded in reverse in the `uniswapV3MintCallback` method to obtain the trading pair and user information.
+我们在Uniswap-v3-core的`mint`方法中提到，调用方需实现[uniswapV3MintCallback](#LiquidityManagement.uniswapV3MintCallback)接口。这里传入`MintCallbackData`作为回调参数，在`uniswapV3MintCallback`方法中可以反向解析出来，以便获取交易对和用户信息。
 
 ```solidity
 require(amount0 >= params.amount0Min && amount1 >= params.amount1Min, 'Price slippage check');
 ```
 
-Finally, ensure the actual consumed `amount0` and `amount1` meet the minimum requirements of `amount0Min` and `amount1Min`.
+最后，确认实际消耗的`amount0`和`amount1`满足`amount0Min`和`amount1Min`的最低要求。
 
 ### LiquidityAmounts.sol
 
 #### getLiquidityForAmount0
 
-Calculate liquidity based on `amount0` and the price range.
+根据`amount0`和价格区间计算流动性。
 
-According to the formula in Uniswap-v3-core's `getAmount0Delta`:
+根据Uniswap-v3-core的`getAmount0Delta`中的公式：
 
 $$
 amount0 = x_b - x_a = L \cdot (\frac{1}{\sqrt{P_b}} - \frac{1}{\sqrt{P_a}}) = L \cdot (\frac{\sqrt{P_a} - \sqrt{P_b}}{\sqrt{P_a} \cdot \sqrt{P_b}})
 $$
 
-We get:
+可得：
 
 $$
 L = amount0 \cdot (\frac{\sqrt{P_a} \cdot \sqrt{P_b}}{\sqrt{P_a} - \sqrt{P_b}})
@@ -931,15 +931,15 @@ function getLiquidityForAmount0(
 
 #### getLiquidityForAmount1
 
-Calculate liquidity based on `amount1` and the price range.
+根据`amount1`和价格区间计算流动性。
 
-According to the formula in Uniswap-v3-core's `getAmount1Delta`:
+根据Uniswap-v3-core的`getAmount1Delta`公式：
 
 $$
 amount1 = y_b - y_a = L \cdot \Delta{\sqrt{P}} = L \cdot (\sqrt{P_b} - \sqrt{P_a})
 $$
 
-We get:
+可得：
 
 $$
 L = \frac{amount1}{\sqrt{P_b} - \sqrt{P_a}}
@@ -964,12 +964,12 @@ function getLiquidityForAmount1(
 
 #### getLiquidityForAmounts
 
-Calculates the maximum liquidity that can be returned based on the current price.
+根据当前价格，计算能够返回的最大流动性。
 
-* Because when $\sqrt{P}$ increases, $x$ is consumed, so if the current price is below the lower point of the price range, liquidity must be calculated completely based on $x$ or `amount0`
-* Conversely, if the current price is above the upper point of the price range, liquidity needs to be calculated based on $y$ or `amount1`
+* 因为当$\sqrt{P}$增大时，需要消耗$x$，因此如果当前价格低于价格区间低点时，需要完全根据$x$即`amount0`计算流动性
+* 反之，如果当前价格高于价格区间高点，需要根据$y$即`amount1`计算流动性
 
-As shown in the figure below:
+如下图所示：
 
 $$
 p,...,\overbrace{p_a,...,p_b}^{amount0}
@@ -983,7 +983,7 @@ $$
 \overbrace{p_a,...,p_b}^{amount1},...,p
 $$
 
-Where $p$ represents the current price, $p_a$ represents the lower point of the range, and $p_b$ represents the upper point of the range.
+其中，$p$表示当前价格，$p_a$表示区间低点，$p_b$表示区间高点。
 
 ```solidity
 /// @notice Computes the maximum amount of liquidity received for a given amount of token0, token1, the current
@@ -1018,15 +1018,15 @@ function getLiquidityForAmounts(
 
 ### Path.sol
 
-In Uniswap v3 [SwapRouter](#SwapRoutersol), the trading path is encoded as a `bytes` type string, formatted as:
+在Uniswap v3 [SwapRouter](#SwapRoutersol)中，交易路径被编码为一个`bytes`类型字符串，其格式为：
 
 $$
 \overbrace{token_0}^{20}\overbrace{fee_0}^{3}\overbrace{token_1}^{20}\overbrace{fee_1}^{3}\overbrace{token_2}^{20}...
 $$
 
-Where the length of $token_n$ is 20 bytes, and the length of $fee_n$ is 3 bytes. The above path indicates swapping from `token0` to `token1` using a pool (`token0`, `token1`, `fee0`) with fee level `fee0`, then continuing to swap to `token2` using a pool (`token1`, `token2`, `fee1`) with fee level `fee1`.
+其中，$token_n$的长度为20个字节（bytes），$fee_n$的长度为3个字节，上述路径表示：从`token0`交换到`token1`，使用手续费等级为`fee0`的池子（`token0`、`token1`、`fee0`），继续交换到`token2`，使用手续费等级为`fee1`的池子（`token1`、`token2`、`fee1`）。
 
-Example of a trading path `path`:
+交易路径`path`示例如下：
 
 $$
 0x\overbrace{ca90cf0734d6ccf5ef52e9ec0a515921a67d6013}^{token0,20bytes}\overbrace{0001f4}^{fee,3bytes}\overbrace{68b3465833fb72a70ecdf485e0e4c7bd8665fc45}^{token1,20bytes}
@@ -1034,7 +1034,7 @@ $$
 
 #### hasMultiplePools
 
-Determines if the trading path goes through multiple pools (2 or more).
+判断交易路径是否经过多个池子（2个及以上）。
 
 ```solidity
 /// @notice Returns true iff the path contains two or more pools
@@ -1045,13 +1045,13 @@ function hasMultiplePools(bytes memory path) internal pure returns (bool) {
 }
 ```
 
-From the encoding of the path above, if passing through 2 pools, it must include at least 3 tokens, so the path length must be at least $20+3+20+3+20=66$ bytes. In the code, `MULTIPLE_POOLS_MIN_LENGTH` is equal to 66.
+我们从上述路径编码可知，如果经过2个池子，至少包含3个代币，则路径长度至少需要$20+3+20+3+20=66$个字节。代码中`MULTIPLE_POOLS_MIN_LENGTH`即等于66。
 
 #### numPools
 
-Calculates the number of pools in the path.
+计算路径中的池子数量。
 
-The algorithm is:
+算法为：
 
 $$
 num = \frac{length - 20}{20 + 3}
@@ -1062,16 +1062,16 @@ $$
 /// @param path The encoded swap path
 /// @return The number of pools in the path
 function numPools(bytes memory path) internal pure returns (uint256) {
-    // Ignore the first token address. From then on, every fee and token offset indicates a pool.
+    // Ignore the first token address. From then on every fee and token offset indicates a pool.
     return ((path.length - ADDR_SIZE) / NEXT_OFFSET);
 }
 ```
 
 #### decodeFirstPool
 
-Decodes the information of the first path, including `token0`, `token1`, and `fee`.
+解析第一个path的信息，包括`token0`，`token1`和`fee`。
 
-It returns the substring 0-19 (`token0`, converted to `address` type), substring 20-22 (`fee`, converted to `uint24` type), and substring 23-42 (`token1`, converted to `address` type). Please refer to the `BytesLib.sol` method [toAddress](#toAddress) and [toUint24](#toUint24).
+分别返回字符串中0-19子串（`token0`，转`address`类型），20-22子串（`fee`，转`uint24`类型），和23-42子串（`token1`，转`address`类型）。请参考`BytesLib.sol`的[toAddress](#toAddress)和[toUint24](#toUint24)方法。
 
 ```solidity
 /// @notice Decodes the first pool in path
@@ -1096,7 +1096,7 @@ function decodeFirstPool(bytes memory path)
 
 #### getFirstPool
 
-Returns the path of the first pool, i.e., the substring composed of the first 43 (20+3+20) characters.
+返回第一个池子的路径，即返回前43（即20+3+20）个字符组成的子字符串。
 
 ```solidity
 /// @notice Gets the segment corresponding to the first pool in the path
@@ -1109,7 +1109,7 @@ function getFirstPool(bytes memory path) internal pure returns (bytes memory) {
 
 #### skipToken
 
-Skips the first `token+fee` on the current path, i.e., skips the first 20+3 characters.
+跳过当前路径上的第一个`token+fee`，即跳过前20+3个字符。
 
 ```solidity
 /// @notice Skips a token + fee element from the buffer and returns the remainder
@@ -1124,7 +1124,7 @@ function skipToken(bytes memory path) internal pure returns (bytes memory) {
 
 #### toAddress
 
-Reads an address (20 characters) from a specified index in the string:
+从字符串的指定序号起，读取一个地址（20个字符）：
 
 ```solidity
 function toAddress(bytes memory _bytes, uint256 _start) internal pure returns (address) {
@@ -1140,17 +1140,17 @@ function toAddress(bytes memory _bytes, uint256 _start) internal pure returns (a
 }
 ```
 
-Since the type of variable `_bytes` is `bytes`, according to the [ABI definition](https://docs.soliditylang.org/en/develop/abi-spec.html), the first 32 bytes of `bytes` store the length of the string. Therefore, we need to skip the first 32 bytes, i.e., `add(_bytes, 0x20); add(add(_bytes, 0x20), _start)` indicates positioning to the specified index `_start` of the string; `mload` reads 32 bytes from this index. Since the `address` type is only 20 bytes, it requires `div 0x1000000000000000000000000`, which means shifting right by 12 bytes.
+因为变量`_bytes`类型为`bytes`，根据[ABI定义](https://docs.soliditylang.org/en/develop/abi-spec.html)，`bytes`的第一个32字节存储字符串的长度（length），因此需要先跳过前面32字节，即`add(_bytes, 0x20)`；`add(add(_bytes, 0x20), _start)`表示定位到字符串指定序号`_start`；`mload`读取从该序号起的32个字节，因为`address`类型只有20字节，因此需要`div 0x1000000000000000000000000`，即右移12字节。
 
-Assuming `_strat = 0`, the distribution of `_bytes` is as shown below:
+假设`_strat = 0`，`_bytes`的分布如下图所示：
 
 $$
-0x\overbrace{0000000…2b}^{length,32bytes}\underbrace{\overbrace{ca90cf0734d6ccf5ef52e9ec0a515921a67d6013}^{address, 20 bytes}\overbrace{0001f468b3465833fb72a70e}^{div,12 bytes}}_{mload, 32bytes}cdf485e0e4c7bd8665fc45
+0x\overbrace{0000000...2b}^{length,32bytes}\underbrace{\overbrace{ca90cf0734d6ccf5ef52e9ec0a515921a67d6013}^{address, 20 bytes}\overbrace{0001f468b3465833fb72a70e}^{div,12 bytes}}_{mload, 32bytes}cdf485e0e4c7bd8665fc45
 $$
 
 #### toUint24
 
-Reads a `uint24` (24 bits, i.e., 3 characters) from a specified index in the string:
+从字符串的指定序号起，读取一个`uint24`（24位，即3个字符）：
 
 ```solidity
 function toUint24(bytes memory _bytes, uint256 _start) internal pure returns (uint24) {
@@ -1166,17 +1166,17 @@ function toUint24(bytes memory _bytes, uint256 _start) internal pure returns (ui
 }
 ```
 
-Since the first 32 characters of `_bytes` represent the length of the string, `mload` reads 32 bytes and ensures that the 3 bytes starting from `_start` are in the least significant position of the 32 bytes read. Assigning this value to a variable of type `uint24` will only retain the least significant 3 bytes.
+因为`_bytes`前32个字符表示字符串长度；`mload`读取32字节，可以确保从`_start`开始的3个字节在读取出来的32字节的最低位，赋值给类型为`uint24`的变量将只保留最低位的3个字节。
 
-Assuming `_start = 0`, the distribution of `_bytes` is as shown below:
+假设`_strat = 0`，`_bytes`的分布如下图所示：
 
 $$
-0x\overbrace{000000}^{0x3+_start}\underbrace{0…2b\overbrace{ca90cf0734d6ccf5ef52e9ec0a515921a67d6013}^{address1,20bytes}\overbrace{0001f4}^{fee,3bytes}}_{mload,32bytes}\overbrace{68b3465833fb72a70ecdf485e0e4c7bd8665fc45}^{address2,20bytes}
+0x\overbrace{000000}^{0x3+\_start}\underbrace{0...2b\overbrace{ca90cf0734d6ccf5ef52e9ec0a515921a67d6013}^{address1,20bytes}\overbrace{0001f4}^{fee,3bytes}}_{mload,32bytes}\overbrace{68b3465833fb72a70ecdf485e0e4c7bd8665fc45}^{address2,20bytes}
 $$
 
 ### OracleLibrary.sol
 
-According to formulas 5.3-5.5 in the white paper, the geometric mean price from $t_1$ to $t_2$ is calculated as follows:
+根据白皮书公式5.3-5.5，计算$t_1$至$t_2$时间内的几何平均价格如下：
 
 $$
 \log_{1.0001}(P_{t_1,t_2}) = \frac{\sum^{t_2}_{i=t_1} \log_{1.0001}(P_i)}{t_2 - t_1} \tag{5.3}
@@ -1190,23 +1190,23 @@ $$
 P_{t_1,t_2} = 1.0001^{\frac{a_{t_2} - a_{t_1}}{t_2 - t_1}} \tag{5.5}
 $$
 
-This contract provides oracle-related methods, including:
+本合约提供价格预言机相关方法，包括如下方法：
 
-* [consult](#consult): Queries the geometric mean price from a period of time ago to now (in `tick` form)
-* [getQuoteAtTick](#getQuoteAtTick): Calculates the token price based on `tick`
+* [consult](#consult)：查询从一段时间前到现在的几何平均价格（以`tick`形式）
+* [getQuoteAtTick](#getQuoteAtTick)：根据`tick`计算代币价格
 
 #### consult
 
-Queries the geometric mean price from a period of time ago to now (in `tick` form).
+查询从一段时间前到现在的几何平均价格（以`tick`形式）。
 
-Parameters are as follows:
+参数如下：
 
-* `pool`: The pool address of the trading pair
-* `period`: The interval in seconds
+* `pool`: 交易对池子地址
+* `period`：以秒计数的区间
 
-Returns:
+返回：
 
-* `timeWeightedAverageTick`: The time-weighted average price
+* `timeWeightedAverageTick`：时间加权平均价格
 
 ```solidity
 /// @notice Fetches time-weighted average tick using Uniswap V3 oracle
@@ -1221,14 +1221,14 @@ function consult(address pool, uint32 period) internal view returns (int24 timeW
     secondAgos[1] = 0;
 ```
 
-Construct two observation points, the first is `period` time ago, and the second is now.
+构造两个监测点，第一个为`period`时间之前，第二个为现在。
 
 ```solidity
     (int56[] memory tickCumulatives, ) = IUniswapV3Pool(pool).observe(secondAgos);
     int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
 ```
 
-According to the `IUniswapV3Pool.observe` method, obtain the cumulative `tick`, i.e., $a_{t_2}$ and $a_{t_1}$ in formula 5.4.
+根据`IUniswapV3Pool.observe`方法获取累积`tick`，即公式5.4中的$a_{t_2}$和$a_{t_1}$。
 
 $$
 tickCumulativesDelta = a_{t_2} - a_{t_1}
@@ -1247,7 +1247,7 @@ $$
     if (tickCumulativesDelta < 0 && (tickCumulativesDelta % period != 0)) timeWeightedAverageTick--;
 ```
 
-If `tickCumulativesDelta` is negative and cannot be divided by `period` without a remainder, then subtract 1 from the average price.
+如果`tickCumulativesDelta`为负数，并且无法被`period`整除，则将平均价格-1。
 
 #### getQuoteAtTick
 
@@ -1281,15 +1281,15 @@ function getQuoteAtTick(
 }
 ```
 
-Based on the Uniswap-v3-core `getSqrtRatioAtTick` method, calculate $\sqrt{P}$ corresponding to `tick`, i.e., $\sqrt{\frac{token1}{token0}}$.
+根据Uniswap-v3-core的`getSqrtRatioAtTick`方法计算`tick`对应的$\sqrt{P}$，即$\sqrt{\frac{token1}{token0}}$。
 
-If `baseToken < quoteToken`, then `baseToken` is `token0`, `quoteToken` is `token1`:
+如果`baseToken < quoteToken`，则`baseToken`为`token0`，`quoteToken`为`token1`：
 
 $$
 quoteAmount = baseAmount \cdot (\sqrt{P})^2
 $$
 
-Otherwise, `baseToken` is `token1`, `quoteToken` is `token0`:
+反之，`baseToken`为`token1`，`quoteToken`为`token0`：
 
 $$
 quoteAmount = \frac{baseAmount}{(\sqrt{P})^2}
