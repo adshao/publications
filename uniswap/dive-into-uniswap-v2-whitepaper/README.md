@@ -97,10 +97,15 @@ Oracle users can choose their interval. A longer interval means higher costs for
 > In mathematics, the concept of Pythagorean means includes three classic types: arithmetic, geometric, and harmonic means.
 > 
 > * Arithmetic Mean
+>
 > $$ A(x_1,...,x_n) = \frac{1}{n}(x_1 + ... + x_n) $$
+>
 > * Geometric Mean
+>
 > $$ G(x_1,...,x_n) = \sqrt[n]{x_1 ... x_n} $$
+>
 > * Harmonic Mean
+>
 > $$ H(x_1,...,x_n) = \frac{n}{\frac{1}{x_1} + ... + \frac{1}{x_n}} $$
 > 
 > * For positive $x$, the relationship:
@@ -118,8 +123,11 @@ A dilemma arises: should we calculate the price of token A in terms of token B, 
 > Note: The calculation of average prices for the two token pricing scenarios is as follows:
 > 
 > * Priced in USD
+>
 > $$ A(x_1, x_2) = \frac{100 + 300}{2} = 200 \text{ USD/ETH} $$
+>
 > * Priced in ETH
+>
 > $$ A(\frac{1}{x_1}, \frac{1}{x_2}) = \frac{\frac{1}{100} + \frac{1}{300}}{2} = \frac{1}{150} \text{ ETH/USD} $$
 
 Another issue is that users can directly send tokens to the pair contract (changing the token balances and affecting the price) without a transaction, bypassing the oracle update mechanism.
@@ -128,7 +136,7 @@ Another issue is that users can directly send tokens to the pair contract (chang
 
 If the contract simply checks its balances and uses the current balance to update the oracle price, an attacker could manipulate the oracle price by sending tokens to the contract just before the first transaction of a block. If the last trade happened $x$ seconds ago in a previous block, the contract would incorrectly accumulate the manipulated new price multiplied by $x$, even though no trades occurred at that price.
 
-> Example: If two tokens A and B had balances of 100 and 200 respectively after the last trade in a previous block, with the price of B in terms of A being 200/100=2, the price to be accumulated after $x$ seconds would be $2x$. However, if an attacker sent 100 B tokens to the contract just before the first trade of the next block, the price would become 200/200=1, and the contract would incorrectly accumulate at $1x$.
+> Example: If two tokens A and B had balances of 100 and 200 respectively after the last trade in a previous block, with the price of B in terms of A being $\frac{200}{100}=2$ , the price to be accumulated after $x$ seconds would be $2x$. However, if an attacker sent 100 B tokens to the contract just before the first trade of the next block, the price would become $\frac{200}{200}=1$ , and the contract would incorrectly accumulate at $1x$.
 
 To prevent this, the core contract caches the token balances after each interaction, updating the oracle price using the cached (not real-time) balances. Besides preventing oracle price manipulation, this adjustment also led to a re-architecture of the contract structure, detailed in section 3.2.
 
@@ -359,7 +367,7 @@ To address this, Uniswap v2 destroys the first minted $10^{-15}$ liquidity token
 
 > The initial minting attack involves an attacker being the first to add liquidity by depositing the minimum unit ($10^{-18}$, i.e., 1 wei) of liquidity, such as 1 wei ABC and 1 wei XYZ, thus minting 1 wei of liquidity tokens ($\sqrt{1}$); then, in the same transaction, the attacker continues to transfer (not mint) 1 million ABC and 1 million XYZ into the pool, followed by calling the sync() method to update the cached balances. Now, 1 wei of liquidity tokens is valued at $1 million + (10^{-18})$ ABC and $1 million + (10^{-18})$ XYZ, making it prohibitively expensive for other liquidity providers to participate.
 > 
-> By destroying the first minted 1,000 wei of liquidity tokens, an attacker aiming to raise each token's price to $100 must at least mint $1,000 + 1 = 1,001$ liquidity tokens, totaling $1,001 \times 100 = $100,100, where $100,000 would be permanently destroyed, significantly increasing the attacker's cost.
+> By destroying the first minted 1,000 wei of liquidity tokens, an attacker aiming to raise each token's price to $100 must at least mint $1,000 + 1 = 1,001$ liquidity tokens, totaling $1,001 \cdot 100 = 100,100$, where $100,000 would be permanently destroyed, significantly increasing the attacker's cost.
 
 ### 3.5 Wrapping ETH - WETH
 
