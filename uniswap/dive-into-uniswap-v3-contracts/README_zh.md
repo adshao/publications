@@ -1200,11 +1200,13 @@ function tickSpacingToMaxLiquidityPerTick(int24 tickSpacing) internal pure retur
 计算两个`tick`区间内部的每流动性累积手续费，该方法实现白皮书公式6.17-6.19:
 
 $$
-f_a(i) = \begin{cases} f_g - f_o(i) & \text{$i_c \geq i$}\\ f_o(i) & \text{$i_c < i$} \end{cases} \tag{6.17}
+f_a(i) = \begin{cases} f_g - f_o(i) & \text{$i_c \geq i$}\\
+f_o(i) & \text{$i_c < i$} \end{cases} \tag{6.17}
 $$
 
 $$
-f_b(i) = \begin{cases} f_o(i) & \text{$i_c \geq i$}\\ f_g - f_o(i) & \text{$i_c < i$}\end{cases} \tag{6.18}
+f_b(i) = \begin{cases} f_o(i) & \text{$i_c \geq i$}\\
+f_g - f_o(i) & \text{$i_c < i$}\end{cases} \tag{6.18}
 $$
 
 $$
@@ -1445,7 +1447,8 @@ $$
 假设 $i$ $\geq 0$，对于一个给定的tick $i$，它总可以表示为二进制，因此以下式子总是成立：
 
 $$
-\begin{cases} i = \sum_{n=0}^{19}{(x_n \cdot 2^n)} = x_0 \cdot 1 + x_1 \cdot 2 + x_2 \cdot 4 + ... + x_{19}\cdot 524288 \\ \forall x_n \in \{0, 1\} \end{cases} \tag{1.1}
+\begin{cases} i = \sum_{n=0}^{19}{(x_n \cdot 2^n)} = x_0 \cdot 1 + x_1 \cdot 2 + x_2 \cdot 4 + ... + x_{19}\cdot 524288 \\
+\forall x_n \in \{0, 1\} \end{cases} \tag{1.1}
 $$
 
 其中， $x_n$ 为 $i$ 的二进制位。如 $i=6$ ，其对应的二进制为：`000000000000000000000110`，则 $x_1 = 1, x_2 = 1$ ，其余 $x_n$ 均为0。
@@ -1527,7 +1530,8 @@ function getSqrtRatioAtTick(int24 tick) internal pure returns (uint160 sqrtPrice
 假设 $i > 0$ 时：
 
 $$
-\sqrt{p_{Q128128}(i)} = 2^{128} \cdot \sqrt{p(i)} = 2^{128} \cdot 1.0001^{\frac{i}{2}} \\ = \frac{2^{128}}{1.0001^{-\frac{i}{2}}} = \frac{2^{256}}{2^{128} \cdot \sqrt{p(-i)}} = \frac{2^{256}}{\sqrt{p_{Q128128}(-i)}}
+\sqrt{p_{Q128128}(i)} = 2^{128} \cdot \sqrt{p(i)} = 2^{128} \cdot 1.0001^{\frac{i}{2}} \\
+= \frac{2^{128}}{1.0001^{-\frac{i}{2}}} = \frac{2^{256}}{2^{128} \cdot \sqrt{p(-i)}} = \frac{2^{256}}{\sqrt{p_{Q128128}(-i)}}
 $$
 
 因此，只需要算出 $i < 0$ 时的 ratio 值，使用 $2^{256}$ 除以ratio即可得出 $i > 0$ 时，使用`Q128.128`表示的ratio值：

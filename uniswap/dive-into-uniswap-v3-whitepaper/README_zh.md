@@ -524,11 +524,13 @@ feeGrowthOutside{0, 1}用于记录一个给定区间总共累计多少手续费�
 根据当前价格是否在区间内，你可以使用一个公式计算每份流动性在tick $i$ 之上（ $f_a$ ）和之下（ $f_b$ ）获取的手续费（根据当前tick序号 $i_c$ 是否大于等于 $i$ ）：
 
 $$
-f_a(i) = \begin{cases} f_g - f_o(i) & \text{$i_c \geq i$}\\ f_o(i) & \text{$i_c < i$} \end{cases} \tag{6.17}
+f_a(i) = \begin{cases} f_g - f_o(i) & \text{$i_c \geq i$}\\
+f_o(i) & \text{$i_c < i$} \end{cases} \tag{6.17}
 $$
 
 $$
-f_b(i) = \begin{cases} f_o(i) & \text{$i_c \geq i$}\\ f_g - f_o(i) & \text{$i_c < i$}\end{cases} \tag{6.18}
+f_b(i) = \begin{cases} f_o(i) & \text{$i_c \geq i$}\\
+f_g - f_o(i) & \text{$i_c < i$}\end{cases} \tag{6.18}
 $$
 
 > 注：
@@ -567,7 +569,8 @@ $$
 只有被至少一个头寸作为边界端点的tick才需要 $f_o$。因此，出于效率考虑， $f_o$ 不会被初始化（当tick被穿越时无需被更新），只有当使用该tick作为边界点创建头寸时才会初始化。当tick $i$的 $f_o$ 初始化时，它的初始值被设置成当前所有的手续费都由小于该tick时收取：
 
 $$
-f_o := \begin{cases} f_g & \text{$i_c \geq i$}\\ 0 & \text{$i_c < i$} \end{cases} \tag{6.21}
+f_o := \begin{cases} f_g & \text{$i_c \geq i$}\\
+0 & \text{$i_c < i$} \end{cases} \tag{6.21}
 $$
 
 注意，因为不同tick的 $f_0$ 值可以在不同时刻初始化，因此比较他们的 $f_0$ 是无意义的，实际上无法保证 $f_0$ 值不变。但这不会导致每个头寸的统计问题，如下文描述，所有的头寸只需要知道从上一次交互后，区间内的 $g$ 值增长即可。
@@ -579,11 +582,13 @@ $$
 比如，对于一个给定的tick，根据当前价格是否在区间内， $s_a$ 与 $s_b$ 分别为大于与小于tick $i$时持续的时长（秒数）， $s_r$ 为区间内持续的秒数，其计算方式分别为：
 
 $$
-t_a(i) = \begin{cases} t - t_o(i) & \text{$i_c \geq i$}\\ t_o(i) & \text{$i_c < i$} \end{cases} \tag{6.22}
+t_a(i) = \begin{cases} t - t_o(i) & \text{$i_c \geq i$}\\
+t_o(i) & \text{$i_c < i$} \end{cases} \tag{6.22}
 $$
 
 $$
-t_b(i) = \begin{cases} t_o(i) & \text{$i_c \geq i$}\\ t - t_o(i) & \text{$i_c < i$}\end{cases} \tag{6.23}
+t_b(i) = \begin{cases} t_o(i) & \text{$i_c \geq i$}\\
+t - t_o(i) & \text{$i_c < i$}\end{cases} \tag{6.23}
 $$
 
 $$
@@ -595,7 +600,8 @@ $$
 和 $f_o$ 类似，对于不是头寸边界点的tick无需记录 $s_o$。因此，只有使用该tick作为边界点的头寸创建时，才需要初始化 $s_o$。为了方便，初始的默认值为截止到当前时间的秒数，并都发生在小于该tick的时候：
 
 $$
-t_o(i) := \begin{cases} t & \text{$i_c \geq i$}\\ 0 & \text{$i_c < i$} \end{cases} \tag{6.25}
+t_o(i) := \begin{cases} t & \text{$i_c \geq i$}\\
+0 & \text{$i_c < i$} \end{cases} \tag{6.25}
 $$
 
 与 $f_o$ 值类似，比较不同tick的 $t_o$ 值也是无意义的。仅当计算一个时间段（起始时间需在两个tick的 $t_0$ 初始化之后）的指定价格区间的流动性持续时间时， $t_0$ 才是有意义的。

@@ -521,11 +521,13 @@ feeGrowthOutside{0, 1} tracks the total fees accumulated outside a given range. 
 Depending on whether the current price is inside the range, you can use one formula to calculate the fees accumulated above ($f_a$) and below ($f_b$) tick $i$ (based on whether the current tick index $i_c$ is greater than or equal to $i$):
 
 $$
-f_a(i) = \begin{cases} f_g - f_o(i) & \text{$i_c \geq i$}\\ f_o(i) & \text{$i_c < i$} \end{cases} \tag{6.17}
+f_a(i) = \begin{cases} f_g - f_o(i) & \text{$i_c \geq i$}\\
+f_o(i) & \text{$i_c < i$} \end{cases} \tag{6.17}
 $$
 
 $$
-f_b(i) = \begin{cases} f_o(i) & \text{$i_c \geq i$}\\ f_g - f_o(i) & \text{$i_c < i$}\end{cases} \tag{6.18}
+f_b(i) = \begin{cases} f_o(i) & \text{$i_c \geq i$}\\
+f_g - f_o(i) & \text{$i_c < i$}\end{cases} \tag{6.18}
 $$
 
 > Note: First, let's recall what each variable means. $f_g$ is the global accumulated fees per liquidity; $f_o(i)$ is the accumulated fees outside a specified tick $i$, and it's important to note that this value changes its meaning of direction with the current tick $i_c$.
@@ -563,7 +565,8 @@ $$
 Only ticks used as boundary points by at least one position need $f_o$. Therefore, for efficiency, $f_o$ is not initialized (does not need to be updated when a tick is crossed) until a position using the tick as a boundary is created. When $f_o$ of tick $i$ is initialized, its initial value is set to assume all fees were collected while the tick was below the current tick:
 
 $$
-f_o := \begin{cases} f_g & \text{$i_c \geq i$}\\ 0 & \text{$i_c < i$} \end{cases} \tag{6.21}
+f_o := \begin{cases} f_g & \text{$i_c \geq i$}\\
+0 & \text{$i_c < i$} \end{cases} \tag{6.21}
 $$
 
 Note that since $f_o$ for different ticks can be initialized at different times, comparing their $f_o$ values is meaningless, and it is not guaranteed that $f_o$ values remain constant. But this does not create a problem for each position, as described below, since all positions need to know how much $g$ has grown inside their range since the last interaction.
@@ -575,11 +578,13 @@ These three variables are similar to the fee growth variables mentioned above. H
 For example, for a given tick, depending on whether the current price is inside the range, $s_a$ and $s_b$ are the durations (in seconds) spent above and below tick $i$, respectively, and $s_r$ is the duration within the range, calculated as follows:
 
 $$
-t_a(i) = \begin{cases} t - t_o(i) & \text{$i_c \geq i$}\\ t_o(i) & \text{$i_c < i$} \end{cases} \tag{6.22}
+t_a(i) = \begin{cases} t - t_o(i) & \text{$i_c \geq i$}\\
+t_o(i) & \text{$i_c < i$} \end{cases} \tag{6.22}
 $$
 
 $$
-t_b(i) = \begin{cases} t_o(i) & \text{$i_c \geq i$}\\ t - t_o(i) & \text{$i_c < i$}\end{cases} \tag{6.23}
+t_b(i) = \begin{cases} t_o(i) & \text{$i_c \geq i$}\\
+t - t_o(i) & \text{$i_c < i$}\end{cases} \tag{6.23}
 $$
 
 $$
@@ -591,7 +596,8 @@ The duration a position is within a price range from $t_1$ to $t_2$ can be deter
 Like $f_o$, $s_o$ for ticks not used as boundary points is not recorded. Therefore, it is only initialized when a position using the tick as a boundary is created. For convenience, the initial default value is the number of seconds up to the current moment, assuming all durations occurred while the tick was below the current one:
 
 $$
-t_o(i) := \begin{cases} t & \text{$i_c \geq i$}\\ 0 & \text{$i_c < i$} \end{cases} \tag{6.25}
+t_o(i) := \begin{cases} t & \text{$i_c \geq i$}\\
+0 & \text{$i_c < i$} \end{cases} \tag{6.25}
 $$
 
 Similar to $f_o$, comparing $t_o$ values for different ticks is meaningless. $t_o$ is only meaningful when calculating the duration a specific price range's liquidity was active during a period (the start time must be after both ticks' $t_0$ initialization).
@@ -645,11 +651,15 @@ Finally, depending on the amount of liquidity destroyed or created, the pool tra
 The amount of token0 ($\Delta{X}$) and token1 ($\Delta{Y}$) tokens required if the price moves to the upper or lower boundary can be seen as selling the corresponding amount of tokens from the position. Depending on whether the price is below the range, within the range, or above the range, the required amounts of token0 and token1 can be derived from equations 6.14 and 6.16 as follows:
 
 $$
-\Delta{Y} = \begin{cases} 0 & \text{$i_c < i_l$}\\ \Delta{L} \cdot (\sqrt{P} - \sqrt{p(i_l)}) & \text{$i_l \leq i_c \leq i_u$}\\ \Delta{L} \cdot (\sqrt{p(i_u)} - \sqrt{p(i_l)}) & \text{$i_c > i_u$} \end{cases} \tag{6.29}
+\Delta{Y} = \begin{cases} 0 & \text{$i_c < i_l$}\\
+\Delta{L} \cdot (\sqrt{P} - \sqrt{p(i_l)}) & \text{$i_l \leq i_c \leq i_u$}\\
+\Delta{L} \cdot (\sqrt{p(i_u)} - \sqrt{p(i_l)}) & \text{$i_c > i_u$} \end{cases} \tag{6.29}
 $$
 
 $$
-\Delta{X} = \begin{cases} \Delta{L} \cdot (\frac{1}{\sqrt{p(i_l)}} - \frac{1}{\sqrt{p(i_u)}}) & \text{$i_c < i_l$}\\ \Delta{L} \cdot (\frac{1}{\sqrt{P}} - \frac{1}{\sqrt{p(i_u)}}) & \text{$i_l \leq i_c \leq i_u$}\\ 0 & \text{$i_c > i_u$} \end{cases} \tag{6.30}
+\Delta{X} = \begin{cases} \Delta{L} \cdot (\frac{1}{\sqrt{p(i_l)}} - \frac{1}{\sqrt{p(i_u)}}) & \text{$i_c < i_l$}\\
+\Delta{L} \cdot (\frac{1}{\sqrt{P}} - \frac{1}{\sqrt{p(i_u)}}) & \text{$i_l \leq i_c \leq i_u$}\\
+0 & \text{$i_c > i_u$} \end{cases} \tag{6.30}
 $$
 
 ## References

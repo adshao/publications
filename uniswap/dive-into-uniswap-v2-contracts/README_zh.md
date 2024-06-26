@@ -438,13 +438,12 @@ $$
 x_{in} = \frac {x_0 \cdot y_{out}}{0.997 \cdot (y_0 - y_{out})} = \frac {1000 \cdot x_0 \cdot y_{out}}{997 \cdot (y_0 - y_{out})}
 $$
 
-> $amountIn = x_{in}$
->
-> $reserveIn = x_0$
->
-> $reserveOut = y_0$
->
-> $amountOut = y_{out}$
+$$
+amountIn = x_{in}\\
+reserveIn = x_0\\
+reserveOut = y_0\\
+amountOut = y_{out}
+$$
 
 计算结果即为合约中代码所示，注意最后有一个`add(1)`，这是为了防止`amountIn`为小数的情况，加1可以保证输入的数（`amountIn`）不小于理论的最小值。
 
