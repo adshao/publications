@@ -126,7 +126,7 @@ $$
 代入公式（6）可得，线性发行速率的VRGDA公式为：
 
 $$
-{linear\_vrgda}_n(t) = p_0(1-k)^{t - \frac{n}{r}} \tag{7}
+{linearvrgda}_n(t) = p_0(1-k)^{t - \frac{n}{r}} \tag{7}
 $$
 
 ### 平方根
@@ -150,7 +150,7 @@ $$
 代入公式（6）可得：
 
 $$
-{sqrt\_vrgda}_n(t) = p_0(1-k)^{t - n^2} \tag{8}
+{sqrtvrgda}_n(t) = p_0(1-k)^{t - n^2} \tag{8}
 $$
 
 ### 逻辑函数
@@ -196,7 +196,7 @@ $$
 代入公式（6），可得到基于逻辑函数的VRGDA公式：
 
 $$
-logistic\_vrgda_n(t) = p_0(1-k)^{t + \frac{ln(\frac{2L}{L + n} - 1)}{s}} \tag{9}
+logisticvrgda_n(t) = p_0(1-k)^{t + \frac{ln(\frac{2L}{L + n} - 1)}{s}} \tag{9}
 $$
 
 对应的代币发行曲线如下图所示：

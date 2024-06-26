@@ -126,7 +126,7 @@ $$
 Substitute into formula (6), the VRGDA formula for the linear issuance rate is:
 
 $$
-{linear\_vrgda}_n(t) = p_0(1-k)^{t - \frac{n}{r}} \tag{7}
+{linearvrgda}_n(t) = p_0(1-k)^{t - \frac{n}{r}} \tag{7}
 $$
 
 ### Square Root
@@ -150,7 +150,7 @@ $$
 Substitute into formula (6):
 
 $$
-{sqrt\_vrgda}_n(t) = p_0(1-k)^{t - n^2} \tag{8}
+{sqrtvrgda}_n(t) = p_0(1-k)^{t - n^2} \tag{8}
 $$
 
 ### Logistic Function
@@ -196,7 +196,7 @@ $$
 Substitute into formula (6), the VRGDA formula based on the logistic function is:
 
 $$
-logistic\_vrgda_n(t) = p_0(1-k)^{t + \frac{ln(\frac{2L}{L + n} - 1)}{s}} \tag{9}
+logisticvrgda_n(t) = p_0(1-k)^{t + \frac{ln(\frac{2L}{L + n} - 1)}{s}} \tag{9}
 $$
 
 The corresponding token issuance curve is shown below:
