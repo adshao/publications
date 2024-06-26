@@ -13,7 +13,7 @@
 
 ## Art Gobblers
 
-* [VRGDA 算法浅析](./artgobblers/vrgda/README.md)
+* [VRGDA Algorithm Analysis](./artgobblers/vrgda/README.md)
 
 ## Links
 
