@@ -1145,7 +1145,7 @@ Since the type of variable `_bytes` is `bytes`, according to the [ABI definition
 Assuming `_strat = 0`, the distribution of `_bytes` is as shown below:
 
 $$
-0x\overbrace{0000000…2b}^{length,32bytes}\underbrace{\overbrace{ca90cf0734d6ccf5ef52e9ec0a515921a67d6013}^{address, 20 bytes}\overbrace{0001f468b3465833fb72a70e}^{div,12 bytes}}_{mload, 32bytes}cdf485e0e4c7bd8665fc45
+0x\overbrace{0000000...2b}^{length,32bytes}\underbrace{\overbrace{ca90cf0734d6ccf5ef52e9ec0a515921a67d6013}^{address, 20 bytes}\overbrace{0001f468b3465833fb72a70e}^{div,12 bytes}}_{mload, 32bytes}cdf485e0e4c7bd8665fc45
 $$
 
 #### toUint24
@@ -1171,7 +1171,7 @@ Since the first 32 characters of `_bytes` represent the length of the string, `m
 Assuming `_start = 0`, the distribution of `_bytes` is as shown below:
 
 $$
-0x\overbrace{000000}^{0x3+_start}\underbrace{0…2b\overbrace{ca90cf0734d6ccf5ef52e9ec0a515921a67d6013}^{address1,20bytes}\overbrace{0001f4}^{fee,3bytes}}_{mload,32bytes}\overbrace{68b3465833fb72a70ecdf485e0e4c7bd8665fc45}^{address2,20bytes}
+0x\overbrace{000000}^{0x3+\_start}\underbrace{0...2b\overbrace{ca90cf0734d6ccf5ef52e9ec0a515921a67d6013}^{address1,20bytes}\overbrace{0001f4}^{fee,3bytes}}_{mload,32bytes}\overbrace{68b3465833fb72a70ecdf485e0e4c7bd8665fc45}^{address2,20bytes}
 $$
 
 ### OracleLibrary.sol
@@ -1179,7 +1179,7 @@ $$
 According to formulas 5.3-5.5 in the white paper, the geometric mean price from $t_1$ to $t_2$ is calculated as follows:
 
 $$
-\log_{1.0001}(P_{t_1,t_2}) = \frac{\sum^{t_2}_{i=t_1} \log_{1.0001}(P_i)}{t_2 - t_1} \tag{5.3}
+\log_{1.0001}(P_{t_1,t_2}) = \frac{\sum_{i=t_1}^{t_2} \log_{1.0001}(P_i)}{t_2 - t_1} \tag{5.3}
 $$
 
 $$

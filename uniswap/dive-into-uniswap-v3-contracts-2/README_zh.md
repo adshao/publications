@@ -966,8 +966,8 @@ function getLiquidityForAmount1(
 
 根据当前价格，计算能够返回的最大流动性。
 
-* 因为当$\sqrt{P}$增大时，需要消耗$x$，因此如果当前价格低于价格区间低点时，需要完全根据$x$即`amount0`计算流动性
-* 反之，如果当前价格高于价格区间高点，需要根据$y$即`amount1`计算流动性
+* 因为当 $\sqrt{P}$ 增大时，需要消耗 $x$ ，因此如果当前价格低于价格区间低点时，需要完全根据 $x$ 即`amount0`计算流动性
+* 反之，如果当前价格高于价格区间高点，需要根据 $y$ 即`amount1`计算流动性
 
 如下图所示：
 
@@ -983,7 +983,7 @@ $$
 \overbrace{p_a,...,p_b}^{amount1},...,p
 $$
 
-其中，$p$表示当前价格，$p_a$表示区间低点，$p_b$表示区间高点。
+其中， $p$ 表示当前价格， $p_a$ 表示区间低点， $p_b$ 表示区间高点。
 
 ```solidity
 /// @notice Computes the maximum amount of liquidity received for a given amount of token0, token1, the current
@@ -1024,7 +1024,7 @@ $$
 \overbrace{token_0}^{20}\overbrace{fee_0}^{3}\overbrace{token_1}^{20}\overbrace{fee_1}^{3}\overbrace{token_2}^{20}...
 $$
 
-其中，$token_n$的长度为20个字节（bytes），$fee_n$的长度为3个字节，上述路径表示：从`token0`交换到`token1`，使用手续费等级为`fee0`的池子（`token0`、`token1`、`fee0`），继续交换到`token2`，使用手续费等级为`fee1`的池子（`token1`、`token2`、`fee1`）。
+其中， $token_n$ 的长度为20个字节（bytes）， $fee_n$ 的长度为3个字节，上述路径表示：从`token0`交换到`token1`，使用手续费等级为`fee0`的池子（`token0`、`token1`、`fee0`），继续交换到`token2`，使用手续费等级为`fee1`的池子（`token1`、`token2`、`fee1`）。
 
 交易路径`path`示例如下：
 
@@ -1045,7 +1045,7 @@ function hasMultiplePools(bytes memory path) internal pure returns (bool) {
 }
 ```
 
-我们从上述路径编码可知，如果经过2个池子，至少包含3个代币，则路径长度至少需要$20+3+20+3+20=66$个字节。代码中`MULTIPLE_POOLS_MIN_LENGTH`即等于66。
+我们从上述路径编码可知，如果经过2个池子，至少包含3个代币，则路径长度至少需要 $20+3+20+3+20=66$ 个字节。代码中`MULTIPLE_POOLS_MIN_LENGTH`即等于66。
 
 #### numPools
 
@@ -1176,10 +1176,10 @@ $$
 
 ### OracleLibrary.sol
 
-根据白皮书公式5.3-5.5，计算$t_1$至$t_2$时间内的几何平均价格如下：
+根据白皮书公式5.3-5.5，计算 $t_1$ 至 $t_2$ 时间内的几何平均价格如下：
 
 $$
-\log_{1.0001}(P_{t_1,t_2}) = \frac{\sum^{t_2}_{i=t_1} \log_{1.0001}(P_i)}{t_2 - t_1} \tag{5.3}
+\log_{1.0001}(P_{t_1,t_2}) = \frac{\sum_{i=t_1}^{t_2} \log_{1.0001}(P_i)}{t_2 - t_1} \tag{5.3}
 $$
 
 $$
@@ -1228,7 +1228,7 @@ function consult(address pool, uint32 period) internal view returns (int24 timeW
     int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
 ```
 
-根据`IUniswapV3Pool.observe`方法获取累积`tick`，即公式5.4中的$a_{t_2}$和$a_{t_1}$。
+根据`IUniswapV3Pool.observe`方法获取累积`tick`，即公式5.4中的 $a_{t_2}$ 和 $a_{t_1}$ 。
 
 $$
 tickCumulativesDelta = a_{t_2} - a_{t_1}
@@ -1281,7 +1281,7 @@ function getQuoteAtTick(
 }
 ```
 
-根据Uniswap-v3-core的`getSqrtRatioAtTick`方法计算`tick`对应的$\sqrt{P}$，即$\sqrt{\frac{token1}{token0}}$。
+根据Uniswap-v3-core的`getSqrtRatioAtTick`方法计算`tick`对应的 $\sqrt{P}$ ，即 $\sqrt{\frac{token1}{token0}}$ 。
 
 如果`baseToken < quoteToken`，则`baseToken`为`token0`，`quoteToken`为`token1`：
 

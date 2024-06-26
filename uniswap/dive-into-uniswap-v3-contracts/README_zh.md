@@ -205,8 +205,8 @@ function initialize(uint160 sqrtPriceX96) external override {
 
 `slot0`定义如下：
 
-* `sqrtPriceX96`：交易对当前的开根号价格$\sqrt{P}$
-* `tick`：当前$\sqrt{P}$对应的tick，使用[getTickAtSqrtRatio](#getTickAtSqrtRatio)计算得出
+* `sqrtPriceX96`：交易对当前的开根号价格 $\sqrt{P}$
+* `tick`：当前 $\sqrt{P}$ 对应的tick，使用[getTickAtSqrtRatio](#getTickAtSqrtRatio)计算得出
 * `observationIndex`：最近更新的（预言机）观测点数组序号
 * `observationCardinality`：（预言机）观测点数组容量，最大65536，初始时为1
 * `observationCardinalityNext`：下一个（预言机）观测点数组容量，如果手动扩容容量，会更新这个值，初始时为1
@@ -356,7 +356,7 @@ function _modifyPosition(ModifyPositionParams memory params)
 
 代码的下半部分则主要通过[getAmount0Delta](#getAmount0Delta)和[getAmount1Delta](#getAmount1Delta)计算该流动性需要分别提供的`token0`和`token1`的数量，即`amount0`和`amount1`。
 
-具体地，当你提供流动性的区间大于当前`tick`$i_c$时，因为`tick`大小与$\sqrt{P}$（即$\sqrt{\frac{y}{x}}$）成正比，意味着在大于$i_c$的区间，$x$的价值更高（需要更少的$x$），因此添加流动性时需在该部分提供$x$代币，即`amount0`数量的`token0`；反之，则提供$y$代币，即`amount1`的`token1`。
+具体地，当你提供流动性的区间大于当前`tick` $i_c$ 时，因为`tick`大小与 $\sqrt{P}$（即 $\sqrt{\frac{y}{x}}$ ）成正比，意味着在大于 $i_c$ 的区间， $x$ 的价值更高（需要更少的 $x$ ），因此添加流动性时需在该部分提供 $x$ 代币，即`amount0`数量的`token0`；反之，则提供 $y$ 代币，即`amount1`的`token1`。
 
 如下所示：
 
@@ -366,9 +366,9 @@ $$
 \overbrace{i_l, ..., i_u}^{amount1}, ..., i_c & \text{$i_u \leq i_c$}\end{cases}
 $$
 
-其中，$i_l$, $i_u$为提供流动性价格区间的边界，$i_c$为当前价格对应的`tick`。
+其中， $i_l$ ,  $i_u$ 为提供流动性价格区间的边界， $i_c$ 为当前价格对应的`tick`。
 
-如果当前价格在区间中，即$i_l \leq i_c < i_u$时，`_modifyPosition`会记录一次（预言机）观测点数据，因为此时区间的流动性发生了变化，需要记录每流动性的持续时间`secondsPerLiquidityCumulativeX128`：
+如果当前价格在区间中，即 $i_l \leq i_c < i_u$ 时，`_modifyPosition`会记录一次（预言机）观测点数据，因为此时区间的流动性发生了变化，需要记录每流动性的持续时间`secondsPerLiquidityCumulativeX128`：
 
 ```solidity
 // write an oracle entry
@@ -611,7 +611,7 @@ function swap(
 
 上面代码主要是初始化状态相关的。
 
-因为$\sqrt{P} = \sqrt{\frac{y}{x}}$，当`zeroForOne = true`，即从`token0`到`token1`时，swap过程中$x$变多，$y$变少，因此$\sqrt{P}$逐渐减小，所以指定的价格极限`sqrtPriceLimitX96`需要小于当前市场价格`sqrtPriceX96`。
+因为 $\sqrt{P} = \sqrt{\frac{y}{x}}$ ，当`zeroForOne = true`，即从`token0`到`token1`时，swap过程中 $x$ 变多， $y$ 变少，因此 $\sqrt{P}$ 逐渐减小，所以指定的价格极限`sqrtPriceLimitX96`需要小于当前市场价格`sqrtPriceX96`。
 
 另外，需要注意几个关键数据：
 
@@ -803,7 +803,7 @@ if (cache.feeProtocol > 0) {
 }
 ```
 
-如果开启了协议手续费，则从交易手续费中拆出协议手续费。注意，协议手续费的值`feeProtocol`表示交易手续费的$\frac{1}{n}$。
+如果开启了协议手续费，则从交易手续费中拆出协议手续费。注意，协议手续费的值`feeProtocol`表示交易手续费的 $\frac{1}{n}$。
 
 ```solidity
 // update global fee tracker
@@ -978,7 +978,7 @@ function flash(
     uint256 fee1 = FullMath.mulDivRoundingUp(amount1, fee, 1e6);
 ```
 
-闪电贷手续费与`swap`手续费相同，都是$\frac{fee}{10^6}$。
+闪电贷手续费与`swap`手续费相同，都是 $\frac{fee}{10^6}$。
 
 ```solidity
     uint256 balance0Before = balance0();
@@ -1114,7 +1114,7 @@ function observe(uint32[] calldata secondsAgos)
 
 设置协议手续费的比例，该方法仅允许工厂合约的owner执行。
 
-注意，需要分别设置`token0`和`token1`的协议手续费比例，该比例是交易手续费的占比，合法值为0（不开启协议手续费）或者$4 \leq n \leq 10$，也就是可以设置协议手续费为交易手续费的$\frac{1}{n}$。
+注意，需要分别设置`token0`和`token1`的协议手续费比例，该比例是交易手续费的占比，合法值为0（不开启协议手续费）或者 $4 \leq n \leq 10$，也就是可以设置协议手续费为交易手续费的 $\frac{1}{n}$。
 
 ```solidity
 /// @inheritdoc IUniswapV3PoolOwnerActions
@@ -1200,11 +1200,13 @@ function tickSpacingToMaxLiquidityPerTick(int24 tickSpacing) internal pure retur
 计算两个`tick`区间内部的每流动性累积手续费，该方法实现白皮书公式6.17-6.19:
 
 $$
-f_a(i) = \begin{cases} f_g - f_o(i) & \text{$i_c \geq i$}\\ f_o(i) & \text{$i_c < i$} \end{cases} \tag{6.17}
+f_a(i) = \begin{cases} f_g - f_o(i) & \text{$i_c \geq i$}\\
+f_o(i) & \text{$i_c < i$} \end{cases} \tag{6.17}
 $$
 
 $$
-f_b(i) = \begin{cases} f_o(i) & \text{$i_c \geq i$}\\ f_g - f_o(i) & \text{$i_c < i$}\end{cases} \tag{6.18}
+f_b(i) = \begin{cases} f_o(i) & \text{$i_c \geq i$}\\
+f_g - f_o(i) & \text{$i_c < i$}\end{cases} \tag{6.18}
 $$
 
 $$
@@ -1261,7 +1263,7 @@ function getFeeGrowthInside(
 }
 ```
 
-首先根据当前`tickCurrent`，分别计算`tickLower`和`tickUpper`的$f_a$, $f_b$，最后计算出区间内手续费$f_r$：
+首先根据当前`tickCurrent`，分别计算`tickLower`和`tickUpper`的 $f_a$ ,  $f_b$ ，最后计算出区间内手续费 $f_r$：
 
 $$
 \underbrace{\overbrace{..., i_l - 1}^{f_b(i_l)}, \overbrace{i_l, i_l + 1, ..., i_u - 1, i_u}^{f_r}, \overbrace{i_u + 1, ...}^{f_a(i_u)}}_{f_g}
@@ -1410,8 +1412,8 @@ function cross(
 
 TickMath主要包含两个方法：
 
-* [getSqrtRatioAtTick](#getSqrtRatioAtTick)：根据tick计算开根号价格$\sqrt{P}$
-* [getTickAtSqrtRatio](#getTickAtSqrtRatio)：根据开根号价格$\sqrt{P}$计算tick
+* [getSqrtRatioAtTick](#getSqrtRatioAtTick)：根据tick计算开根号价格 $\sqrt{P}$
+* [getTickAtSqrtRatio](#getTickAtSqrtRatio)：根据开根号价格 $\sqrt{P}$ 计算tick
 
 #### getSqrtRatioAtTick
 
@@ -1421,9 +1423,9 @@ $$
 \sqrt{p}(i) = \sqrt{1.0001}^i = 1.0001^{\frac{i}{2}}
 $$
 
-其中，$i$即为`tick`。
+其中， $i$ 即为`tick`。
 
-因为Uniswap v3支持的价格（$\frac{token1}{token0}$）区间为$[2^{-128}, 2^{128}]$，根据白皮书公式6.1:
+因为Uniswap v3支持的价格（ $\frac{token1}{token0}$ ）区间为 $[2^{-128}, 2^{128}]$ ，根据白皮书公式6.1:
 
 $$
 p(i) = 1.0001^i
@@ -1442,25 +1444,27 @@ i = \lceil log_{1.0001}{2^{-128}} \rceil = \lceil -887272.7517970635 \rceil = -8
 $$
 
 
-假设$i$ $\geq 0$，对于一个给定的tick $i$，它总可以表示为二进制，因此以下式子总是成立：
+假设 $i$ $\geq 0$，对于一个给定的tick $i$，它总可以表示为二进制，因此以下式子总是成立：
 
 $$
-\begin{cases} i = \sum_{n=0}^{19}{(x_n \cdot 2^n)} = x_0 \cdot 1 + x_1 \cdot 2 + x_2 \cdot 4 + ... + x_{19}\cdot 524288 \\ \forall x_n \in \{0, 1\} \end{cases} \tag{1.1}
+\begin{cases} i = \sum_{n=0}^{19}{(x_n \cdot 2^n)} = x_0 \cdot 1 + x_1 \cdot 2 + x_2 \cdot 4 + ... + x_{19}\cdot 524288 \\
+\forall x_n \in \{0, 1\} \end{cases} \tag{1.1}
 $$
 
-其中，$x_n$为$i$的二进制位。如$i=6$，其对应的二进制为：`000000000000000000000110`，则$x_1 = 1, x_2 = 1$，其余$x_n$均为0。
+其中， $x_n$ 为 $i$ 的二进制位。如 $i=6$ ，其对应的二进制为：`000000000000000000000110`，则 $x_1 = 1, x_2 = 1$ ，其余 $x_n$ 均为0。
 
-同样可以推出$i < 0$也可以用类似的公式表示。
+同样可以推出 $i < 0$ 也可以用类似的公式表示。
 
-我们先看$i < 0$的情况：
+我们先看 $i < 0$ 的情况：
 
 如果 $i < 0$，则：
 
 $$
-\sqrt{p}(i) = 1.0001^{\frac{i}{2}} = 1.0001^{-\frac{|i|}{2}} = \frac{1}{1.0001^{\frac{|i|}{2}}} = \frac{1}{1.0001^{\frac{1}{2}(\sum_{n=0}^{19}{(x_n \cdot 2^n)})}} \\ = \frac{1}{1.0001^{\frac{1}{2} \cdot x_0}} \cdot \frac{1}{1.0001^{\frac{2}{2} \cdot x_1}} \cdot \frac{1}{1.0001^{\frac{4}{2} \cdot x_2}} \cdot ... \cdot \frac{1}{1.0001^{\frac{524288}{2} \cdot x_{19}}}
+\sqrt{p}(i) = 1.0001^{\frac{i}{2}} = 1.0001^{-\frac{|i|}{2}} = \frac{1}{1.0001^{\frac{|i|}{2}}} = \frac{1}{1.0001^{\frac{1}{2}(\sum_{n=0}^{19}{(x_n \cdot 2^n)})}} \\
+= \frac{1}{1.0001^{\frac{1}{2} \cdot x_0}} \cdot \frac{1}{1.0001^{\frac{2}{2} \cdot x_1}} \cdot \frac{1}{1.0001^{\frac{4}{2} \cdot x_2}} \cdot ... \cdot \frac{1}{1.0001^{\frac{524288}{2} \cdot x_{19}}}
 $$
 
-根据二进制位$x_n$的值，可以总结如下：
+根据二进制位 $x_n$ 的值，可以总结如下：
 
 $$
 \frac{1}{1.0001^{\frac{x_n \cdot 2^n}{2}}} \begin{cases} = 1 & \text{$x_n = 0, n \geq 0, i < 0$}\\
@@ -1468,12 +1472,12 @@ $$
 \end{cases}
 $$
 
-为了最小化精度误差，在计算过程中，使用`Q128.128`（128位定点数）表示中间价格，对于每一个价格$p$，均需要左移128位。由于$i < 0, x_n = 1$时，$\frac{1}{1.0001^{\frac{x_n \cdot 2^n}{2}}} < 1$，因此在连续乘积过程中不会有溢出问题。
+为了最小化精度误差，在计算过程中，使用`Q128.128`（128位定点数）表示中间价格，对于每一个价格 $p$ ，均需要左移128位。由于 $i < 0, x_n = 1$ 时， $\frac{1}{1.0001^{\frac{x_n \cdot 2^n}{2}}} < 1$ ，因此在连续乘积过程中不会有溢出问题。
 
-可以总结计算$\sqrt{p}(i)$的方法：
+可以总结计算 $\sqrt{p}(i)$ 的方法：
 
-* 初始值为1，从第0位开始，从低位到高位（从右往左）循环遍历$i$的二进制比特位
-* 如果该位不为0，则乘以对应的$\frac{2^{128}}{1.0001^{\frac{2^n}{2}}}$，其中$2^{128}$表示左移128位
+* 初始值为1，从第0位开始，从低位到高位（从右往左）循环遍历 $i$ 的二进制比特位
+* 如果该位不为0，则乘以对应的 $\frac{2^{128}}{1.0001^{\frac{2^n}{2}}}$ ，其中 $2^{128}$ 表示左移128位
 * 如果该位为0，则乘以1，可以省略
 
 
@@ -1526,10 +1530,11 @@ function getSqrtRatioAtTick(int24 tick) internal pure returns (uint160 sqrtPrice
 假设 $i > 0$ 时：
 
 $$
-\sqrt{p_{Q128128}(i)} = 2^{128} \cdot \sqrt{p(i)} = 2^{128} \cdot 1.0001^{\frac{i}{2}} \\ = \frac{2^{128}}{1.0001^{-\frac{i}{2}}} = \frac{2^{256}}{2^{128} \cdot \sqrt{p(-i)}} = \frac{2^{256}}{\sqrt{p_{Q128128}(-i)}}
+\sqrt{p_{Q128128}(i)} = 2^{128} \cdot \sqrt{p(i)} = 2^{128} \cdot 1.0001^{\frac{i}{2}} \\
+= \frac{2^{128}}{1.0001^{-\frac{i}{2}}} = \frac{2^{256}}{2^{128} \cdot \sqrt{p(-i)}} = \frac{2^{256}}{\sqrt{p_{Q128128}(-i)}}
 $$
 
-因此，只需要算出 $i < 0$ 时的 ratio 值，使用$2^{256}$除以ratio即可得出 $i > 0$ 时，使用`Q128.128`表示的ratio值：
+因此，只需要算出 $i < 0$ 时的 ratio 值，使用 $2^{256}$ 除以ratio即可得出 $i > 0$ 时，使用`Q128.128`表示的ratio值：
 ```solidity
 if (tick > 0) ratio = type(uint256).max / ratio;
 ```
@@ -1540,7 +1545,7 @@ if (tick > 0) ratio = type(uint256).max / ratio;
 sqrtPriceX96 = uint160((ratio >> 32) + (ratio % (1 << 32) == 0 ? 0 : 1));
 ```
 
-这里算的是开根号价格$\sqrt{p}$，由于价格$p$最大为$2^{128}$，因此$\sqrt{p}$最大为$2^{64}$，也就是整数部分最大只需要64位表示，因此最终的sqrtPriceX96一定可以用160位（64+96，即`Q64.96`格式的定点数）表示。
+这里算的是开根号价格 $\sqrt{p}$ ，由于价格 $p$ 最大为 $2^{128}$ ，因此 $\sqrt{p}$ 最大为 $2^{64}$ ，也就是整数部分最大只需要64位表示，因此最终的sqrtPriceX96一定可以用160位（64+96，即`Q64.96`格式的定点数）表示。
 
 #### getTickAtSqrtRatio
 
@@ -1558,9 +1563,9 @@ $$
 
 由于 $log_{\sqrt{1.0001}}{2}$ 是一个常数，因此我们只需要计算 $log_2{\sqrt{P}}$ 即可。
 
-将输入的参数为$\sqrt{P}$看作$x$，问题转化为求 $log_2{x}$。
+将输入的参数为 $\sqrt{P}$ 看作 $x$ ，问题转化为求 $log_2{x}$。
 
-把结果分为整数部分$n$和小数部分$m$，则：
+把结果分为整数部分 $n$ 和小数部分 $m$ ，则：
 
 $$
 n \leq log_2{x} = n + m < n + 1
@@ -1568,17 +1573,17 @@ $$
 
 ##### 整数部分
 
-对于$n$，因为：
+对于 $n$ ，因为：
 
 $$
 2^n \leq x < 2^{n+1}
 $$
 
-可以通过二分查找找到$n$值：
+可以通过二分查找找到 $n$ 值：
 
-* 对于256位的数，$0 \leq n < 256$，可以用8位比特表示$n$
-* 从二进制表示的第8位（k=7）到第1位（k=0）（从最高位到最低位），依次比较$x$是否大于$2^{2^{k}} - 1$，如果大于则标记该位为1，并右移$2^k$位；否则标记0
-* 最终标记后的8位二进制即为$n$值
+* 对于256位的数， $0 \leq n < 256$ ，可以用8位比特表示 $n$
+* 从二进制表示的第8位（k=7）到第1位（k=0）（从最高位到最低位），依次比较 $x$ 是否大于 $2^{2^{k}} - 1$ ，如果大于则标记该位为1，并右移 $2^k$ 位；否则标记0
+* 最终标记后的8位二进制即为 $n$ 值
 
 使用Python代码描述如下：
 
@@ -1654,15 +1659,15 @@ function getTickAtSqrtRatio(uint160 sqrtPriceX96) internal pure returns (int24 t
 
 ##### 小数部分
 
-对于小数部分$m$：
+对于小数部分 $m$：
 
 $$
 0 \leq m = log_2{x} - n = log_2{\frac{x}{2^n}} < 1 \tag{1.2}
 $$
 
-其中，$n$为上文算出的msb，即整数部分。
+其中， $n$ 为上文算出的msb，即整数部分。
 
-我们先将$\frac{x}{2^n}$看做一个整体$r$，则：
+我们先将 $\frac{x}{2^n}$ 看做一个整体 $r$，则：
 
 $$
 0 \leq log_2{r} < 1
@@ -1672,7 +1677,7 @@ $$
 1 \leq r = \frac{x}{2^n} < 2
 $$
 
-这里我们希望求出$log_2{r}$，如果能够将$log_2{r}$表示成一个不断收敛的数列，当小数位足够多时，就可以近似求出$log_2{r}$的值。
+这里我们希望求出 $log_2{r}$ ，如果能够将 $log_2{r}$ 表示成一个不断收敛的数列，当小数位足够多时，就可以近似求出 $log_2{r}$ 的值。
 
 根据对数公式，我们可以推导以下两个等式：
 
@@ -1686,12 +1691,12 @@ $$
 
 我们循环套用上述两个公式，可以整理以下方法：
 
-1. 因为初始时 $log_2{r} < 1$，因此先应用公式1.3，将问题转化为求$log_2{r^2}$，注意此时基数为$\frac{1}{2}$；
-    - 事实上，每一次进入步骤1，新的基数都是上一次基数的$\frac{1}{2}$，比如第二次进入步骤1的基数为$\frac{1}{4}$，以此类推。
-2. 如果$r^2$ >= 2，则应用公式1.4，分离出1，并将问题转化为求$log_2{\frac{r^2}{2}}$；
-    - 因为公式1.4是在公式1.3之后判断，因此这里的1需要乘以上一次步骤1的基数，如果是第一次则记录$\frac{1}{2}$，第二次则记录$\frac{1}{4}$，以此类推；
-    - 因为$1 \leq r < 2$，且$2 \leq r^2 < 4$，因此$1 \leq \frac{r^2}{2} < 2$，将$\frac{r^2}{2}$看做一个整体$r$，又回到步骤1求解$log_2{r}$，并且$1 \leq r < 2$。
-3. 如果$r^2 < 2$，则回到步骤1继续。
+1. 因为初始时 $log_2{r} < 1$，因此先应用公式1.3，将问题转化为求 $log_2{r^2}$ ，注意此时基数为 $\frac{1}{2}$ ；
+    - 事实上，每一次进入步骤1，新的基数都是上一次基数的 $\frac{1}{2}$ ，比如第二次进入步骤1的基数为 $\frac{1}{4}$ ，以此类推。
+2. 如果 $r^2$ >= 2 ，则应用公式1.4，分离出1，并将问题转化为求 $log_2{\frac{r^2}{2}}$ ；
+    - 因为公式1.4是在公式1.3之后判断，因此这里的1需要乘以上一次步骤1的基数，如果是第一次则记录 $\frac{1}{2}$ ，第二次则记录 $\frac{1}{4}$ ，以此类推；
+    - 因为 $1 \leq r < 2$ ，且 $2 \leq r^2 < 4$ ，因此 $1 \leq \frac{r^2}{2} < 2$ ，将 $\frac{r^2}{2}$ 看做一个整体 $r$ ，又回到步骤1求解 $log_2{r}$ ，并且 $1 \leq r < 2$ 。
+3. 如果 $r^2 < 2$ ，则回到步骤1继续。
 
 可以将上述步骤总结为以下公式：
 
@@ -1699,27 +1704,27 @@ $$
 log_2{r} = m_1 \cdot \frac{1}{2} + m_2 \cdot \frac{1}{4} + ... + m_n \cdot \frac{1}{2^n} = \sum^{\infty}_{i=1}(m_i \cdot \frac{1}{2^i}) \tag{1.5}
 $$
 
-其中，$\forall m_i \in \{0, 1\}$。
+其中， $\forall m_i \in \{0, 1\}$。
 
-这其实就是小数的二进制表示法，小数的二进制第一位表示为$2^{-1}$，第二位为$2^{-2}$，以此类推。而在我们上述计算$log_2{r}$的步骤中，如果进入步骤2，则相当于标记该位为1；如果进入步骤3，则相当于标记该位为0。
+这其实就是小数的二进制表示法，小数的二进制第一位表示为 $2^{-1}$ ，第二位为 $2^{-2}$ ，以此类推。而在我们上述计算 $log_2{r}$ 的步骤中，如果进入步骤2，则相当于标记该位为1；如果进入步骤3，则相当于标记该位为0。
 
-重复以上步骤的过程，即为确认小数部分二进制位从高位到低位（从左到右）每一位的值，每一个循环确认一位。循环次数越多，计算得出的$log_2{r}$精度越高。
+重复以上步骤的过程，即为确认小数部分二进制位从高位到低位（从左到右）每一位的值，每一个循环确认一位。循环次数越多，计算得出的 $log_2{r}$ 精度越高。
 
-我们继续看Uniswap v3中计算小数部分的代码：
+我们继续看 Uniswap v3 中计算小数部分的代码：
 
 ```solidity
         if (msb >= 128) r = ratio >> (msb - 127);
         else r = ratio << (127 - msb);
 ```
 
-这里msb即为整数部分$n$。因为ratio是`Q128.128`，如果`msb >= 128`则表示`ratio >= 1`，因此需要右移整数位数得到小数部分`ratio >> msb`；`-127`表示左移127位，使用`Q129.127`表示小数部分；同样，如果`msb < 128`，则表示`ratio < 1`，其本身就只有小数部分，因此通过左移`127 - msb`位，将小数部分凑齐127位，也用`Q129.127`表示小数部分。
+这里msb即为整数部分 $n$ 。因为ratio是`Q128.128`，如果`msb >= 128`则表示`ratio >= 1`，因此需要右移整数位数得到小数部分`ratio >> msb`；`-127`表示左移127位，使用`Q129.127`表示小数部分；同样，如果`msb < 128`，则表示`ratio < 1`，其本身就只有小数部分，因此通过左移`127 - msb`位，将小数部分凑齐127位，也用`Q129.127`表示小数部分。
 
-实际上，`ratio >> msb`即为公式1.2中的$\frac{x}{2^n}$，也就是步骤1中的$r$，在后续迭代算法（步骤1-3）中需要用到。
+实际上，`ratio >> msb`即为公式1.2中的 $\frac{x}{2^n}$ ，也就是步骤1中的 $r$ ，在后续迭代算法（步骤1-3）中需要用到。
 
 ```solidity
     int256 log_2 = (int256(msb) - 128) << 64;
 ```
-因为msb是基于`Q128.128`的ratio计算的，`int256(msb) - 128`表示$n$的真正值。`<< 64`使用`Q192.64`表示$n$。
+因为msb是基于`Q128.128`的ratio计算的，`int256(msb) - 128`表示 $n$ 的真正值。`<< 64`使用`Q192.64`表示 $n$ 。
 这一行代码实际上是使用`Q192.64`保存整数部分的值。
 
 下面代码循环计算二进制表示的小数部分的前14位小数：
@@ -1818,7 +1823,7 @@ $$
     }
 ```
 
-上述计算的log_2即为`Q192.64`表示的$log_2{\sqrt{P}}$，精度为$2^{-14}$。
+上述计算的log_2即为`Q192.64`表示的 $log_2{\sqrt{P}}$ ，精度为 $2^{-14}$ 。
 
 ```solidity
     int256 log_sqrt10001 = log_2 * 255738958999603826347141; // 128.128 number
@@ -1829,9 +1834,9 @@ $$
 \log_{\sqrt{1.0001}} \sqrt{P} = \frac{log_2{\sqrt{P}}}{log_2{\sqrt{1.0001}}} = log_2{\sqrt{P}}  \cdot log_{\sqrt{1.0001}}{2}
 $$
 
-这里`255738958999603826347141`即为$log_{\sqrt{1.0001}}{2} \cdot 2^{64}$，两个`Q192.64`乘以的结果为`Q128.64`（不会发生溢出）。
+这里`255738958999603826347141`即为 $log_{\sqrt{1.0001}}{2} \cdot 2^{64}$ ，两个`Q192.64`乘以的结果为`Q128.64`（不会发生溢出）。
 
-由于这里算出的$log_2{\sqrt{P}}$精度为$2^{-14}$，乘以`255738958999603826347141`后误差进一步放大，因此需要修正并确保结果是最接近给定价格的tick。
+由于这里算出的 $log_2{\sqrt{P}}$ 精度为 $2^{-14}$ ，乘以`255738958999603826347141`后误差进一步放大，因此需要修正并确保结果是最接近给定价格的tick。
 
 ```solidity
     int24 tickLow = int24((log_sqrt10001 - 3402992956809132418596140100660247210) >> 128);
@@ -1842,10 +1847,10 @@ $$
 
 其中，`3402992956809132418596140100660247210`表示`0.01000049749154292 << 128`，`291339464771989622907027621153398088495`表示`0.8561697375276566 << 128`。
 
-参考[abdk的这篇文章](https://hackmd.io/@abdk/SkVJeHK9v)，当精度为$2^{-14}$时，tick的最小误差为$−
-0.85617$，最大误差为$0.0100005$。同时，这篇文章也从理论上证明了，只有当精度等于（或高于）$2^{-14}$时，只需要一次计算即可得出所需的tick值。
+参考[abdk的这篇文章](https://hackmd.io/@abdk/SkVJeHK9v)，当精度为 $2^{-14}$ 时，tick的最小误差为 $−
+0.85617$ ，最大误差为 $0.0100005$ 。同时，这篇文章也从理论上证明了，只有当精度等于（或高于） $2^{-14}$ 时，只需要一次计算即可得出所需的tick值。
 
-我们的目的是寻找满足当前条件的最大tick，使得tick对应的$\sqrt{P}$小于等于传入的值。因此如果补偿后的tickHi满足要求，则优先使用tickHi；否则使用tickLow。
+我们的目的是寻找满足当前条件的最大tick，使得tick对应的 $\sqrt{P}$ 小于等于传入的值。因此如果补偿后的tickHi满足要求，则优先使用tickHi；否则使用tickLow。
 
 以下是本节参考文章，有兴趣的朋友请扩展阅读：
 
@@ -1874,7 +1879,7 @@ function position(int24 tick) private pure returns (int16 wordPos, uint8 bitPos)
 }
 ```
 
-只有能被`tickSpacing`整除的`tick`才能记录在位图中，因此此处的参数：$tick = \frac{tick}{tickSpacing}$。
+只有能被`tickSpacing`整除的`tick`才能记录在位图中，因此此处的参数： $tick = \frac{tick}{tickSpacing}$。
 
 `tick`类型为`int24`，其二进制从右到左，从低位到高位，前8位表示`bitPos`，后16位表示`wordPos`，如下图所示：
 
@@ -2196,7 +2201,7 @@ if (exactIn) {
 
 如果是输入固定数量，则交易手续费需要从输入代币中扣除。
 
-因为`feePips`的单位是百分之一基点，即$\frac{1}{10^6}$，因此，按照如下公式扣除手续费：
+因为`feePips`的单位是百分之一基点，即 $\frac{1}{10^6}$ ，因此，按照如下公式扣除手续费：
 
 $$
 amountRemaining \cdot (1 - \frac{feePips}{10^6})
@@ -2310,7 +2315,7 @@ if (exactIn && sqrtRatioNextX96 != sqrtRatioTargetX96) {
 
 #### getNextSqrtPriceFromAmount0RoundingUp
 
-根据当前价格、`liquidity`和$\Delta{x}$，计算目标价格。
+根据当前价格、`liquidity`和 $\Delta{x}$ ，计算目标价格。
 
 根据白皮书公式6.16:
 
@@ -2318,13 +2323,13 @@ $$
 \Delta{x} = \Delta{\frac{1}{\sqrt{P}}} \cdot L
 $$
 
-假设$\sqrt{P_a} > \sqrt{P_b}$，则$x_a < x_b$：
+假设 $\sqrt{P_a} > \sqrt{P_b}$ ，则 $x_a < x_b$ ：
 
 $$
 \Delta{x} = x_b - x_a
 $$
 
-如果已知$\sqrt{P_a}$计算$\sqrt{P_b}$，则：
+如果已知 $\sqrt{P_a}$ 计算 $\sqrt{P_b}$ ，则：
 
 $$
 \frac{1}{\sqrt{P_b}} = \frac{\Delta{x}}{L} + \frac{1}{\sqrt{P_a}} = \frac{1}{L} \cdot (\Delta{x} + \frac{L}{\sqrt{P_a}}) \tag{1.1}
@@ -2338,7 +2343,7 @@ $$
 {\sqrt{P_b}} = \frac{L \cdot \sqrt{P_a}}{L + \Delta{x} \cdot \sqrt{P_a}}  \tag{1.3}
 $$
 
-如果已知$\sqrt{P_b}$计算$\sqrt{P_a}$，则：
+如果已知 $\sqrt{P_b}$ 计算 $\sqrt{P_a}$ ，则：
 
 $$
 \frac{1}{\sqrt{P_a}} = \frac{1}{\sqrt{P_b}} - \frac{\Delta{x}}{L}  \tag{1.4}
@@ -2391,14 +2396,14 @@ function getNextSqrtPriceFromAmount0RoundingUp(
 }
 ```
 
-* 当`add = true`时，即已知$\sqrt{P_a}$计算$\sqrt{P_b}$
-    - 如果$\Delta{x} \cdot \sqrt{P_a}$没有发生溢出，则使用公式1.3计算$\sqrt{P_b}$，因为这种方式精度最高
-    - 否则，使用公式1.2计算$\sqrt{P_b}$
-* 当`add = false`时，即已知$\sqrt{P_b}$，根据上述公式1.5计算$\sqrt{P_a}$
+* 当`add = true`时，即已知 $\sqrt{P_a}$ 计算 $\sqrt{P_b}$
+    - 如果 $\Delta{x} \cdot \sqrt{P_a}$ 没有发生溢出，则使用公式1.3计算 $\sqrt{P_b}$ ，因为这种方式精度最高
+    - 否则，使用公式1.2计算 $\sqrt{P_b}$
+* 当`add = false`时，即已知 $\sqrt{P_b}$ ，根据上述公式1.5计算 $\sqrt{P_a}$
 
 #### getNextSqrtPriceFromAmount1RoundingDown
 
-根据当前价格、`liquidity`和$\Delta{y}$，计算目标价格。
+根据当前价格、`liquidity`和 $\Delta{y}$ ，计算目标价格。
 
 根据白皮书公式6.13:
 
@@ -2406,19 +2411,19 @@ $$
 \Delta{\sqrt{P}} = \frac{\Delta{y}}{L} \tag{6.13}
 $$
 
-假设$\sqrt{P_a} > \sqrt{P_b}$，则$y_a > y_b$：
+假设 $\sqrt{P_a} > \sqrt{P_b}$ ，则 $y_a > y_b$：
 
 $$
 \Delta{y} = y_a - y_b
 $$
 
-如果已知$\sqrt{P_b}$计算$\sqrt{P_a}$，则：
+如果已知 $\sqrt{P_b}$ 计算 $\sqrt{P_a}$ ，则：
 
 $$
 \sqrt{P_a} = \sqrt{P_b} + \frac{\Delta{y}}{L} \tag{1.6}
 $$
 
-如果已知$\sqrt{P_a}$计算$\sqrt{P_b}$，则：
+如果已知 $\sqrt{P_a}$ 计算 $\sqrt{P_b}$ ，则：
 
 $$
 \sqrt{P_b} = \sqrt{P_a} - \frac{\Delta{y}}{L} \tag{1.7}
@@ -2467,8 +2472,8 @@ function getNextSqrtPriceFromAmount1RoundingDown(
 }
 ```
 
-* 当`add = true`时，即按照公式1.6，根据$\sqrt{P_b}$计算$\sqrt{P_a}$
-* 当`add = false`时，按照公式1.7，根据$\sqrt{P_a}$计算$\sqrt{P_b}$
+* 当`add = true`时，即按照公式1.6，根据 $\sqrt{P_b}$ 计算 $\sqrt{P_a}$
+* 当`add = false`时，按照公式1.7，根据 $\sqrt{P_a}$ 计算 $\sqrt{P_b}$
 
 #### getNextSqrtPriceFromInput
 
@@ -2682,7 +2687,7 @@ function transform(
 根据白皮书公式5.3-5.5：
 
 $$
-\log_{1.0001}(P_{t_1,t_2}) = \frac{\sum^{t_2}_{i=t_1} \log_{1.0001}(P_i)}{t_2 - t_1} \tag{5.3}
+\log_{1.0001}(P_{t_1,t_2}) = \frac{\sum_{i=t_1}^{t_2} \log_{1.0001}(P_i)}{t_2 - t_1} \tag{5.3}
 $$
 
 $$
@@ -2693,16 +2698,16 @@ $$
 P_{t_1,t_2} = 1.0001^{\frac{a_{t_2} - a_{t_1}}{t_2 - t_1}} \tag{5.5}
 $$
 
-这里保存的`tickCumulative`即为$a_{t_n}$，其对应的公式为：
+这里保存的`tickCumulative`即为 $a_{t_n}$ ，其对应的公式为：
 
 $$
-tickCumulative = \sum^{t_n}_{i=0} \log_{1.0001}(P_i)
+tickCumulative = \sum_{i=0}^{t_n} \log_{1.0001}(P_i)
 $$
 
 同样，每流动性持续时间`secondsPerLiquidityCumulative`为：
 
 $$
-secondsPerLiquidityCumulative = \sum^{n}_{i=0} \frac{t_i}{L_i}
+secondsPerLiquidityCumulative = \sum_{i=0}^{n} \frac{t_i}{L_i}
 $$
 
 #### initialize
@@ -2828,7 +2833,7 @@ function grow(
 
 比较两个时间戳的大小。
 
-由于合约使用`uint32`类型表示时间戳，其最大值$2^{32}-1 = 4294967295$，对应的时间为`February 7, 2106 6:28:15 AM GMT+00:00`，如果两个时间`a`和`b`（$a < b$）正好位于`uint32`最大值的两边，`b`由于溢出，因此$a > b$，直接比较数值会导致错误的结果，因此需要统一时间。
+由于合约使用`uint32`类型表示时间戳，其最大值 $2^{32}-1 = 4294967295$，对应的时间为`February 7, 2106 6:28:15 AM GMT+00:00`，如果两个时间`a`和`b`（ $a < b$ ）正好位于`uint32`最大值的两边，`b`由于溢出，因此 $a > b$，直接比较数值会导致错误的结果，因此需要统一时间。
 
 > 注：实际上每136年左右就会有溢出问题。
 
@@ -2858,13 +2863,13 @@ function lte(
 
 * 如果`a`和`b`都小于等于`time`，则表示没有发生溢出，因此直接返回`a <= b`
 * 由于`a`和`b`在时间线上均小于等于`time`
-  * 如果$a > time$，则表示发生溢出，`aAdjusted`为补齐`2**32`后的时间`a`
+  * 如果 $a > time$ ，则表示发生溢出，`aAdjusted`为补齐`2**32`后的时间`a`
   * 同理，`bAdjusted`为补齐后的时间`b`
   * 最后比较两个补齐后的时间`aAdjusted`和`bAdjusted`
 
-因此，该方法在`a`、`b`与`time`存在0到1个$2^{32}$的时间差时是溢出安全的。
+因此，该方法在`a`、`b`与`time`存在0到1个 $2^{32}$ 的时间差时是溢出安全的。
 
-> 不能跨越两个$2^{32} - 1$。
+> 不能跨越两个 $2^{32} - 1$ 。
 
 #### binarySearch
 
@@ -3109,9 +3114,9 @@ function observeSingle(
 * 如果目标时间等于`beforeOrAt`时间，则直接返回该观测点的相关数据
 * 如果目标时间等于`atOrAfter`时间，则也返回相关数据
 * 如果目标时间介于`beforeOrAt`和`atOrAfter`之间，则需要根据时间比例计算相关值：
-  * `observationTimeDelta`为`beforeOrAt`和`atOrAfter`的时间差值（下面用$\Delta{t}$表示），`targetDelta`为`beforeOrAt`和`target`的时间差值
-  * 因为$\Delta{tickCumulative} = tick \cdot \Delta{t}$，则截止到`target`的值应为：$\frac{\Delta{tickCumulative}}{\Delta{t}} \cdot targetDelta$
-  * 同样，$\Delta{secondsPerLiquidityCumulativeX128} = \frac{\Delta{t}}{liquidity}$，则截止到`target`的值应为：$\frac{\Delta{secondsPerLiquidityCumulativeX128}}{\Delta{t}} \cdot targetDelta$
+  * `observationTimeDelta`为`beforeOrAt`和`atOrAfter`的时间差值（下面用 $\Delta{t}$ 表示），`targetDelta`为`beforeOrAt`和`target`的时间差值
+  * 因为 $\Delta{tickCumulative} = tick \cdot \Delta{t}$，则截止到`target`的值应为： $\frac{\Delta{tickCumulative}}{\Delta{t}} \cdot targetDelta$
+  * 同样， $\Delta{secondsPerLiquidityCumulativeX128} = \frac{\Delta{t}}{liquidity}$，则截止到`target`的值应为： $\frac{\Delta{secondsPerLiquidityCumulativeX128}}{\Delta{t}} \cdot targetDelta$
 
 #### observe
 

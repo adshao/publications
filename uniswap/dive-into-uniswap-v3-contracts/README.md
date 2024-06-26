@@ -1200,11 +1200,13 @@ function tickSpacingToMaxLiquidityPerTick(int24 tickSpacing) internal pure retur
 Calculates the accumulated fee per liquidity inside two `tick` ranges, implementing formulas 6.17-6.19 from the white paper:
 
 $$
-f_a(i) = \begin{cases} f_g - f_o(i) & \text{if $i_c \geq i$}\\ f_o(i) & \text{$i_c < i$} \end{cases} \tag{6.17}
+f_a(i) = \begin{cases} f_g - f_o(i) & \text{if $i_c \geq i$}\\
+f_o(i) & \text{$i_c < i$} \end{cases} \tag{6.17}
 $$
 
 $$
-f_b(i) = \begin{cases} f_o(i) & \text{if $i_c \geq i$}\\ f_g - f_o(i) & \text{$i_c < i$}\end{cases} \tag{6.18}
+f_b(i) = \begin{cases} f_o(i) & \text{if $i_c \geq i$}\\
+f_g - f_o(i) & \text{$i_c < i$}\end{cases} \tag{6.18}
 $$
 
 $$
@@ -1444,7 +1446,8 @@ $$
 Assuming $i \geq 0$, for a given tick $i$, it can always be represented in binary, thus the following formula always holds:
 
 $$
-\begin{cases} i = \sum_{n=0}^{19}{(x_n \cdot 2^n)} = x_0 \cdot 1 + x_1 \cdot 2 + x_2 \cdot 4 + ... + x_{19}\cdot 524288 \\ \forall x_n \in \{0, 1\} \end{cases} \tag{1.1}
+\begin{cases} i = \sum_{n=0}^{19}{(x_n \cdot 2^n)} = x_0 \cdot 1 + x_1 \cdot 2 + x_2 \cdot 4 + ... + x_{19}\cdot 524288 \\
+\forall x_n \in \{0, 1\} \end{cases} \tag{1.1}
 $$
 
 where $x_n$ are the binary digits of $i$. For example, if $i=6$, its binary representation is `000000000000000000000110`, then $x_1 = 1, x_2 = 1$, and the rest of $x_n$ are 0.
@@ -1456,7 +1459,8 @@ Let's first consider the case when $i < 0$:
 If $i < 0$, then:
 
 $$
-\sqrt{p}(i) = 1.0001^{\frac{i}{2}} = 1.0001^{-\frac{|i|}{2}} = \frac{1}{1.0001^{\frac{|i|}{2}}} = \frac{1}{1.0001^{\frac{1}{2}(\sum_{n=0}^{19}{(x_n \cdot 2^n)})}} \\ = \frac{1}{1.0001^{\frac{1}{2} \cdot x_0}} \cdot \frac{1}{1.0001^{\frac{2}{2} \cdot x_1}} \cdot \frac{1}{1.0001^{\frac{4}{2} \cdot x_2}} \cdot ... \cdot \frac{1}{1.0001^{\frac{524288}{2} \cdot x_{19}}}
+\sqrt{p}(i) = 1.0001^{\frac{i}{2}} = 1.0001^{-\frac{|i|}{2}} = \frac{1}{1.0001^{\frac{|i|}{2}}} = \frac{1}{1.0001^{\frac{1}{2}(\sum_{n=0}^{19}{(x_n \cdot 2^n)})}} \\
+= \frac{1}{1.0001^{\frac{1}{2} \cdot x_0}} \cdot \frac{1}{1.0001^{\frac{2}{2} \cdot x_1}} \cdot \frac{1}{1.0001^{\frac{4}{2} \cdot x_2}} \cdot ... \cdot \frac{1}{1.0001^{\frac{524288}{2} \cdot x_{19}}}
 $$
 
 Based on the value of binary digits $x_n$, we can summarize as follows:
@@ -1524,7 +1528,8 @@ function getSqrtRatioAtTick(int24 tick) internal pure returns (uint160 sqrtPrice
 Assuming $i > 0$:
 
 $$
-\sqrt{p_{Q128128}(i)} = 2^{128} \cdot \sqrt{p(i)} = 2^{128} \cdot 1.0001^{\frac{i}{2}} \\ = \frac{2^{128}}{1.0001^{-\frac{i}{2}}} = \frac{2^{256}}{2^{128} \cdot \sqrt{p(-i)}} = \frac{2^{256}}{\sqrt{p_{Q128128}(-i)}}
+\sqrt{p_{Q128128}(i)} = 2^{128} \cdot \sqrt{p(i)} = 2^{128} \cdot 1.0001^{\frac{i}{2}} \\
+= \frac{2^{128}}{1.0001^{-\frac{i}{2}}} = \frac{2^{256}}{2^{128} \cdot \sqrt{p(-i)}} = \frac{2^{256}}{\sqrt{p_{Q128128}(-i)}}
 $$
 
 Therefore, just calculate the ratio value for $i < 0$, and use $2^{256}$ divided by ratio to get the ratio value for $i > 0$ in `Q128.128` representation:
@@ -2680,7 +2685,7 @@ Where: `tickCumulative: last.tickCumulative + int56(tick) * delta`.
 According to the whitepaper formulas 5.3-5.5:
 
 $$
-\log_{1.0001}(P_{t_1,t_2}) = \frac{\sum^{t_2}_{i=t_1} \log_{1.0001}(P_i)}{t_2 - t_1} \tag{5.3}
+\log_{1.0001}(P_{t_1,t_2}) = \frac{\sum_{i=t_1}^{t_2} \log_{1.0001}(P_i)}{t_2 - t_1} \tag{5.3}
 $$
 
 $$
@@ -2694,13 +2699,13 @@ $$
 Here, the saved `tickCumulative` is $a_{t_n}$, corresponding to the formula:
 
 $$
-tickCumulative = \sum^{t_n}_{i=0} \log_{1.0001}(P_i)
+tickCumulative = \sum_{i=0}^{t_n} \log_{1.0001}(P_i)
 $$
 
 Similarly, the cumulative seconds per liquidity `secondsPerLiquidityCumulative` is:
 
 $$
-secondsPerLiquidityCumulative = \sum^{n}_{i=0} \frac{t_i}{L_i}
+secondsPerLiquidityCumulative = \sum_{i=0}^{n} \frac{t_i}{L_i}
 $$
 
 #### initialize
@@ -3105,9 +3110,9 @@ According to [getSurroundingObservations](#getSurroundingObservations) method, i
 * If the target time equals `beforeOrAt` time, then directly return the related data of that observation point
 * If the target time equals `atOrAfter` time, then also return the related data
 * If the target time is between `beforeOrAt` and `atOrAfter`, it is necessary to calculate related values based on the time proportion:
-  * `observationTimeDelta` is the time difference between `beforeOrAt` and `atOrAfter` (\(\Delta{t}\) below), `targetDelta` is the time difference between `beforeOrAt` and `target`
-  * Because \(\Delta{tickCumulative} = tick \cdot \Delta{t}\), the value up to `target` should be: \(\frac{\Delta{tickCumulative}}{\Delta{t}} \cdot targetDelta\)
-  * Similarly, \(\Delta{secondsPerLiquidityCumulativeX128} = \frac{\Delta{t}}{liquidity}\), the value up to `target` should be: \(\frac{\Delta{secondsPerLiquidityCumulativeX128}}{\Delta{t}} \cdot targetDelta\)
+  * `observationTimeDelta` is the time difference between `beforeOrAt` and `atOrAfter` ( $\Delta{t}$ below), `targetDelta` is the time difference between `beforeOrAt` and `target`
+  * Because $\Delta{tickCumulative} = tick \cdot \Delta{t}$, the value up to `target` should be: $\frac{\Delta{tickCumulative}}{\Delta{t}} \cdot targetDelta$
+  * Similarly, $\Delta{secondsPerLiquidityCumulativeX128} = \frac{\Delta{t}}{liquidity}$, the value up to `target` should be: $\frac{\Delta{secondsPerLiquidityCumulativeX128}}{\Delta{t}} \cdot targetDelta$
 
 #### observe
 
