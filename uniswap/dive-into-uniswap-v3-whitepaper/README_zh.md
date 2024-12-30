@@ -41,7 +41,7 @@ Uniswap v3的设计思想是*集中流动性*：流动性限制在某个价格�
 在之前的版本中，流动性被均匀分布在以下曲线：
 
 $$
-x \cdot y = k \tag{2.1}
+x \cdot y = k \quad \text{(2.1)}
 $$
 
 其中， $x$ 和 $y$ 是两种代币 $X$ 和 $Y$ 的余额， $k$ 是一个常数。换句话说，之前版本被设计为给整个价格区间 $(0, \infty)$ 提供流动性。这种方式容易实现，允许流动性被有效聚合，但也意味着池子中很多资产（流动性）永远不会被使用。
@@ -63,7 +63,7 @@ $$
 流动性数量可以用 $L$ 衡量，其等价于 $\sqrt{k}$。头寸的真实代币余额可以用以下曲线表示：
 
 $$
-(x + \frac{L}{\sqrt(p_b)})(y + L \sqrt{p_a}) = L^2 \tag{2.2}
+(x + \frac{L}{\sqrt(p_b)})(y + L \sqrt{p_a}) = L^2 \quad \text{(2.2)}
 $$
 
 该曲线是公式2.1的变形，头寸只在自己的区间具有偿付能力（图2）。
@@ -80,19 +80,19 @@ $$
 > 
 > 则平移后的v3曲线为：
 >
-> $$(x + x_b) \cdot (y + y_a) = k \tag{2.2.0}$$
+> $$(x + x_b) \cdot (y + y_a) = k \quad \text{(2.2.0)}$$
 > 
 > $a$, $b$点的价格分别为：
 >
-> $$p_a = \frac{y_a}{x_a} \tag{2.2.1}$$
+> $$p_a = \frac{y_a}{x_a} \quad \text{(2.2.1)}$$
 >
-> $$p_b = \frac{y_b}{x_b} \tag{2.2.2}$$
+> $$p_b = \frac{y_b}{x_b} \quad \text{(2.2.2)}$$
 > 
 > 又因为：
 >
-> $$x_a \cdot y_a = k \tag{2.2.3}$$
+> $$x_a \cdot y_a = k \quad \text{(2.2.3)}$$
 > 
-> $$x_b \cdot y_b = k \tag{2.2.4}$$
+> $$x_b \cdot y_b = k \quad \text{(2.2.4)}$$
 >
 > 因此，根据公式2.2.1和2.2.3可得：
 >
@@ -233,7 +233,7 @@ Uniswap v3使用时间加权的几何平均数价格，避免了为两个代币�
 Uniswap v3记录当前tick序号的累计和（ $\log_{1.0001}{P}$ ，即以1.0001为底的价格 $P$ 对数，它可以识别1个基点即0.01%的价格变化），而不是记录累计价格 $P$ 。任意时间点的累计数等价于该合约截止当前时间每秒对数价格（ $\log_{1.0001}(P)$ ）之和：
 
 $$
-a_t = \sum_{i=1}^{t} \log_{1.0001}(P_i) \tag{5.1}
+a_t = \sum_{i=1}^{t} \log_{1.0001}(P_i) \quad \text{(5.1)}
 $$
 
 > 注：为什么 $log_{1.0001}P$ 能够识别的价格变化精度为0.01%（即1个基点）呢？
@@ -245,7 +245,7 @@ $$
 任意时间段 $t_1$ 到 $t_2$ 的几何平均价格（时间加权平均价格） $(p_{t_1,t_2})$ 为：
 
 $$
-P_{t_1,t_2} = \left(\prod^{t_2}_{i=t_1} P_i \right)^{\frac{1}{t_2 - t_1}} \tag{5.2}
+P_{t_1,t_2} = \left(\prod^{t_2}_{i=t_1} P_i \right)^{\frac{1}{t_2 - t_1}} \quad \text{(5.2)}
 $$
 
 > 注：这里我们回顾一下几何平均数的定义：
@@ -259,15 +259,15 @@ $$
 为了计算这个值，你可以分别查看 $t_1$ 和 $t_2$ 时刻的累计价格，将后者减去前者，并除以时间差（秒数），最后计算 $1.0001^x$ 得出时间加权几何平均价格：
 
 $$
-\log_{1.0001}(P_{t_1,t_2}) = \frac{\sum_{i=t_1}^{t_2} \log_{1.0001}(P_i)}{t_2 - t_1} \tag{5.3}
+\log_{1.0001}(P_{t_1,t_2}) = \frac{\sum_{i=t_1}^{t_2} \log_{1.0001}(P_i)}{t_2 - t_1} \quad \text{(5.3)}
 $$
 
 $$
-\log_{1.0001}(P_{t_1,t_2}) = \frac{a_{t_2} - a_{t_1}}{t_2 - t_1} \tag{5.4}
+\log_{1.0001}(P_{t_1,t_2}) = \frac{a_{t_2} - a_{t_1}}{t_2 - t_1} \quad \text{(5.4)}
 $$
 
 $$
-P_{t_1,t_2} = 1.0001^{\frac{a_{t_2} - a_{t_1}}{t_2 - t_1}} \tag{5.5}
+P_{t_1,t_2} = 1.0001^{\frac{a_{t_2} - a_{t_1}}{t_2 - t_1}} \quad \text{(5.5)}
 $$
 
 ### 5.3 Liquidity Oracle 流动性预言机
@@ -303,7 +303,7 @@ $$
 从概念上，每当价格 $p$ 等于1.0001的整数次方时就存在1个tick（点）。我们使用整数 $i$ 表示tick（点），使得该点的价格可以表示为：
 
 $$
-p(i) = 1.0001^i \tag{6.1}
+p(i) = 1.0001^i \quad \text{(6.1)}
 $$
 
 根据定义，两个相邻的tick之间的价格移动精度为0.01%（1个基点）。
@@ -313,7 +313,7 @@ $$
 由于6.2.1节中描述的技术原因，交易对池子实际上使用开根号价格 $\sqrt{price}$ 来跟踪tick（点），该值等于 $\sqrt{1.0001}$ 的整数次方。可将上述等式转换为等价的开根号价格形式：
 
 $$
-\sqrt{p}(i) = \sqrt{1.0001}^i = 1.0001^{\frac{i}{2}} \tag{6.2}
+\sqrt{p}(i) = \sqrt{1.0001}^i = 1.0001^{\frac{i}{2}} \quad \text{(6.2)}
 $$
 
 举个例子， $\sqrt{p}(0)$ （tick 0的开根号价格）等于1， $\sqrt{p}(0)$ 等于 $\sqrt{1.0001} \approx 1.00005$ ， $\sqrt{p}(-1)$ 等于 $\frac{1}{\sqrt{1.0001}} \approx 0.99995$ 。
@@ -342,21 +342,21 @@ $$
 交易对合约记录两个不同值：流动性liquidity（ $L$ ）和开根号价格sqrtPrice（ $\sqrt{P}$ ），而不是虚拟余额。这两个值可根据虚拟余额计算如下：
 
 $$
-L = \sqrt{xy} \tag{6.3}
+L = \sqrt{xy} \quad \text{(6.3)}
 $$
 
 $$
-\sqrt{P} = \sqrt{\frac{y}{x}} \tag{6.4}
+\sqrt{P} = \sqrt{\frac{y}{x}} \quad \text{(6.4)}
 $$
 
 反过来，两种代币的虚拟余额也可以使用这两个值计算得出：
 
 $$
-x = \frac{L}{\sqrt{P}} \tag{6.5}
+x = \frac{L}{\sqrt{P}} \quad \text{(6.5)}
 $$
 
 $$
-y = L \cdot \sqrt{P} \tag{6.6}
+y = L \cdot \sqrt{P} \quad \text{(6.6)}
 $$
 
 使用 $L$ 和 $\sqrt{P}$ （而不是 $x$ 和 $y$ ）计算比较方便，因为一个时刻只有其中一个值会变化。当在一个tick内交易时，只有价格（即 $\sqrt{P}$ ）发生变化；当穿越一个tick或者铸造/销毁流动性时，只有流动性（即 $L$ ）发生变化。这避免了在记录虚拟余额时可能遇到的舍入误差问题。
@@ -366,7 +366,7 @@ $$
 同样，流动性也可以被看作token1的（无论是真实还是虚拟的）数量变化与价格 $\sqrt{P}$ 变化的比例：
 
 $$
-L = \frac{\Delta{Y}}{\Delta{\sqrt{P}}} \tag{6.7}
+L = \frac{\Delta{Y}}{\Delta{\sqrt{P}}} \quad \text{(6.7)}
 $$
 
 > 注：根据公式6.6，假设 $t_0$ 和 $t_1$ 时刻，对应的 $y_0$ 和 $y_1$ 分别为：
@@ -390,7 +390,7 @@ $$
 全局状态记录当前tick序号为 $tick(i_c)$ ，一个表示当前tick的有符号整数（更准确地说，是低于当前价格的最接近的tick）。这是一种优化策略（也是一种避免对数精度问题的方法），因为在任意时刻，你需要能够基于当前的开根号价格 $sqrtPrice$ 计算出对应的tick。在任意时间点，以下等式总是成立：
 
 $$
-i_c = \lfloor \log_{\sqrt{1.0001}} \sqrt{P} \rfloor \tag{6.8}
+i_c = \lfloor \log_{\sqrt{1.0001}} \sqrt{P} \rfloor \quad \text{(6.8)}
 $$
 
 > 注：根据公式6.2:
@@ -426,11 +426,11 @@ $$
 首先，feeGrowthGlobal1和protocolFees1将增加：
 
 $$
-\Delta{f_{g,1}} = y_{in} \cdot \gamma \cdot (1 - \phi) \tag{6.9}
+\Delta{f_{g,1}} = y_{in} \cdot \gamma \cdot (1 - \phi) \quad \text{(6.9)}
 $$
 
 $$
-\Delta{f_{p,1}} = y_{in} \cdot \gamma \cdot \phi \tag{6.10}
+\Delta{f_{p,1}} = y_{in} \cdot \gamma \cdot \phi \quad \text{(6.10)}
 $$
 
 > 注： $\phi$ 是协议手续费占手续费的比例，因此协议手续费比例为： $\gamma \cdot \phi$ ，协议手续费收入为公式6.10。
@@ -440,13 +440,13 @@ $$
 $\Delta y$ 是 $y$ 的增加量（当手续费扣除后）。
 
 $$
-\Delta{y} = y_{in} \cdot (1 - \gamma) \tag{6.11}
+\Delta{y} = y_{in} \cdot (1 - \gamma) \quad \text{(6.11)}
 $$
 
 如果你用经过计算的虚拟余额（ $x$ 和 $y$ ）为token0和token1的数量，以下公式可以计算出交易后的token0的代币数量：
 
 $$
-x_{end} = \frac{x \cdot y}{y + \Delta{y}} \tag{6.12}
+x_{end} = \frac{x \cdot y}{y + \Delta{y}} \quad \text{(6.12)}
 $$
 
 > 注：因为在1个tick内，交易符合k常值函数，即：
@@ -460,21 +460,21 @@ $$
 但是请注意，在v3，合约使用流动性（ $L$ ）和开根号价格（ $\sqrt{P}$ ）代替 $x$ 和 $y$ 。我们可以使用这两个值计算 $x$ 和 $y$ ，然后计算交易的成交价格。但是，对于给定的 $L$ ，我们可以推导出简洁的等式描述 $\Delta{\sqrt{P}}$ 和 $\Delta{y}$ 的关系（可根据公式6.7推出）：
 
 $$
-\Delta{\sqrt{P}} = \frac{\Delta{y}}{L} \tag{6.13}
+\Delta{\sqrt{P}} = \frac{\Delta{y}}{L} \quad \text{(6.13)}
 $$
 
 $$
-\Delta{y} = \Delta{\sqrt{P}} \cdot L \tag{6.14}
+\Delta{y} = \Delta{\sqrt{P}} \cdot L \quad \text{(6.14)}
 $$
 
 同时可以推导出 $\Delta{\frac{1}{\sqrt{P}}}$ 和 $\Delta{x}$ 的关系：
 
 $$
-\Delta{\frac{1}{\sqrt{P}}} = \frac{\Delta{x}}{L} \tag{6.15}
+\Delta{\frac{1}{\sqrt{P}}} = \frac{\Delta{x}}{L} \quad \text{(6.15)}
 $$
 
 $$
-\Delta{x} = \Delta{\frac{1}{\sqrt{P}}} \cdot L \tag{6.16}
+\Delta{x} = \Delta{\frac{1}{\sqrt{P}}} \cdot L \quad \text{(6.16)}
 $$
 
 > 注：根据公式6.5，假设 $t_0$ 和 $t_1$ 时刻，对应的 $x_0$ 和 $x_1$ 分别为：
@@ -525,12 +525,12 @@ feeGrowthOutside{0, 1}用于记录一个给定区间总共累计多少手续费�
 
 $$
 f_a(i) = \begin{cases} f_g - f_o(i) & \text{$i_c \geq i$}\\
-f_o(i) & \text{$i_c < i$} \end{cases} \tag{6.17}
+f_o(i) & \text{$i_c < i$} \end{cases} \quad \text{(6.17)}
 $$
 
 $$
 f_b(i) = \begin{cases} f_o(i) & \text{$i_c \geq i$}\\
-f_g - f_o(i) & \text{$i_c < i$}\end{cases} \tag{6.18}
+f_g - f_o(i) & \text{$i_c < i$}\end{cases} \quad \text{(6.18)}
 $$
 
 > 注：
@@ -551,7 +551,7 @@ $$
 我们可以使用上述函数计算任意两个tick（低点tick $i_l$和高点tick $i_u$）区间内，每个流动性累计的全部手续费 $f_r$：
 
 $$
-f_r = f_g - f_b(i_l) - f_a(i_u) \tag{6.19}
+f_r = f_g - f_b(i_l) - f_a(i_u) \quad \text{(6.19)}
 $$
 
 > 注：根据上述推论，我们可以画出几个手续费的逻辑关系如下：
@@ -563,14 +563,14 @@ $$
 $f_o$ 需要在每次tick穿越时被更新。特别地，当tick被反方向穿越时，其对应的 $f_o$（token0和token1）需要按照如下方式更新：
 
 $$
-f_o(i) := f_g - f_o(i) \tag{6.20}
+f_o(i) := f_g - f_o(i) \quad \text{(6.20)}
 $$
 
 只有被至少一个头寸作为边界端点的tick才需要 $f_o$。因此，出于效率考虑， $f_o$ 不会被初始化（当tick被穿越时无需被更新），只有当使用该tick作为边界点创建头寸时才会初始化。当tick $i$的 $f_o$ 初始化时，它的初始值被设置成当前所有的手续费都由小于该tick时收取：
 
 $$
 f_o := \begin{cases} f_g & \text{$i_c \geq i$}\\
-0 & \text{$i_c < i$} \end{cases} \tag{6.21}
+0 & \text{$i_c < i$} \end{cases} \quad \text{(6.21)}
 $$
 
 注意，因为不同tick的 $f_0$ 值可以在不同时刻初始化，因此比较他们的 $f_0$ 是无意义的，实际上无法保证 $f_0$ 值不变。但这不会导致每个头寸的统计问题，如下文描述，所有的头寸只需要知道从上一次交互后，区间内的 $g$ 值增长即可。
@@ -583,16 +583,16 @@ $$
 
 $$
 t_a(i) = \begin{cases} t - t_o(i) & \text{$i_c \geq i$}\\
-t_o(i) & \text{$i_c < i$} \end{cases} \tag{6.22}
+t_o(i) & \text{$i_c < i$} \end{cases} \quad \text{(6.22)}
 $$
 
 $$
 t_b(i) = \begin{cases} t_o(i) & \text{$i_c \geq i$}\\
-t - t_o(i) & \text{$i_c < i$}\end{cases} \tag{6.23}
+t - t_o(i) & \text{$i_c < i$}\end{cases} \quad \text{(6.23)}
 $$
 
 $$
-t_r(i_l, i_u) = t - t_b(i_l) - t_a(i_u) \tag{6.24}
+t_r(i_l, i_u) = t - t_b(i_l) - t_a(i_u) \quad \text{(6.24)}
 $$
 
 在 $t_1$ 到 $t_2$ 时间段内，头寸在价格区间内的持续时间可以通过记录 $t_1$ 和 $t_2$ 时间点的 $s_r(i_l, i_u)$ 值，并将后者减去前者得到。
@@ -601,7 +601,7 @@ $$
 
 $$
 t_o(i) := \begin{cases} t & \text{$i_c \geq i$}\\
-0 & \text{$i_c < i$} \end{cases} \tag{6.25}
+0 & \text{$i_c < i$} \end{cases} \quad \text{(6.25)}
 $$
 
 与 $f_o$ 值类似，比较不同tick的 $t_o$ 值也是无意义的。仅当计算一个时间段（起始时间需在两个tick的 $t_0$ 初始化之后）的指定价格区间的流动性持续时间时， $t_0$ 才是有意义的。
@@ -613,11 +613,11 @@ $$
 为了记录在价格区间内时，该tick作为边界点的手续费收入（和持续时间），合约需要更新tick的状态。feeGrowthOutside{0, 1}和secondsOutside被更新到反映当前值，当与该tick关联的交易方向改变时，按照下述公式更新：
 
 $$
-f_o := f_g - f_o \tag{6.26}
+f_o := f_g - f_o \quad \text{(6.26)}
 $$
 
 $$
-t_o := t - t_o \tag{6.27}
+t_o := t - t_o \quad \text{(6.27)}
 $$
 
 当一个tick被穿越后，如6.2.3节描述，交易将继续直到碰到下一个已初始化的tick。
@@ -646,7 +646,7 @@ setPosition的两个参数：lowerTick和upperTick，与调用者msg.sender一�
 为了计算一个代币的未领取手续费，你需要知道自从上一次领取手续费后，该头寸对应的区间获得多少手续费 $f_r$（如6.3描述，使用区间 $i_l$, $i_r$计算）。从 $t_0$ 到 $t_1$ 时间段，区间内每份流动性的的手续费增长为： $f_r(t_1) - f_r(t_0)$（其中， $f_r(t_0)$ 在头寸中以feeGrowthInside{0, 1}Last保存， $f_r(t_1)$ 能够从当前tick状态中计算）。将其乘以头寸的流动性，即为以token0表示的该头寸未领取的手续费：
 
 $$
-f_u = l \cdot (f_r(t_1) - f_r(t_0)) \tag{6.28}
+f_u = l \cdot (f_r(t_1) - f_r(t_0)) \quad \text{(6.28)}
 $$
 
 接着，合约将liquidityDelta加到头寸的liquidity（流动性）。在tick区间低点，它同时将liquidityDelta加到liquidityNet（注：tick从左到右，表示加入流动性）；而在头寸的高点，则从liquidityNet减去liquidityDelta（注：tick从右到左，表示移除流动性）。如果池子当前价格在头寸区间内，合约也会将liquidity加到全局的globalLiquidity。
@@ -658,13 +658,13 @@ $$
 $$
 \Delta{Y} = \begin{cases} 0 & \text{$i_c < i_l$}\\
 \Delta{L} \cdot (\sqrt{P} - \sqrt{p(i_l)}) & \text{$i_l \leq i_c \leq i_u$}\\
-\Delta{L} \cdot (\sqrt{p(i_u)} - \sqrt{p(i_l)}) & \text{$i_c \geq i_u$} \end{cases} \tag{6.29}
+\Delta{L} \cdot (\sqrt{p(i_u)} - \sqrt{p(i_l)}) & \text{$i_c \geq i_u$} \end{cases} \quad \text{(6.29)}
 $$
 
 $$
 \Delta{X} = \begin{cases} \Delta{L} \cdot (\frac{1}{\sqrt{p(i_l)}} - \frac{1}{\sqrt{p(i_u)}}) & \text{$i_c < i_l$}\\
 \Delta{L} \cdot (\frac{1}{\sqrt{P}} - \frac{1}{\sqrt{p(i_u)}}) & \text{$i_l \leq i_c \leq i_u$}\\
-0 & \text{$i_c \geq i_u$} \end{cases} \tag{6.30}
+0 & \text{$i_c \geq i_u$} \end{cases} \quad \text{(6.30)}
 $$
 
 ## 引用文献

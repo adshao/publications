@@ -1201,16 +1201,16 @@ function tickSpacingToMaxLiquidityPerTick(int24 tickSpacing) internal pure retur
 
 $$
 f_a(i) = \begin{cases} f_g - f_o(i) & \text{$i_c \geq i$}\\
-f_o(i) & \text{$i_c < i$} \end{cases} \tag{6.17}
+f_o(i) & \text{$i_c < i$} \end{cases} \quad \text{(6.17)}
 $$
 
 $$
 f_b(i) = \begin{cases} f_o(i) & \text{$i_c \geq i$}\\
-f_g - f_o(i) & \text{$i_c < i$}\end{cases} \tag{6.18}
+f_g - f_o(i) & \text{$i_c < i$}\end{cases} \quad \text{(6.18)}
 $$
 
 $$
-f_r = f_g - f_b(i_l) - f_a(i_u) \tag{6.19}
+f_r = f_g - f_b(i_l) - f_a(i_u) \quad \text{(6.19)}
 $$
 
 代码如下：
@@ -1374,7 +1374,7 @@ function clear(mapping(int24 => Tick.Info) storage self, int24 tick) internal {
 当`tick`被穿越时，需要翻转`Outside`等变量的方向，如白皮书公式6.20:
 
 $$
-f_o(i) := f_g - f_o(i) \tag{6.20}
+f_o(i) := f_g - f_o(i) \quad \text{(6.20)}
 $$
 
 这些变量在[getFeeGrowthInside](#getFeeGrowthInside)等方法被用到。
@@ -1448,7 +1448,7 @@ $$
 
 $$
 \begin{cases} i = \sum_{n=0}^{19}{(x_n \cdot 2^n)} = x_0 \cdot 1 + x_1 \cdot 2 + x_2 \cdot 4 + ... + x_{19}\cdot 524288 \\
-\forall x_n \in \{0, 1\} \end{cases} \tag{1.1}
+\forall x_n \in \{0, 1\} \end{cases} \quad \text{(1.1)}
 $$
 
 其中， $x_n$ 为 $i$ 的二进制位。如 $i=6$ ，其对应的二进制为：`000000000000000000000110`，则 $x_1 = 1, x_2 = 1$ ，其余 $x_n$ 均为0。
@@ -1662,7 +1662,7 @@ function getTickAtSqrtRatio(uint160 sqrtPriceX96) internal pure returns (int24 t
 对于小数部分 $m$：
 
 $$
-0 \leq m = log_2{x} - n = log_2{\frac{x}{2^n}} < 1 \tag{1.2}
+0 \leq m = log_2{x} - n = log_2{\frac{x}{2^n}} < 1 \quad \text{(1.2)}
 $$
 
 其中， $n$ 为上文算出的msb，即整数部分。
@@ -1682,11 +1682,11 @@ $$
 根据对数公式，我们可以推导以下两个等式：
 
 $$
-log_2{r} = \frac{2 \cdot log_2{r}}{2} = \frac{log_2{r^2}}{2} \tag{1.3}
+log_2{r} = \frac{2 \cdot log_2{r}}{2} = \frac{log_2{r^2}}{2} \quad \text{(1.3)}
 $$
 
 $$
-log_2{r} = log_2{2 \cdot \frac{r}{2}} = 1 + log_2{\frac{r}{2}} \tag{1.4}
+log_2{r} = log_2{2 \cdot \frac{r}{2}} = 1 + log_2{\frac{r}{2}} \quad \text{(1.4)}
 $$
 
 我们循环套用上述两个公式，可以整理以下方法：
@@ -1701,7 +1701,7 @@ $$
 可以将上述步骤总结为以下公式：
 
 $$
-log_2{r} = m_1 \cdot \frac{1}{2} + m_2 \cdot \frac{1}{4} + ... + m_n \cdot \frac{1}{2^n} = \sum^{\infty}_{i=1}(m_i \cdot \frac{1}{2^i}) \tag{1.5}
+log_2{r} = m_1 \cdot \frac{1}{2} + m_2 \cdot \frac{1}{4} + ... + m_n \cdot \frac{1}{2^n} = \sum^{\infty}_{i=1}(m_i \cdot \frac{1}{2^i}) \quad \text{(1.5)}
 $$
 
 其中， $\forall m_i \in \{0, 1\}$。
@@ -2332,25 +2332,25 @@ $$
 如果已知 $\sqrt{P_a}$ 计算 $\sqrt{P_b}$ ，则：
 
 $$
-\frac{1}{\sqrt{P_b}} = \frac{\Delta{x}}{L} + \frac{1}{\sqrt{P_a}} = \frac{1}{L} \cdot (\Delta{x} + \frac{L}{\sqrt{P_a}}) \tag{1.1}
+\frac{1}{\sqrt{P_b}} = \frac{\Delta{x}}{L} + \frac{1}{\sqrt{P_a}} = \frac{1}{L} \cdot (\Delta{x} + \frac{L}{\sqrt{P_a}}) \quad \text{(1.1)}
 $$
 
 $$
-\sqrt{P_b} = \frac{L}{\Delta{x} + \frac{L}{\sqrt{P_a}}} \tag{1.2}
+\sqrt{P_b} = \frac{L}{\Delta{x} + \frac{L}{\sqrt{P_a}}} \quad \text{(1.2)}
 $$
 
 $$
-{\sqrt{P_b}} = \frac{L \cdot \sqrt{P_a}}{L + \Delta{x} \cdot \sqrt{P_a}}  \tag{1.3}
+{\sqrt{P_b}} = \frac{L \cdot \sqrt{P_a}}{L + \Delta{x} \cdot \sqrt{P_a}}  \quad \text{(1.3)}
 $$
 
 如果已知 $\sqrt{P_b}$ 计算 $\sqrt{P_a}$ ，则：
 
 $$
-\frac{1}{\sqrt{P_a}} = \frac{1}{\sqrt{P_b}} - \frac{\Delta{x}}{L}  \tag{1.4}
+\frac{1}{\sqrt{P_a}} = \frac{1}{\sqrt{P_b}} - \frac{\Delta{x}}{L}  \quad \text{(1.4)}
 $$
 
 $$
-{\sqrt{P_a}} = \frac{L \cdot \sqrt{P_b}}{L - \Delta{x} \cdot \sqrt{P_b}}  \tag{1.5}
+{\sqrt{P_a}} = \frac{L \cdot \sqrt{P_b}}{L - \Delta{x} \cdot \sqrt{P_b}}  \quad \text{(1.5)}
 $$
 
 ```solidity
@@ -2408,7 +2408,7 @@ function getNextSqrtPriceFromAmount0RoundingUp(
 根据白皮书公式6.13:
 
 $$
-\Delta{\sqrt{P}} = \frac{\Delta{y}}{L} \tag{6.13}
+\Delta{\sqrt{P}} = \frac{\Delta{y}}{L} \quad \text{(6.13)}
 $$
 
 假设 $\sqrt{P_a} > \sqrt{P_b}$ ，则 $y_a > y_b$：
@@ -2420,13 +2420,13 @@ $$
 如果已知 $\sqrt{P_b}$ 计算 $\sqrt{P_a}$ ，则：
 
 $$
-\sqrt{P_a} = \sqrt{P_b} + \frac{\Delta{y}}{L} \tag{1.6}
+\sqrt{P_a} = \sqrt{P_b} + \frac{\Delta{y}}{L} \quad \text{(1.6)}
 $$
 
 如果已知 $\sqrt{P_a}$ 计算 $\sqrt{P_b}$ ，则：
 
 $$
-\sqrt{P_b} = \sqrt{P_a} - \frac{\Delta{y}}{L} \tag{1.7}
+\sqrt{P_b} = \sqrt{P_a} - \frac{\Delta{y}}{L} \quad \text{(1.7)}
 $$
 
 ```solidity
@@ -2687,15 +2687,15 @@ function transform(
 根据白皮书公式5.3-5.5：
 
 $$
-\log_{1.0001}(P_{t_1,t_2}) = \frac{\sum_{i=t_1}^{t_2} \log_{1.0001}(P_i)}{t_2 - t_1} \tag{5.3}
+\log_{1.0001}(P_{t_1,t_2}) = \frac{\sum_{i=t_1}^{t_2} \log_{1.0001}(P_i)}{t_2 - t_1} \quad \text{(5.3)}
 $$
 
 $$
-\log_{1.0001}(P_{t_1,t_2}) = \frac{a_{t_2} - a_{t_1}}{t_2 - t_1} \tag{5.4}
+\log_{1.0001}(P_{t_1,t_2}) = \frac{a_{t_2} - a_{t_1}}{t_2 - t_1} \quad \text{(5.4)}
 $$
 
 $$
-P_{t_1,t_2} = 1.0001^{\frac{a_{t_2} - a_{t_1}}{t_2 - t_1}} \tag{5.5}
+P_{t_1,t_2} = 1.0001^{\frac{a_{t_2} - a_{t_1}}{t_2 - t_1}} \quad \text{(5.5)}
 $$
 
 这里保存的`tickCumulative`即为 $a_{t_n}$ ，其对应的公式为：
