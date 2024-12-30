@@ -41,7 +41,7 @@ The central idea of Uniswap v3 is *concentrated liquidity*: limiting liquidity t
 In previous versions, liquidity was evenly distributed along the following curve:
 
 $$
-x \cdot y = k \tag{2.1}
+x \cdot y = k \quad \text{(2.1)}
 $$
 
 where $x$ and $y$ are the balances of two tokens $X$ and $Y$, and $k$ is a constant. In other words, previous versions were designed to provide liquidity across the entire price range $(0, \infty)$. While this approach is easy to implement and allows for effective aggregation of liquidity, it means that many assets (liquidity) in the pool will never be utilized.
@@ -63,7 +63,7 @@ When the price moves out of the position's range, its liquidity becomes inactive
 The amount of liquidity can be measured by $L$, equivalent to $\sqrt{k}$. The real token balances of a position can be described by the following curve:
 
 $$
-(x + \frac{L}{\sqrt(p_b)})(y + L \sqrt{p_a}) = L^2 \tag{2.2}
+(x + \frac{L}{\sqrt(p_b)})(y + L \sqrt{p_a}) = L^2 \quad \text{(2.2)}
 $$
 
 This curve is a variation of equation 2.1, with positions only having the ability to pay out within their range (Figure 2).
@@ -80,19 +80,19 @@ This curve is a variation of equation 2.1, with positions only having the abilit
 > 
 > The translated v3 curve is:
 >
-> $$(x + x_b) \cdot (y + y_a) = k \tag{2.2.0}$$
+> $$(x + x_b) \cdot (y + y_a) = k \quad \text{(2.2.0)}$$
 > 
 > The prices at points $a$ and $b$ are:
 >
-> $$p_a = \frac{y_a}{x_a} \tag{2.2.1}$$
+> $$p_a = \frac{y_a}{x_a} \quad \text{(2.2.1)}$$
 >
-> $$p_b = \frac{y_b}{x_b} \tag{2.2.2}$$
+> $$p_b = \frac{y_b}{x_b} \quad \text{(2.2.2)}$$
 > 
 > Also, given:
 >
-> $$x_a \cdot y_a = k \tag{2.2.3}$$
+> $$x_a \cdot y_a = k \quad \text{(2.2.3)}$$
 > 
-> $$x_b \cdot y_b = k \tag{2.2.4}$$
+> $$x_b \cdot y_b = k \quad \text{(2.2.4)}$$
 >
 > Therefore, from equations 2.2.1 and 2.2.3, we get:
 >
@@ -231,7 +231,7 @@ Implementing geometric mean prices in Uniswap v3 is relatively straightforward t
 Uniswap v3 records the cumulative sum of the current tick number ($\log_{1.0001}{P}$, the logarithm of price $P$ with base 1.0001, which can detect a price change of one basis point, 0.01%) instead of the cumulative price $P$. The cumulative count at any moment equals the sum of the logarithmic prices ( $\log_{1.0001}(P)$ ) per second up to that point:
 
 $$
-a_t = \sum_{i=1}^{t} \log_{1.0001}(P_i) \tag{5.1}
+a_t = \sum_{i=1}^{t} \log_{1.0001}(P_i) \quad \text{(5.1)}
 $$
 
 > Note: Why can $\log_{1.0001}P$ detect a precision of price change as 0.01% (one basis point)?
@@ -243,7 +243,7 @@ $$
 The geometric mean price (time-weighted average price) $(p_{t_1,t_2})$ for any period from $t_1$ to $t_2$ is:
 
 $$
-P_{t_1,t_2} = \left(\prod^{t_2}_{i=t_1} P_i \right)^{\frac{1}{t_2 - t_1}} \tag{5.2}
+P_{t_1,t_2} = \left(\prod^{t_2}_{i=t_1} P_i \right)^{\frac{1}{t_2 - t_1}} \quad \text{(5.2)}
 $$
 
 > Note: Here, we revisit the definition of the geometric mean:
@@ -257,15 +257,15 @@ $$
 To calculate this value, you can look at the cumulative price at moments $t_1$ and $t_2$, subtract the former from the latter, divide by the time difference (in seconds), and finally calculate $1.0001^x$ to get the time-weighted geometric mean price:
 
 $$
-\log_{1.0001}(P_{t_1,t_2}) = \frac{\sum_{i=t_1}^{t_2} \log_{1.0001}(P_i)}{t_2 - t_1} \tag{5.3}
+\log_{1.0001}(P_{t_1,t_2}) = \frac{\sum_{i=t_1}^{t_2} \log_{1.0001}(P_i)}{t_2 - t_1} \quad \text{(5.3)}
 $$
 
 $$
-\log_{1.0001}(P_{t_1,t_2}) = \frac{a_{t_2} - a_{t_1}}{t_2 - t_1} \tag{5.4}
+\log_{1.0001}(P_{t_1,t_2}) = \frac{a_{t_2} - a_{t_1}}{t_2 - t_1} \quad \text{(5.4)}
 $$
 
 $$
-P_{t_1,t_2} = 1.0001^{\frac{a_{t_2} - a_{t_1}}{t_2 - t_1}} \tag{5.5}
+P_{t_1,t_2} = 1.0001^{\frac{a_{t_2} - a_{t_1}}{t_2 - t_1}} \quad \text{(5.5)}
 $$
 
 ### 5.3 Liquidity Oracle
@@ -301,7 +301,7 @@ Each range can be defined by a pair of tick indices (signed integers): a lower t
 Conceptually, a tick exists whenever the price $p$ equals an integer power of 1.0001. We use integer $i$ to represent a tick, such that the tick's price can be expressed as:
 
 $$
-p(i) = 1.0001^i \tag{6.1}
+p(i) = 1.0001^i \quad \text{(6.1)}
 $$
 
 By definition, the precision of price movement between two adjacent ticks is 0.01% (one basis point).
@@ -311,7 +311,7 @@ By definition, the precision of price movement between two adjacent ticks is 0.0
 Due to technical reasons described in section 6.2.1, the pool contract actually tracks ticks using the square root of the price, $\sqrt{price}$, equal to an integer power of $\sqrt{1.0001}$. The equation above can be converted to an equivalent square root price form:
 
 $$
-\sqrt{p}(i) = \sqrt{1.0001}^i = 1.0001^{\frac{i}{2}} \tag{6.2}
+\sqrt{p}(i) = \sqrt{1.0001}^i = 1.0001^{\frac{i}{2}} \quad \text{(6.2)}
 $$
 
 For example, $\sqrt{p}(0)$ (the square root price of tick 0) equals 1, $\sqrt{p}(1)$ equals $\sqrt{1.0001} \approx 1.00005$, and $\sqrt{p}(-1)$ equals $\frac{1}{\sqrt{1.0001}} \approx 0.99995$.
@@ -339,21 +339,21 @@ In Uniswap v2, each pool contract recorded the current token balances of the poo
 The contract records two different values: liquidity ($L$) and the square root of the price (sqrtPrice), $\sqrt{P}$, instead of virtual balances. These two values can be calculated from the virtual balances as follows:
 
 $$
-L = \sqrt{xy} \tag{6.3}
+L = \sqrt{xy} \quad \text{(6.3)}
 $$
 
 $$
-\sqrt{P} = \sqrt{\frac{y}{x}} \tag{6.4}
+\sqrt{P} = \sqrt{\frac{y}{x}} \quad \text{(6.4)}
 $$
 
 Conversely, the virtual balances of the two tokens can also be calculated using these two values:
 
 $$
-x = \frac{L}{\sqrt{P}} \tag{6.5}
+x = \frac{L}{\sqrt{P}} \quad \text{(6.5)}
 $$
 
 $$
-y = L \cdot \sqrt{P} \tag{6.6}
+y = L \cdot \sqrt{P} \quad \text{(6.6)}
 $$
 
 Using $L$ and $\sqrt{P}$ for calculation is convenient because at any given moment, only one of these values changes. When trading within a tick, only the price (i.e., $\sqrt{P}$) changes; when crossing a tick or minting/burning liquidity, only the liquidity ($L$) changes. This avoids the rounding error issues that might occur when recording virtual balances.
@@ -363,7 +363,7 @@ You might notice that the liquidity formula (based on the virtual balances of th
 Similarly, liquidity can also be regarded as the proportion of the change in the number of token1 ($\Delta{Y}$) to the change in price $\sqrt{P}$:
 
 $$
-L = \frac{\Delta{Y}}{\Delta{\sqrt{P}}} \tag{6.7}
+L = \frac{\Delta{Y}}{\Delta{\sqrt{P}}} \quad \text{(6.7)}
 $$
 
 > Note: Based on equation 6.6, suppose at moments $t_0$ and $t_1$, the corresponding $y_0$ and $y_1$ are:
@@ -387,7 +387,7 @@ We record $\sqrt{P}$ instead of $P$ in order to utilize the formula mentioned ab
 The global state records the current tick index as $tick(i_c)$, a signed integer representing the closest tick below the current price. This is an optimization strategy (and a way to avoid logarithmic precision issues) because at any moment, you need to be able to calculate the corresponding tick based on the current square root price $\sqrt{P}$. At any point, the following equation always holds:
 
 $$
-i_c = \lfloor \log_{\sqrt{1.0001}} \sqrt{P} \rfloor \tag{6.8}
+i_c = \lfloor \log_{\sqrt{1.0001}} \sqrt{P} \rfloor \quad \text{(6.8)}
 $$
 
 > Note: According to equation 6.2:
@@ -423,11 +423,11 @@ Suppose $\gamma$ is the transaction fee, such as 0.003, and $y_{in}$ is the amou
 First, feeGrowthGlobal1 and protocolFees1 increase by:
 
 $$
-\Delta{f_{g,1}} = y_{in} \cdot \gamma \cdot (1 - \phi) \tag{6.9}
+\Delta{f_{g,1}} = y_{in} \cdot \gamma \cdot (1 - \phi) \quad \text{(6.9)}
 $$
 
 $$
-\Delta{f_{p,1}} = y_{in} \cdot \gamma \cdot \phi \tag{6.10}
+\Delta{f_{p,1}} = y_{in} \cdot \gamma \cdot \phi \quad \text{(6.10)}
 $$
 
 > Note: $\phi$ is the protocol fee as a percentage of the transaction fee, so the protocol fee proportion is: $\gamma \cdot \phi$, with the protocol fee income given by equation 6.10.
@@ -437,13 +437,13 @@ $$
 $\Delta y$ is the increase in $y$ (after deducting the fee).
 
 $$
-\Delta{y} = y_{in} \cdot (1 - \gamma) \tag{6.11}
+\Delta{y} = y_{in} \cdot (1 - \gamma) \quad \text{(6.11)}
 $$
 
 Using the virtual balances ($x$ and $y$) calculated for token0 and token1, the token0 amount after the trade can be calculated with the following formula:
 
 $$
-x_{end} = \frac{x \cdot y}{y + \Delta{y}} \tag{6.12}
+x_{end} = \frac{x \cdot y}{y + \Delta{y}} \quad \text{(6.12)}
 $$
 
 > Note: Because within a tick, the trade conforms to the $k$ constant function, i.e.,
@@ -457,21 +457,21 @@ $$
 However, please note, in v3, the contract uses liquidity ($L$) and square root price ($\sqrt{P}$) instead of $x$ and $y$. We could use these two values to calculate $x$ and $y$ and then compute the transaction price. However, for a given $L$, we can derive a concise equation that describes the relationship between $\Delta{\sqrt{P}}$ and $\Delta{y}$ (which can be derived from equation 6.7):
 
 $$
-\Delta{\sqrt{P}} = \frac{\Delta{y}}{L} \tag{6.13}
+\Delta{\sqrt{P}} = \frac{\Delta{y}}{L} \quad \text{(6.13)}
 $$
 
 $$
-\Delta{y} = \Delta{\sqrt{P}} \cdot L \tag{6.14}
+\Delta{y} = \Delta{\sqrt{P}} \cdot L \quad \text{(6.14)}
 $$
 
 Similarly, we can derive the relationship between $\Delta{\frac{1}{\sqrt{P}}}$ and $\Delta{x}$:
 
 $$
-\Delta{\frac{1}{\sqrt{P}}} = \frac{\Delta{x}}{L} \tag{6.15}
+\Delta{\frac{1}{\sqrt{P}}} = \frac{\Delta{x}}{L} \quad \text{(6.15)}
 $$
 
 $$
-\Delta{x} = \Delta{\frac{1}{\sqrt{P}}} \cdot L \tag{6.16}
+\Delta{x} = \Delta{\frac{1}{\sqrt{P}}} \cdot L \quad \text{(6.16)}
 $$
 
 > Note: According to equation 6.5, suppose at moments $t_0$ and $t_1$, the corresponding $x_0$ and $x_1$ are:
@@ -522,12 +522,12 @@ Depending on whether the current price is inside the range, you can use one form
 
 $$
 f_a(i) = \begin{cases} f_g - f_o(i) & \text{$i_c \geq i$}\\
-f_o(i) & \text{$i_c < i$} \end{cases} \tag{6.17}
+f_o(i) & \text{$i_c < i$} \end{cases} \quad \text{(6.17)}
 $$
 
 $$
 f_b(i) = \begin{cases} f_o(i) & \text{$i_c \geq i$}\\
-f_g - f_o(i) & \text{$i_c < i$}\end{cases} \tag{6.18}
+f_g - f_o(i) & \text{$i_c < i$}\end{cases} \quad \text{(6.18)}
 $$
 
 > Note: First, let's recall what each variable means. $f_g$ is the global accumulated fees per liquidity; $f_o(i)$ is the accumulated fees outside a specified tick $i$, and it's important to note that this value changes its meaning of direction with the current tick $i_c$.
@@ -547,7 +547,7 @@ $$
 Using the above functions, we can calculate the total fees accumulated for every liquidity unit between two ticks (the lower tick $i_l$ and the upper tick $i_u$) as $f_r$:
 
 $$
-f_r = f_g - f_b(i_l) - f_a(i_u) \tag{6.19}
+f_r = f_g - f_b(i_l) - f_a(i_u) \quad \text{(6.19)}
 $$
 
 > Note: According to the above derivation, we can diagram several fee relationships as follows:
@@ -559,14 +559,14 @@ $$
 $f_o$ needs to be updated every time a tick is crossed. Specifically, when a tick is crossed in the opposite direction, its corresponding $f_o$ (for both token0 and token1) needs to be updated as follows:
 
 $$
-f_o(i) := f_g - f_o(i) \tag{6.20}
+f_o(i) := f_g - f_o(i) \quad \text{(6.20)}
 $$
 
 Only ticks used as boundary points by at least one position need $f_o$. Therefore, for efficiency, $f_o$ is not initialized (does not need to be updated when a tick is crossed) until a position using the tick as a boundary is created. When $f_o$ of tick $i$ is initialized, its initial value is set to assume all fees were collected while the tick was below the current tick:
 
 $$
 f_o := \begin{cases} f_g & \text{$i_c \geq i$}\\
-0 & \text{$i_c < i$} \end{cases} \tag{6.21}
+0 & \text{$i_c < i$} \end{cases} \quad \text{(6.21)}
 $$
 
 Note that since $f_o$ for different ticks can be initialized at different times, comparing their $f_o$ values is meaningless, and it is not guaranteed that $f_o$ values remain constant. But this does not create a problem for each position, as described below, since all positions need to know how much $g$ has grown inside their range since the last interaction.
@@ -579,16 +579,16 @@ For example, for a given tick, depending on whether the current price is inside 
 
 $$
 t_a(i) = \begin{cases} t - t_o(i) & \text{$i_c \geq i$}\\
-t_o(i) & \text{$i_c < i$} \end{cases} \tag{6.22}
+t_o(i) & \text{$i_c < i$} \end{cases} \quad \text{(6.22)}
 $$
 
 $$
 t_b(i) = \begin{cases} t_o(i) & \text{$i_c \geq i$}\\
-t - t_o(i) & \text{$i_c < i$}\end{cases} \tag{6.23}
+t - t_o(i) & \text{$i_c < i$}\end{cases} \quad \text{(6.23)}
 $$
 
 $$
-t_r(i_l, i_u) = t - t_b(i_l) - t_a(i_u) \tag{6.24}
+t_r(i_l, i_u) = t - t_b(i_l) - t_a(i_u) \quad \text{(6.24)}
 $$
 
 The duration a position is within a price range from $t_1$ to $t_2$ can be determined by recording the $s_r(i_l, i_u)$ value at moments $t_1$ and $t_2$ and subtracting the former from the latter.
@@ -597,7 +597,7 @@ Like $f_o$, $s_o$ for ticks not used as boundary points is not recorded. Therefo
 
 $$
 t_o(i) := \begin{cases} t & \text{$i_c \geq i$}\\
-0 & \text{$i_c < i$} \end{cases} \tag{6.25}
+0 & \text{$i_c < i$} \end{cases} \quad \text{(6.25)}
 $$
 
 Similar to $f_o$, comparing $t_o$ values for different ticks is meaningless. $t_o$ is only meaningful when calculating the duration a specific price range's liquidity was active during a period (the start time must be after both ticks' $t_0$ initialization).
@@ -609,11 +609,11 @@ As described in section 6.2.3, when trading between initialized ticks, Uniswap v
 To record the fees accumulated inside the range while the tick serves as a boundary point during price movement (and the duration), the contract needs to update the tick's state. feeGrowthOutside{0, 1} and secondsOutside are updated to reflect current values when the direction of trade associated with the tick changes, updated as follows:
 
 $$
-f_o := f_g - f_o \tag{6.26}
+f_o := f_g - f_o \quad \text{(6.26)}
 $$
 
 $$
-t_o := t - t_o \tag{6.27}
+t_o := t - t_o \quad \text{(6.27)}
 $$
 
 After a tick is crossed, as described in section 6.2.3, the trade continues until it encounters the next initialized tick.
@@ -641,7 +641,7 @@ First, the method calculates the position's uncollected fees ($f_u$) (in both to
 To calculate the uncollected fees for a token, it is necessary to know how much fee income $f_r$ has been accumulated for the position's range since the last fee collection (calculated using the range $i_l$, $i_r$ as described in section 6.3). From $t_0$ to $t_1$, the fee growth per liquidity unit within the range is $f_r(t_1) - f_r(t_0)$ (where $f_r(t_0)$ is stored in the position as feeGrowthInside{0, 1}Last, and $f_r(t_1)$ can be calculated from the current tick state). Multiplying this by the position's liquidity yields the uncollected fees in token0 for that position:
 
 $$
-f_u = l \cdot (f_r(t_1) - f_r(t_0)) \tag{6.28}
+f_u = l \cdot (f_r(t_1) - f_r(t_0)) \quad \text{(6.28)}
 $$
 
 Next, the method adds liquidityDelta to the position's liquidity. At the lower tick, it also adds liquidityDelta to liquidityNet (indicating adding liquidity as the tick moves from left to right); at the position's upper tick, it subtracts liquidityDelta from liquidityNet (indicating removing liquidity as the tick moves from right to left). If the pool's current price is within the position's range, the contract also adds the liquidity to the global liquidity.
@@ -653,13 +653,13 @@ The amount of token0 ($\Delta{X}$) and token1 ($\Delta{Y}$) tokens required if t
 $$
 \Delta{Y} = \begin{cases} 0 & \text{$i_c < i_l$}\\
 \Delta{L} \cdot (\sqrt{P} - \sqrt{p(i_l)}) & \text{$i_l \leq i_c \leq i_u$}\\
-\Delta{L} \cdot (\sqrt{p(i_u)} - \sqrt{p(i_l)}) & \text{$i_c > i_u$} \end{cases} \tag{6.29}
+\Delta{L} \cdot (\sqrt{p(i_u)} - \sqrt{p(i_l)}) & \text{$i_c > i_u$} \end{cases} \quad \text{(6.29)}
 $$
 
 $$
 \Delta{X} = \begin{cases} \Delta{L} \cdot (\frac{1}{\sqrt{p(i_l)}} - \frac{1}{\sqrt{p(i_u)}}) & \text{$i_c < i_l$}\\
 \Delta{L} \cdot (\frac{1}{\sqrt{P}} - \frac{1}{\sqrt{p(i_u)}}) & \text{$i_l \leq i_c \leq i_u$}\\
-0 & \text{$i_c > i_u$} \end{cases} \tag{6.30}
+0 & \text{$i_c > i_u$} \end{cases} \quad \text{(6.30)}
 $$
 
 ## References
