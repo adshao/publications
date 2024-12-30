@@ -65,7 +65,7 @@ Uniswap v2允许流动性提供者为任意两个ERC-20代币创建交易对合�
 在时间点 $t$ 由Uniswap提供的边际价格（不包含手续费）可以通过代币a和代币b的数量相除得出：
 
 $$
-p_t = \frac {r^a_t}{r^b_t} \tag{1}
+p_t = \frac {r^a_t}{r^b_t} \quad \text{(1)}
 $$
 
 当Uniswap提供的价格不正确时，套利者可以在Uniswap交易套利（通过足够数量代币以支付手续费），因此Uniswap提供的代币价格将跟随市场价格。这意味着Uniswap提供的代币价格可以作为一种近似的价格预言机。
@@ -85,13 +85,13 @@ Uniswap v2改进了预言机功能，通过在每个区块的第一笔交易前�
 Uniswap v2通过在每个区块第一笔交易前记录累计价格实现预言机。每个价格会以时间权重记录（基于当前区块与上一次更新价格的区块的时间差）。这意味着在任意时间点，该累计价格将是此合约历史上每秒的现货价格之和。
 
 $$
-a_t = \sum_{i=1}^t p_i \tag{2}
+a_t = \sum_{i=1}^t p_i \quad \text{(2)}
 $$
 
 为了估算在 $t_1$ 到 $t_2$ 时间段内的时间加权平均价格（TWAP），外部调用者可以分别记录 $t_1$ 和 $t_2$ 的累计价格，将 $t_2$ 价格减去 $t_1$ 价格，并除以 $t_2 - t_1$ 的时间差（需注意，合约本身不存储历史的累计价格，因此需要调用者在区间开始时调用合约，读取并保存当前的价格）。
 
 $$
-p_{t_1,t_2} = \frac{\sum_{i=t_1}^{t_2} p_i}{t_2 - t_1} = \frac{\sum_{i=1}^{t_2} p_i - \sum_{i=1}^{t_1} p_i}{t_2 - t_1} = \frac {a_{t_2} - a_{t_1}}{t_2 - t_1} \tag{3}
+p_{t_1,t_2} = \frac{\sum_{i=t_1}^{t_2} p_i}{t_2 - t_1} = \frac{\sum_{i=1}^{t_2} p_i - \sum_{i=1}^{t_1} p_i}{t_2 - t_1} = \frac {a_{t_2} - a_{t_1}}{t_2 - t_1} \quad \text{(3)}
 $$
 
 预言机的用户可以自行选择区间的开始和结束。选择一个更长的区间，意味着攻击者将花费更高的代价来操控该区间的时间加权平均价格，虽然这将导致该平均价格与实时价格相差较大。
@@ -213,7 +213,7 @@ Uniswap v2包含一个0.05%的协议手续费开关。如果打开，该手续�
 总累计手续费可以通过计算从上次收取手续费后，以 $\sqrt{k}$（也就是 $\sqrt{x \cdot y}$ ）计价的增长量。可计算从 $t_1$ 到 $t_2$ 的累计手续费，与 $t_2$ 时刻的流动性的百分比如下：
 
 $$
-f_{1,2} = 1 - \frac{\sqrt{k_1}}{\sqrt{k_2}} \tag{4}
+f_{1,2} = 1 - \frac{\sqrt{k_1}}{\sqrt{k_2}} \quad \text{(4)}
 $$
 
 > 注：这里不太好理解，为什么手续费是以 $\sqrt{x \cdot y}$ 的形式给出的呢？如果看完白皮书【3.4 初始化流动性代币供应】就明白了。第一次流动性铸造的代币数量是以 $\sqrt{x \cdot y}$ 算出的，在 $t_1$ , $t_2$ 不同时刻，（不考虑mint/burn流动性时）其流动性代币数量始终等于 $\sqrt{x_1 \cdot y_1}$ 与 $\sqrt{x_2 \cdot y_2}$，其增长部分即为手续费，因此公式（4）可按照如下推导得出：
@@ -235,25 +235,25 @@ $$
 假设协议手续费对应的流动性代币数量为 $s_m$ ， $s_1$ 为 $t_1$ 时刻的流动性代币数量，则有以下等式：
 
 $$
-\frac{s_m}{s_m + s_1} = \phi \cdot f_{1,2} \tag{5}
+\frac{s_m}{s_m + s_1} = \phi \cdot f_{1,2} \quad \text{(5)}
 $$
 
 使用公式（4）替换 $f_{1,2}$ ，经过计算可以得出 $s_m$ 为：
 
 $$
-s_m = \frac{\sqrt{k_2} - \sqrt{k_1}}{(\frac{1}{\phi} - 1) \cdot \sqrt{k_2} + \sqrt{k_1}} \cdot s_1 \tag{6}
+s_m = \frac{\sqrt{k_2} - \sqrt{k_1}}{(\frac{1}{\phi} - 1) \cdot \sqrt{k_2} + \sqrt{k_1}} \cdot s_1 \quad \text{(6)}
 $$
 
 使用 $\frac{1}{6}$ 替换其中的比例部分，可得：
 
 $$
-s_m = \frac{\sqrt{k_2} - \sqrt{k_1}}{5 \cdot \sqrt{k_2} + \sqrt{k_1}} \cdot s_1 \tag{7}
+s_m = \frac{\sqrt{k_2} - \sqrt{k_1}}{5 \cdot \sqrt{k_2} + \sqrt{k_1}} \cdot s_1 \quad \text{(7)}
 $$
 
 假设初始流动性提供者存入100 DAI和1 ETH，获得10个流动性代币。一段时间后（假设没有其他流动性提供者），当feeTo希望取出协议手续费时，两种代币余额分别为96 DAI和1.5 ETH。分别代入公式（7）可得：
 
 $$
-s_m = \frac{\sqrt{1.5 \cdot 96} - \sqrt{1 \cdot 100}}{5 \cdot \sqrt{1.5 \cdot 96} + \sqrt{1 \cdot 100}} \cdot 10 \approx 0.0286 \tag{8}
+s_m = \frac{\sqrt{1.5 \cdot 96} - \sqrt{1 \cdot 100}}{5 \cdot \sqrt{1.5 \cdot 96} + \sqrt{1 \cdot 100}} \cdot 10 \approx 0.0286 \quad \text{(8)}
 $$
 
 > 注：当没有mint/burn流动性时，只是单纯swap，池子的k值是不断变大的，原因就在于手续费沉淀，因为此时流动性代币总量（shares）不变，但交易对池子中两种代币余额不断增加。如上所述， $k_1 = 100 DAI \cdot 1 ETH = 100，k_2 = 96 DAI \cdot 1.5 ETH = 144，k_2 > k_1$ 。
@@ -291,7 +291,7 @@ Uniswap v2的一个设计重点在于最小化core交易对合约的对外接口
 Uniswap v1的交易手续费是通过减少存入合约的代币数量来实现，在比较k常值函数之前，需要先减去0.3%的交易手续费。合约隐式约束如下：
 
 $$
-(x_1 - 0.003 \cdot x_{in}) \cdot y_1 \geq x_0 \cdot y_0 \tag{9}
+(x_1 - 0.003 \cdot x_{in}) \cdot y_1 \geq x_0 \cdot y_0 \quad \text{(9)}
 $$
 
 > 注：扣除手续费以后的两种代币余额，符合k常值函数。
@@ -299,7 +299,7 @@ $$
 通过闪电贷功能，Uniswap v2引入了一种可能性，即xin和yin可能同时不为0（当一个用户希望通过归还借出的代币，而不是做交易时）。为了处理这种情况下的手续费问题，合约强制要求如下约束：
 
 $$
-(x_1 - 0.003 \cdot x_{in}) \cdot (y_1 - 0.003 \cdot y_{in}) \geq x_0 \cdot y_0 \tag{10}
+(x_1 - 0.003 \cdot x_{in}) \cdot (y_1 - 0.003 \cdot y_{in}) \geq x_0 \cdot y_0 \quad \text{(10)}
 $$
 
 > 注：Uniswap的swap方法可以同时支持闪电贷和交易功能，当通过闪电贷同时借出x和y两种代币时，需要分别对x和y收取0.3%的手续费，因此需要先扣除手续费，再保证余额满足k值约束。
@@ -307,7 +307,7 @@ $$
 为了简化链上计算，我们可以为公式（10）两边同时乘以1,000,000，得出：
 
 $$
-(1000 \cdot x_1 - 3 \cdot x_{in}) \cdot (1000 \cdot y_1 - 3 \cdot y_{in}) \geq 1000000 \cdot x_0 \cdot y_0 \tag{11}
+(1000 \cdot x_1 - 3 \cdot x_{in}) \cdot (1000 \cdot y_1 - 3 \cdot y_{in}) \geq 1000000 \cdot x_0 \cdot y_0 \quad \text{(11)}
 $$
 
 > 因为Solidity不支持浮点数，因此通过同步放大来简化计算。
@@ -342,7 +342,7 @@ Uniswap v2针对非标准ERC-20代币的实现，则使用不一样的处理方�
 当一个新的流动性提供者将代币存入一个已存在的Uniswap交易对，新铸造的流动性代币数量可根据当前代币数量计算：
 
 $$
-s_{minted} = \frac{x_{deposited}}{x_{starting}} \cdot s_{starting} \tag{12}
+s_{minted} = \frac{x_{deposited}}{x_{starting}} \cdot s_{starting} \quad \text{(12)}
 $$
 
 > 注：因为流动性代币本身是一种ERC-20代币，持有流动性代币数量即表示占有该池子代币的份额（shares）。因此对于已存在的交易对，即已经有该交易对的流动性代币存在，那么存入的代币价值与总价值的比例，与其得到的流动性代币数量与总数量的比例应相等：
@@ -362,7 +362,7 @@ Uniswap v1将首次流动性代币数量等同于存入的ETH数量（以wei为�
 与v1不同，Uniswap v2规定首次铸造流动性代币的数量等于存入的两种代币数量的几何平均数：
 
 $$
-s_{minted} = \sqrt{x_{deposited} \cdot {y_{deposited}}} \tag{13}
+s_{minted} = \sqrt{x_{deposited} \cdot {y_{deposited}}} \quad \text{(13)}
 $$
 
 该公式确保在任意时刻，流动性份额的价值与其存入代币的价格比例无关。比如，假设当前1 ABC的价格是100 XYZ，如果首次存入2 ABC和200 XYZ（对应的比例为1:100），则流动性提供者将收到 $\sqrt{2 \cdot 200}=20$ 个流动性代币。这些代币价值2 ABC和200 XYZ，以及对应的累计手续费。

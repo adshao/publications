@@ -63,7 +63,7 @@ Uniswap v2 allows liquidity providers to create contracts for any two ERC-20 tok
 The marginal price (excluding fees) provided by Uniswap at time $t$ can be determined by dividing the quantities of tokens a and b:
 
 $$
-p_t = \frac {r^a_t}{r^b_t} \tag{1}
+p_t = \frac {r^a_t}{r^b_t} \quad \text{(1)}
 $$
 
 When Uniswap's price is incorrect, arbitrageurs can profit (paying enough in fees), meaning Uniswap's token prices follow market prices. This implies Uniswap prices can serve as a rough price oracle.
@@ -81,13 +81,13 @@ Uniswap v2 improves the oracle function by recording prices at the first transac
 Uniswap v2 implements the oracle by recording cumulative prices before the first transaction of each block. Prices are time-weighted (based on the time since the last price update). This means, at any point, the cumulative price is the sum of every second's spot price in the contract's history.
 
 $$
-a_t = \sum_{i=1}^t p_i \tag{2}
+a_t = \sum_{i=1}^t p_i \quad \text{(2)}
 $$
 
 To estimate the time-weighted average price (TWAP) between $t_1$ and $t_2$, callers can record cumulative prices at $t_1$ and $t_2$, subtract $t_2$'s price from $t_1$'s, and divide by the time difference (note: the contract doesn't store historical cumulative prices, so callers must invoke the contract at the interval's start, read, and save the current price).
 
 $$
-p_{t_1,t_2} = \frac{\sum_{i=t_1}^{t_2} p_i}{t_2 - t_1} = \frac{\sum_{i=1}^{t_2} p_i - \sum_{i=1}^{t_1} p_i}{t_2 - t_1} = \frac {a_{t_2} - a_{t_1}}{t_2 - t_1} \tag{3}
+p_{t_1,t_2} = \frac{\sum_{i=t_1}^{t_2} p_i}{t_2 - t_1} = \frac{\sum_{i=1}^{t_2} p_i - \sum_{i=1}^{t_1} p_i}{t_2 - t_1} = \frac {a_{t_2} - a_{t_1}}{t_2 - t_1} \quad \text{(3)}
 $$
 
 Oracle users can choose their interval. A longer interval means higher costs for attackers to manipulate the TWAP, but the average price will deviate more from the real-time price.
@@ -205,7 +205,7 @@ Collecting a 0.05% fee on every transaction would incur additional gas costs. To
 The total cumulative fee can be calculated by the growth in $\sqrt{k}$ (i.e., $\sqrt{x \cdot y}$) priced since the last fee collection. The cumulative fee from $t_1$ to $t_2$ as a percentage of the liquidity at time $t_2$ is:
 
 $$
-f_{1,2} = 1 - \frac{\sqrt{k_1}}{\sqrt{k_2}} \tag{4}
+f_{1,2} = 1 - \frac{\sqrt{k_1}}{\sqrt{k_2}} \quad \text{(4)}
 $$
 
 > This calculation might seem complex, but the rationale is as follows: If the number of liquidity tokens minted during the initial provision is calculated based on $\sqrt{x \cdot y}$, at different times $t_1$ and $t_2$, the liquidity token amount remains equal to $\sqrt{x_1 \cdot y_1}$ and $\sqrt{x_2 \cdot y_2}$, respectively. The growth part is hence the fee, thus deriving formula (4):
@@ -225,25 +225,25 @@ If the protocol fee was activated before $t_1$, then between $t_1$ and $t_2$, th
 Assuming the liquidity tokens corresponding to the protocol fee are $s_m$, and $s_1$ is the liquidity token amount at time $t_1$, the following equation holds:
 
 $$
-\frac{s_m}{s_m + s_1} = \phi \cdot f_{1,2} \tag{5}
+\frac{s_m}{s_m + s_1} = \phi \cdot f_{1,2} \quad \text{(5)}
 $$
 
 Substituting $f_{1,2}$ from formula (4), $s_m$ is calculated as:
 
 $$
-s_m = \frac{\sqrt{k_2} - \sqrt{k_1}}{(\frac{1}{\phi} - 1) \cdot \sqrt{k_2} + \sqrt{k_1}} \cdot s_1 \tag{6}
+s_m = \frac{\sqrt{k_2} - \sqrt{k_1}}{(\frac{1}{\phi} - 1) \cdot \sqrt{k_2} + \sqrt{k_1}} \cdot s_1 \quad \text{(6)}
 $$
 
 Substituting $\frac{1}{6}$ for the proportion, we get:
 
 $$
-s_m = \frac{\sqrt{k_2} - \sqrt{k_1}}{5 \cdot \sqrt{k_2} + \sqrt{k_1}} \cdot s_1 \tag{7}
+s_m = \frac{\sqrt{k_2} - \sqrt{k_1}}{5 \cdot \sqrt{k_2} + \sqrt{k_1}} \cdot s_1 \quad \text{(7)}
 $$
 
 For instance, if the initial liquidity provider deposits 100 DAI and 1 ETH, receiving 10 liquidity tokens, and later (assuming no other liquidity providers), when the feeTo wishes to collect protocol fees, the token balances are 96 DAI and 1.5 ETH, substituting into formula (7) yields:
 
 $$
-s_m = \frac{\sqrt{1.5 \cdot 96} - \sqrt{1 \cdot 100}}{5 \cdot \sqrt{1.5 \cdot 96} + \sqrt{1 \cdot 100}} \cdot 10 \approx 0.0286 \tag{8}
+s_m = \frac{\sqrt{1.5 \cdot 96} - \sqrt{1 \cdot 100}}{5 \cdot \sqrt{1.5 \cdot 96} + \sqrt{1 \cdot 100}} \cdot 10 \approx 0.0286 \quad \text{(8)}
 $$
 
 > When there's only swap activity (no mint/burn of liquidity), the pool's $k$ value increases due to fee sedimentation. Since the total amount of liquidity tokens (shares) remains constant, but the token balances in the pool keep increasing, as shown, $k_1 = 100 DAI \cdot 1 ETH = 100, k_2 = 96 DAI \cdot 1.5 ETH = 144, k_2 > k_1$.
@@ -281,7 +281,7 @@ In Uniswap v2, the seller sends tokens to the core contract before executing the
 Uniswap v1 implemented trading fees by reducing the amount of tokens deposited into the contract, subtracting 0.3% of the transaction fee before comparing the constant k function. The contract implicitly enforced the following constraint:
 
 $$
-(x_1 - 0.003 \cdot x_{in}) \cdot y_1 \geq x_0 \cdot y_0 \tag{9}
+(x_1 - 0.003 \cdot x_{in}) \cdot y_1 \geq x_0 \cdot y_0 \quad \text{(9)}
 $$
 
 > The two token balances, after deducting the trading fee, satisfy the constant k function.
@@ -289,7 +289,7 @@ $$
 With the introduction of flash loans in Uniswap v2, it's possible that both xin and yin are non-zero (when a user wants to return borrowed tokens instead of trading). To address fee calculation in this scenario, the contract enforces the following constraint:
 
 $$
-(x_1 - 0.003 \cdot x_{in}) \cdot (y_1 - 0.003 \cdot y_{in}) \geq x_0 \cdot y_0 \tag{10}
+(x_1 - 0.003 \cdot x_{in}) \cdot (y_1 - 0.003 \cdot y_{in}) \geq x_0 \cdot y_0 \quad \text{(10)}
 $$
 
 > Uniswap's swap method can support both flash loans and trading. When borrowing both x and y tokens via a flash loan, a 0.3% fee is deducted from both, and then the remaining balances must satisfy the k constant.
@@ -297,7 +297,7 @@ $$
 To simplify on-chain computation, both sides of formula (10) are multiplied by 1,000,000, resulting in:
 
 $$
-(1000 \cdot x_1 - 3 \cdot x_{in}) \cdot (1000 \cdot y_1 - 3 \cdot y_{in}) \geq 1000000 \cdot x_0 \cdot y_0 \tag{11}
+(1000 \cdot x_1 - 3 \cdot x_{in}) \cdot (1000 \cdot y_1 - 3 \cdot y_{in}) \geq 1000000 \cdot x_0 \cdot y_0 \quad \text{(11)}
 $$
 
 > Since Solidity does not support floating-point numbers, scaling up simplifies the computation.
@@ -332,7 +332,7 @@ Also, Uniswap v1 assumed transfer() and transferFrom() could not trigger reentra
 When a new liquidity provider deposits tokens into an existing Uniswap pair, the number of newly minted liquidity tokens is calculated based on the current token amounts:
 
 $$
-s_{minted} = \frac{x_{deposited}}{x_{starting}} \cdot s_{starting} \tag{12}
+s_{minted} = \frac{x_{deposited}}{x_{starting}} \cdot s_{starting} \quad \text{(12)}
 $$
 
 > Since liquidity tokens are a type of ERC-20 token, holding a certain number of liquidity tokens represents a share of the pool's token balance. Therefore, for existing pairs with existing liquidity tokens, the ratio of the deposited token value to the total value should equal the ratio of the obtained liquidity token amount to the total amount:
@@ -352,7 +352,7 @@ However, this meant the value of liquidity shares depended on the price ratio at
 Unlike v1, Uniswap v2 dictates that the number of liquidity tokens minted for the first provider equals the geometric mean of the deposited token amounts:
 
 $$
-s_{minted} = \sqrt{x_{deposited} \cdot {y_{deposited}}} \tag{13}
+s_{minted} = \sqrt{x_{deposited} \cdot {y_{deposited}}} \quad \text{(13)}
 $$
 
 This formula ensures that at any moment, the value of a liquidity share is independent of the price ratio of the deposited tokens. For instance, if the current price of 1 ABC is 100 XYZ, and the first deposit is 2 ABC and 200 XYZ (matching the 1:100 ratio), the provider receives $\sqrt{2 \cdot 200}=20$ liquidity tokens. These tokens represent the value of 2 ABC and 200 XYZ, along with any accumulated fees.

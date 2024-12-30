@@ -21,13 +21,13 @@ To achieve the effect of Dutch auctions, a function of price $p$ and time $t$ ne
 Many functions can meet the requirements, as mentioned in the [GDA article](https://www.paradigm.xyz/2022/04/gda) by Paradigm:
 
 $$
-p_n(t) = k \cdot \alpha^n e^{-\lambda t} \tag{1}
+p_n(t) = k \cdot \alpha^n e^{-\lambda t} \quad \text{(1)}
 $$
 
 Here, we choose the following function:
 
 $$
-p_n(t) = p_0 \cdot c^t \text{, 0 < c < 1} \tag{2}
+p_n(t) = p_0 \cdot c^t \text{, 0 < c < 1} \quad \text{(2)}
 $$
 
 Where $p_0$ is the initial price, and since $0 \lt c \lt 1$, the price $p_n$ will be less than $p_0$ as time $t$ increases.
@@ -49,7 +49,7 @@ Define the following parameters:
 We use $1-k$ to replace $c$ in equation (1):
 
 $$
-p_n(t) = p_0 \cdot (1-k)^t \tag{3}
+p_n(t) = p_0 \cdot (1-k)^t \quad \text{(3)}
 $$
 
 Assume $k=0.30$, the time unit of $t$ is days, and the initial price is $p_0$, then it means if there is no transaction, the price decreases by 30% each day (70% of the previous day's price).
@@ -69,13 +69,13 @@ We hope $s_n$ can achieve the following effects:
 Assume the auction progress matches the expectations, we can derive:
 
 $$
-p_0 \cdot (1-k)^{t_n - s_n} = p_0 \tag{4}
+p_0 \cdot (1-k)^{t_n - s_n} = p_0 \quad \text{(4)}
 $$
 
 Thus $t_n = s_n$, so $s_n$ can be seen as a function of time and token quantity, i.e., the inverse function of the token quantity and time function $f(t)$:
 
 $$
-s_n = t_n = f^{-1}(n) \tag{5}
+s_n = t_n = f^{-1}(n) \quad \text{(5)}
 $$
 
 Where the token quantity and time function $f(t)$ is the token issuance model.
@@ -91,7 +91,7 @@ This achieves the interaction between auction price and market enthusiasm.
 The final formula of VRGDA is as follows:
 
 $$
-vrgda_n(t) = p_0(1-k)^{t - f^{-1}(n)} \tag{6}
+vrgda_n(t) = p_0(1-k)^{t - f^{-1}(n)} \quad \text{(6)}
 $$
 
 Where,
@@ -126,7 +126,7 @@ $$
 Substitute into formula (6), the VRGDA formula for the linear issuance rate is:
 
 $$
-{linearvrgda}_n(t) = p_0(1-k)^{t - \frac{n}{r}} \tag{7}
+{linearvrgda}_n(t) = p_0(1-k)^{t - \frac{n}{r}} \quad \text{(7)}
 $$
 
 ### Square Root
@@ -150,7 +150,7 @@ $$
 Substitute into formula (6):
 
 $$
-{sqrtvrgda}_n(t) = p_0(1-k)^{t - n^2} \tag{8}
+{sqrtvrgda}_n(t) = p_0(1-k)^{t - n^2} \quad \text{(8)}
 $$
 
 ### Logistic Function
@@ -196,7 +196,7 @@ $$
 Substitute into formula (6), the VRGDA formula based on the logistic function is:
 
 $$
-logisticvrgda_n(t) = p_0(1-k)^{t + \frac{ln(\frac{2L}{L + n} - 1)}{s}} \tag{9}
+logisticvrgda_n(t) = p_0(1-k)^{t + \frac{ln(\frac{2L}{L + n} - 1)}{s}} \quad \text{(9)}
 $$
 
 The corresponding token issuance curve is shown below:

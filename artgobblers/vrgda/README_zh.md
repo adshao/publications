@@ -21,13 +21,13 @@
 有很多函数可以满足要求，如paradigm在[GDA文章](https://www.paradigm.xyz/2022/04/gda)中提到的：
 
 $$
-p_n(t) = k \cdot \alpha^n e^{-\lambda t} \tag{1}
+p_n(t) = k \cdot \alpha^n e^{-\lambda t} \quad \text{(1)}
 $$
 
 这里我们选择如下函数：
 
 $$
-p_n(t) = p_0 \cdot c^t \text{, 0 < c < 1} \tag{2}
+p_n(t) = p_0 \cdot c^t \text{, 0 < c < 1} \quad \text{(2)}
 $$
 
 其中， $p_0$ 为起始价格，由于 $0 \lt c \lt 1$，因此随着时间 $t$ 增加，价格 $p_n$ 将小于 $p_0$。
@@ -49,7 +49,7 @@ $$
 我们使用 $1-k$ 替换公式（1）中的 $c$，可得：
 
 $$
-p_n(t) = p_0 \cdot (1-k)^t \tag{3}
+p_n(t) = p_0 \cdot (1-k)^t \quad \text{(3)}
 $$
 
 假设 $k=0.30$， $t$ 的时间单位为天，起始价格为 $p_0$，则表示如果没有成交，每天价格下降30%（为前一天的70%）。
@@ -69,13 +69,13 @@ $$
 假设拍卖进度等于预期，我们可以得出：
 
 $$
-p_0 \cdot (1-k)^{t_n - s_n} = p_0 \tag{4}
+p_0 \cdot (1-k)^{t_n - s_n} = p_0 \quad \text{(4)}
 $$
 
 可知此时 $t_n = s_n$，因此 $s_n$ 可以看作时间与代币数量的函数，即代币数量与时间函数 $f(t)$ 的反函数：
 
 $$
-s_n = t_n = f^{-1}(n) \tag{5}
+s_n = t_n = f^{-1}(n) \quad \text{(5)}
 $$
 
 其中，代币数量与时间函数 $f(t)$，即为代币发行模型。
@@ -91,7 +91,7 @@ $$
 VRGDA最终公式如下：
 
 $$
-vrgda_n(t) = p_0(1-k)^{t - f^{-1}(n)} \tag{6}
+vrgda_n(t) = p_0(1-k)^{t - f^{-1}(n)} \quad \text{(6)}
 $$
 
 其中，
@@ -126,7 +126,7 @@ $$
 代入公式（6）可得，线性发行速率的VRGDA公式为：
 
 $$
-{linearvrgda}_n(t) = p_0(1-k)^{t - \frac{n}{r}} \tag{7}
+{linearvrgda}_n(t) = p_0(1-k)^{t - \frac{n}{r}} \quad \text{(7)}
 $$
 
 ### 平方根
@@ -150,7 +150,7 @@ $$
 代入公式（6）可得：
 
 $$
-{sqrtvrgda}_n(t) = p_0(1-k)^{t - n^2} \tag{8}
+{sqrtvrgda}_n(t) = p_0(1-k)^{t - n^2} \quad \text{(8)}
 $$
 
 ### 逻辑函数
@@ -196,7 +196,7 @@ $$
 代入公式（6），可得到基于逻辑函数的VRGDA公式：
 
 $$
-logisticvrgda_n(t) = p_0(1-k)^{t + \frac{ln(\frac{2L}{L + n} - 1)}{s}} \tag{9}
+logisticvrgda_n(t) = p_0(1-k)^{t + \frac{ln(\frac{2L}{L + n} - 1)}{s}} \quad \text{(9)}
 $$
 
 对应的代币发行曲线如下图所示：
