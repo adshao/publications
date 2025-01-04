@@ -212,7 +212,7 @@ Uniswap v2 maintains two cumulative prices, one for the price of token0 in terms
 
 Uniswap v3 uses a time-weighted geometric mean price, eliminating the need to maintain separate cumulative prices for two tokens. The geometric mean of a set of ratios is the reciprocal of the geometric mean of their reciprocals.
 
-> Note: Suppose the price of token0 in terms of token1 is $x$, then the price of token1 in terms of token0 is $\frac{1}{x}$.
+> Note: Suppose the price of token0 in terms of token1 is $x$, then the price of token1 in terms of token0 is $\frac{1}{x}$, $x_t$ represents the price at time $t$ .
 >
 > The geometric mean price of token0:
 > $$P_0 = \sqrt[n]{x_1 \cdot x_2 \cdot ... \cdot x_n}$$
@@ -238,7 +238,7 @@ $$
 >
 > Since Uniswap v3 uses int24 (24-bit signed integer) to represent ticks, suppose the current tick is $i$, corresponding to price $P_1$; the next closest tick is $i + 1$, with corresponding price $P_2 = P_1 \cdot 1.0001$, its relative change in price to $P_1$ is:
 >
-> $$\frac{P_2 - P_1}{P_1} = \frac{P_1 \cdot 1.0001 - P_1}{P_1} = 1.0001 - 1 = 0.0001 = 0.01\%$$
+> $$ \frac{P_2 - P_1}{P_1} = \frac{P_1 \cdot 1.0001 - P_1}{P_1} = 1.0001 - 1 = 0.0001 = 0.01\\% $$
 
 The geometric mean price (time-weighted average price) $(p_{t_1,t_2})$ for any period from $t_1$ to $t_2$ is:
 
@@ -296,6 +296,8 @@ The remaining sections of this paper will discuss the implementation mechanism o
 
 To implement custom liquidity supply, the possible price space is discretized into ticks. Liquidity providers can supply liquidity between any two ticks (not necessarily adjacent).
 
+> Note: In trading systems, the tick size represents the smallest unit of price movement. For example, if the minimum price increment for a stock is \$0.01, its price can only move from \$100.00 to \$100.01. In Uniswap V3, the prices \$100.00 and \$100.01 correspond to two separate ticks, and the smallest price increment of \$0.01 is equivalent to the tick spacing.
+
 Each range can be defined by a pair of tick indices (signed integers): a lower tick ($i_l$) and an upper tick ($i_u$). Ticks represent prices at which the contract's virtual liquidity can be modified. We assume prices are always expressed as the price of token0 in terms of token1. The assignment of token0 and token1 is arbitrary and does not affect the contract's logic (except for possible rounding errors).
 
 Conceptually, a tick exists whenever the price $p$ equals an integer power of 1.0001. We use integer $i$ to represent a tick, such that the tick's price can be expressed as:
@@ -319,6 +321,8 @@ For example, $\sqrt{p}(0)$ (the square root price of tick 0) equals 1, $\sqrt{p}
 When liquidity is added to a range, if one or both ticks are not already used as boundaries by existing positions, that tick is initialized.
 
 Not every tick can be initialized. Each pool pair is initialized with a parameter tickSpacing ($t_s$); only ticks whose indices are divisible by tickSpacing can be initialized. For example, if tickSpacing is 2, only even ticks (...-4, -2, 0, 2, 4...) can be initialized. Smaller tickSpacing allows for tighter and more precise ranges but may result in higher gas consumption per transaction (because crossing an initialized tick incurs a gas cost for the transactor).
+
+> Note: Tick spacing can be understood as the equivalent of tick size in trading systems, representing the smallest unit of price movement. A smaller tick spacing means smaller price increments, which can reduce trading slippage. However, this also leads to higher gas consumption.
 
 Whenever the price crosses an initialized tick, virtual liquidity is added or removed. The gas cost incurred by crossing an initialized tick is fixed and independent of the number of positions adding or removing virtual liquidity at that tick.
 

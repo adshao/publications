@@ -173,6 +173,8 @@ function enableFeeAmount(uint24 fee, int24 tickSpacing) public override {
 * [setFeeProtocol](#setFeeProtocol)：修改某个交易对的协议手续费比例
 * [collectProtocol](#collectProtocol)：收集某个交易对的协议手续费
 
+![](./assets/uniswapV3Pool.png)
+
 #### initialize
 
 创建完交易对后，需要调用`initialize`方法初始化合约，才能正常使用交易对功能。
@@ -611,7 +613,7 @@ function swap(
 
 上面代码主要是初始化状态相关的。
 
-因为 $\sqrt{P} = \sqrt{\frac{y}{x}}$ ，当`zeroForOne = true`，即从`token0`到`token1`时，swap过程中 $x$ 变多， $y$ 变少，因此 $\sqrt{P}$ 逐渐减小，所以指定的价格极限`sqrtPriceLimitX96`需要小于当前市场价格`sqrtPriceX96`。
+因为 $\sqrt{P} = \sqrt{\frac{y}{x}}$ ，当`zeroForOne = true`，即从`token0`到`token1`时，swap过程中 Pool 的 $x$ 变多， $y$ 变少，因此 $\sqrt{P}$ 逐渐减小，所以指定的价格极限`sqrtPriceLimitX96`需要小于当前市场价格`sqrtPriceX96`。
 
 另外，需要注意几个关键数据：
 
@@ -858,7 +860,9 @@ if (state.sqrtPriceX96 == step.sqrtPriceNextX96) {
     * 如果该`tick`已经初始化，则：
         - 通过`ticks.cross`方法穿越该`tick`，反向设置相关`Outside`变量的数据
         - 使用`tick`净流动性`liquidityNet`更新可用流动性`state.liquidity`
-            - 关于`liquidityNet`，请参考[Tick.update](#update)
+            - 由于在[mint](#mint)初始化`tick`时，`tickLower`的`liquidityNet`是正的，即`liquidityDelta`；`tickUpper`的`liquidityNet`是负的，即`-liquidityDelta`；因此这里需要根据`zeroForOne`的值来调整`liquidityNet`的正负
+            - 当`zeroForOne = true`时，随着交易的进行， Pool 中 $x$ 变多， $y$ 变少，价格 $\sqrt{P}$ 逐渐变小，`tick`朝 lower 方向移动，如果穿越了`tickLower`，意味着离开区间，因此需要减少流动性；反之，如果穿越了`tickUpper`，意味着进入区间，因此需要增加流动性；即都使用 `-liquidityNet`
+            - 当`zeroForOne = false`时，随着交易的进行， Pool 中 $y$ 变多， $x$ 变少，价格 $\sqrt{P}$ 逐渐变大，`tick`朝 upper 方向移动，如果穿越了`tickUpper`，意味着离开区间，因此需要减少流动性；反之，如果穿越了`tickLower`，意味着进入区间，因此需要增加流动性；即都使用 `liquidityNet`
     * 移动当前`tick`到下一个`tick`
 * 如果交换后的价格没有达到本次目标价格，但是又不等于初始价格，即表示此时交易结束：
     * 使用交换后的价格计算最新的`tick`值
@@ -1597,7 +1601,7 @@ def find_msb(x):
     return msb
 ```
 
-Uniswap v3中的Solidity代码如下：
+Uniswap v3中的Solidity代码如下（请参考代码中注释）：
 
 ```solidity
 /// @notice Calculates the greatest tick value such that getRatioAtTick(tick) <= ratio
@@ -1608,7 +1612,7 @@ Uniswap v3中的Solidity代码如下：
 function getTickAtSqrtRatio(uint160 sqrtPriceX96) internal pure returns (int24 tick) {
     // second inequality must be < because the price can never reach the price at the max tick
     require(sqrtPriceX96 >= MIN_SQRT_RATIO && sqrtPriceX96 < MAX_SQRT_RATIO, 'R');
-    uint256 ratio = uint256(sqrtPriceX96) << 32; // 右移32位，转化为Q128.128格式
+    uint256 ratio = uint256(sqrtPriceX96) << 32; // 左移32位，转化为Q128.128格式
 
     uint256 r = ratio;
     uint256 msb = 0;
@@ -2136,6 +2140,8 @@ function update(
 #### computeSwapStep
 
 SwapMath只有一个方法，即`computeSwapStep`，计算单步交换的输入输出。
+
+该方法实际上实现的是白皮书6.2.3小节：在一个Tick内交易。在该场景下，流动性 $L$ 不变，仅价格 $\sqrt{P}$ 发生变化。
 
 参数如下：
 
