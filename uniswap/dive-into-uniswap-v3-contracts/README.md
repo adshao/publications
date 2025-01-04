@@ -173,6 +173,8 @@ Additionally, the factory owner can call the following two methods:
 * [setFeeProtocol](#setFeeProtocol): Modifies the protocol fee ratio for a specific trading pair.
 * [collectProtocol](#collectProtocol): Collects protocol fees for a specific trading pair.
 
+![](./assets/uniswapV3Pool.png)
+
 #### initialize
 
 After creating the trading pair, the `initialize` method must be called to initialize the contract before it can be used normally.
@@ -611,7 +613,7 @@ function swap(
 
 The code above mainly initializes the states.
 
-Because $\sqrt{P} = \sqrt{\frac{y}{x}}$, when `zeroForOne = true`, i.e., swapping from `token0` to `token1`, during the swap process $x$ increases, $y$ decreases, thus $\sqrt{P}$ gradually decreases. Therefore, the specified price limit `sqrtPriceLimitX96` needs to be less than the current market price `sqrtPriceX96`.
+Because $\sqrt{P} = \sqrt{\frac{y}{x}}$, when `zeroForOne = true`, i.e., swapping from `token0` to `token1`, during the swap process $x$ in the pool increases, $y$ decreases, thus $\sqrt{P}$ gradually decreases. Therefore, the specified price limit `sqrtPriceLimitX96` needs to be less than the current market price `sqrtPriceX96`.
 
 Also, several key data should be noted:
 
@@ -858,7 +860,9 @@ if (state.sqrtPriceX96 == step.sqrtPriceNextX96) {
     * If that `tick` is initialized, then:
         - Through `ticks.cross` to cross the `tick`, set related `Outside` variables in reverse.
         - Use `tick` net liquidity `liquidityNet` to update the available liquidity `state.liquidity`.
-            - Regarding `liquidityNet`, please refer to [Tick.update](#update).
+            - During the initialization of `tick` in [mint](#mint), the `liquidityNet` of `tickLower` is positive (equal to `liquidityDelta`), while the `liquidityNet` of `tickUpper` is negative (equal to `-liquidityDelta`). Therefore, the sign of `liquidityNet` needs to be adjusted based on the value of `zeroForOne`.
+            - When `zeroForOne = true`, as trading progresses, the amount of $x$ in the pool increases, $y$ decreases, and the price $\sqrt{P}$ gradually decreases. The `tick` moves in the lower direction. If it crosses `tickLower`, it means leaving the range, so liquidity needs to be reduced. Conversely, if it crosses `tickUpper`, it means entering the range, so liquidity needs to be increased. In both cases, `-liquidityNet` is used.
+            - When `zeroForOne = false`, as trading progresses, the amount of $y$ in the pool increases, $x$ decreases, and the price $\sqrt{P}$ gradually increases. The `tick` moves in the upper direction. If it crosses `tickUpper`, it means leaving the range, so liquidity needs to be reduced. Conversely, if it crosses `tickLower`, it means entering the range, so liquidity needs to be increased. In both cases, `liquidityNet` is used.
     * Move the current `tick` to the next `tick`.
 * If the post-swap price did not reach this step's target price but is not equal to the initial price, i.e., indicates the trade is finished:
     * Calculate the latest `tick` value based on the post-swap price.
@@ -1595,7 +1599,7 @@ def find_msb(x):
     return msb
 ```
 
-The Solidity code in Uniswap v3 is as follows:
+The Solidity code in Uniswap v3 is as follows (please refer to the comments in the code):
 
 ```solidity
 /// @notice Calculates the greatest tick value such that getRatioAtTick(tick) <= ratio
@@ -1606,7 +1610,7 @@ The Solidity code in Uniswap v3 is as follows:
 function getTickAtSqrtRatio(uint160 sqrtPriceX96) internal pure returns (int24 tick) {
     // second inequality must be < because the price can never reach the price at the max tick
     require(sqrtPriceX96 >= MIN_SQRT_RATIO && sqrtPriceX96 < MAX_SQRT_RATIO, 'R');
-    uint256 ratio = uint256(sqrtPriceX96) << 32; // Right-shift by 32 bits, converting to Q128.128 format
+    uint256 ratio = uint256(sqrtPriceX96) << 32; // Left-shift by 32 bits, converting to Q128.128 format
 
     uint256 r = ratio;
     uint256 msb = 0;
@@ -2134,6 +2138,8 @@ Updates the position liquidity, this period's fee per liquidity, and withdrawabl
 #### computeSwapStep
 
 SwapMath has only one method, `computeSwapStep`, which calculates the input and output for a single swap step.
+
+This method essentially implements the concept described in Section 6.2.3 of the white paper: conducting trades within a single tick. In this scenario, the liquidity $L$ remains constant, while only the price $\sqrt{P}$ changes.
 
 Parameters are as follows:
 
