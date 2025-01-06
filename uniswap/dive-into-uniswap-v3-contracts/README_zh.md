@@ -1342,10 +1342,11 @@ function update(
     info.liquidityGross = liquidityGrossAfter;
 ```
 
-`liquidityGross`表示总流动性，用于判断`tick`是否需要翻转：
+`liquidityGross`表示总流动性，用于判断`tick`是否需要初始化：
 
 * 如果`mint`，则增加流动性；如果`burn`，则减少流动性
 * 该变量与`tick`在不同头寸中是否作为边界低点或高点无关，只与`mint`或`burn`操作有关
+* 如果一个`tick`同时被用作`tickLower`和`tickUpper`，则其`liquidityNet`可能是0，但`liquidityGross`仍然会大于0，因此不需要再次初始化
 
 ```solidity
     // when the lower (upper) tick is crossed left to right (right to left), liquidity must be added (removed)

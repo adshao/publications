@@ -1342,10 +1342,11 @@ If a `tick` had no liquidity before, it is initialized; for ticks less than the 
     info.liquidityGross = liquidityGrossAfter;
 ```
 
-`liquidityGross` represents total liquidity and is used to determine whether a `tick` needs to be flipped:
+`liquidityGross` represents the total liquidity and is used to determine whether a `tick` requires initialization:
 
-- If `mint`, then increase liquidity; if `burn`, then decrease liquidity
-- This variable is unrelated to whether a `tick` is the lower or upper boundary in different positions, only related to `mint` or `burn` operations
+- For `mint` operations, liquidity is increased; for burn operations, liquidity is decreased.
+- This variable is unrelated to whether the `tick` serves as a boundary low point (`tickLower`) or high point (`tickUpper`) in different positions. It is solely related to the `mint` or `burn` operations.
+- If a `tick` is simultaneously used as both `tickLower` and `tickUpper`, its `liquidityNet` might be 0, but `liquidityGross` will still be greater than 0. As a result, no reinitialization is required.
 
 ```solidity
     // when the lower (upper) tick is crossed left to right (right to left), liquidity must be added (removed)
