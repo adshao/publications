@@ -362,6 +362,9 @@ $$
 
 Using $L$ and $\sqrt{P}$ for calculation is convenient because at any given moment, only one of these values changes. When trading within a tick, only the price (i.e., $\sqrt{P}$) changes; when crossing a tick or minting/burning liquidity, only the liquidity ($L$) changes. This avoids the rounding error issues that might occur when recording virtual balances.
 
+> Note: It is essential to understand this statement, as it is a core principle of Uniswap v3: at any given time, either $L$ (liquidity) or $\sqrt{P}$ (price’s square root) will change, but not both simultaneously.
+> During a swap, the total liquidity is composed of all the liquidity within the current price range. Each swap is broken into multiple steps, with each step executed within a single tick range. Therefore, during a swap $L$ remains constant, $\sqrt{P}$ changes. When the price crosses a tick: the total liquidity $L$ is updated to reflect the change in liquidity from crossing the tick, $\sqrt{P}$ remains unchanged at that moment, the swap process then continues with the next step. During add or burn liquidity operations: $L$ changes to account for the addition or removal of liquidity, $\sqrt{P}$ remains constant.
+
 You might notice that the liquidity formula (based on the virtual balances of the tokens) is similar to the formula Uniswap v2 used for initializing the quantity of liquidity tokens (when no fee income has yet been accumulated). Liquidity can be considered as virtual liquidity tokens.
 
 Similarly, liquidity can also be regarded as the proportion of the change in the number of token1 ($\Delta{Y}$) to the change in price $\sqrt{P}$:
