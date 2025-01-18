@@ -1,69 +1,71 @@
-# 深入理解 Uniswap v4 白皮书
+[English](./README.md) | [中文](./README_zh.md)
+
+# Deep Dive into Uniswap v4 Whitepaper
 
 ###### tags: `uniswap` `uniswap-v4` `uniswap-v4-core` `whitepaper`
 
-## Abstract | 概述
+## Abstract
 
-Uniswap v4 是为以太坊虚拟机（EVM）实现的去托管自动化做市商。Uniswap v4 通过任意代码逻辑的 hook 实现定制化功能，允许开发者在 Uniswap v3 引入的集中流动性模型的基础上添加新功能。在 Uniswap v4 中，任何人都可以创建带有指定 hook 的新池，该 hook 可以在预先定义的池操作之前或之后执行。Hook 既可以用于实现之前内置于协议中的功能（如预言机），也可以实现此前需要在协议外独立开发的全新功能。Uniswap v4 还通过单例实现、闪电记账以及对原生 ETH 的支持，带来了更高效的 gas 和更友好的开发者体验。
+Uniswap v4 is a non-custodial automated market maker implemented for the Ethereum Virtual Machine. Uniswap v4 offers customizability via arbitrary code hooks, allowing developers to augment the concentrated liquidity model introduced in Uniswap v3 with new functionality. In Uniswap v4, anyone can create a new pool with a specified hook, which can run before or after predetermined pool actions. Hooks can be used to implement features that were previously built into the protocol, like oracles, as well as new features that previously would have required independent implementations of the protocol. Uniswap v4 also offers improved gas efficiency and developer experience through a singleton implementation, flash accounting, and support for native ETH.
 
-> 注： Uniswap v4 在 AMM 核心逻辑上没有发生变化，仍然采用了 Uniswap v3 中的集中流动性模型。通过引入 Hook 机制，使得 Uniswap v4 更加灵活，甚至可以通过 Hook 跳过集中流动性模型，实现自定义 AMM 算法。另外，Uniswap v4 使用单例设计重构了整个合约的架构，使得合约更加高效和节省 gas。
+> Note: Uniswap v4 has not changed the core logic of its AMM (Automated Market Maker) and continues to use the concentrated liquidity model introduced in Uniswap v3. However, by introducing a Hook mechanism, Uniswap v4 becomes more flexible, allowing developers to even bypass the concentrated liquidity model and implement custom AMM algorithms. Additionally, Uniswap v4 uses a singleton design to restructure the entire contract architecture, making it more efficient and gas-saving.
 
-## 1 Introduction | 介绍
+## 1 INTRODUCTION
 
-Uniswap v4 是一个在以太坊虚拟机（EVM）上进行高效价值交换的自动做市商（AMM）。与之前版本的 Uniswap 协议一样，它具有去托管、不可升级和无许可等特性。Uniswap v4 基于 Uniswap v1 和 v2 的 AMM 模型，以及 Uniswap v3 引入的集中流动性模型，它的核心关注点在于：为开发者带来更多的可定制化功能，以及为了提高 gas 效率所进行的架构调整。
+Uniswap v4 is an automated market maker (AMM) facilitating efficient exchange of value on the Ethereum Virtual Machine (EVM). As with previous versions of the Uniswap Protocol, it is noncustodial, non-upgradable, and permissionless. The focus of Uniswap v4 is on additional customization for developers and architectural changes for gas efficiency improvements, building on the AMM model built by Uniswap v1 and v2 and the concentrated liquidity model introduced in Uniswap v3.
 
-Uniswap v1 [1] 和 v2 [3] 是 Uniswap 协议的前两代版本，分别实现了 ERC20 <-> ETH 和 ERC20 <-> ERC20 的兑换，并均采用了“常数乘积做市商”（CPMM）模型。Uniswap v3 [4] 引入了集中流动性，通过在指定价格区间提供流动性的头寸，实现更高效的资金利用率，同时引入了多级费率。
+Uniswap v1 [2] and v2 [3] were the first two iterations of the Uniswap Protocol, facilitating ERC-20 <> ETH and ERC-20 <> ERC-20 swaps, respectively, both using a constant product market maker (CPMM) model. Uniswap v3 [4] introduced concentrated liquidity, enabling more capital efficient liquidity through positions that provide liquidity within a limited price range, and multiple fee tiers.
 
-> 注：这里的常数乘积做市商（CPMM）模型即：$x \cdot y = k$，其中 $x$ 和 $y$ 分别为两个资产的数量，$k$ 为常数。
+> Note: The constant product market maker (CPMM) model referenced here is defined as $x \cdot y = k$, where $x$ and $y$ represent the quantities of two assets, and $k$ is a constant.
 
-虽然集中流动性和多级费率为流动性提供者增加了灵活性，并允许新的流动性管理策略。但随着 AMM 和 DeFi 的持续演变，Uniswap v3 在支持新功能方面的灵活性仍然不足。
+While concentrated liquidity and fee tiers increased flexibility for liquidity providers and allowed for new liquidity provision strategies, Uniswap v3 lacks flexibility to support new functionalities invented as AMMs and DeFi have evolved.
 
-一些特性，例如，在 Uniswap v2 中首次引入的价格预言机功能（并在 Uniswap v3 中也被沿用），允许集成方利用去中心化的链上价格数据，但这会增加每笔交易的 gas 成本，同时也缺少对集成方的定制化空间。其它可能的增强功能，例如通过“时间加权平均做市商（TWAMM）[8]”实现的时间加权平均价格订单（TWAP）、波动率预言机、限价单、或者动态费率等，都需要对核心协议进行重新实现，第三方开发者无法为 Uniswap v3 添加此类功能。
+Some features, like the price oracle originally introduced in Uniswap v2 and included in Uniswap v3, allow integrators to utilize decentralized onchain pricing data, at the expense of increased gas costs for swappers and without customizability for integrators. Other possible enhancements, such as time-weighted average price orders (TWAP) through a time-weighted average market maker (TWAMM) [8], volatility oracles, limit orders, or dynamic fees, require reimplementations of the core protocol, and can not be added to Uniswap v3 by third-party developers.
 
-此外，在之前版本的 Uniswap 中，每创建一个新池都需要部署一个新合约，其成本与合约字节码大小正相关。而且，若一次交易需要跨多个 Uniswap 池，则会出现多个合约间的代币转移、重复的状态更新等问题。自 Uniswap v2 开始，Uniswap 要求将 ETH 包装成 ERC-20，而不支持原生 ETH。这些设计都导致了最终用户在 gas 成本的增加。
+Additionally, in previous versions of Uniswap, deployment of new pools involves deploying a new contract—where cost scales with the size of the bytecode—and trades with multiple Uniswap pools involve transfers and redundant state updates across multiple contracts. Additionally since Uniswap v2, Uniswap has required ETH to be wrapped into an ERC-20, rather than supporting native ETH. These design choices came with increased gas costs for end users.
 
-> 注：Uniswap v2 和 v3 都会将 ETH 转换为 WETH 进行交易，因此增加了额外的 gas 成本。
+> Note: Both Uniswap v2 and v3 convert ETH to WETH for transactions, which incurs additional gas costs.
 
-在 Uniswap v4 中，我们通过以下一些值得关注的特性来改进这些不足：
+In Uniswap v4, we improve on these inefficiencies through a few notable features:
 
-**Hooks（钩子）**：Uniswap v4 允许任何人部署具有自定义功能的集中流动性的新池。创建者可以为每个池子都指定一个 hook 合约，该合约可在调用的生命周期的特定阶段执行自定义逻辑。这些 hook 也可动态管理池的交易费，实现自定义曲线，以及通过“自定义记账”来调整分配给流动性提供者和交易者的费用。
+**Hooks**: Uniswap v4 allows anyone to deploy new concentrated liquidity pools with custom functionality. For each pool, the creator can define a “hook contract” that implements logic executed at specific points in a call’s lifecycle. These hooks can also manage the swap fee of the pool dynamically, implement custom curves, and adjust fees charged to liquidity providers and swappers though Custom Accounting.
 
-> 注：Hook 是一种钩子机制，与 Javascript 中的钩子函数类似，用于在特定的生命周期阶段执行自定义逻辑，比如在交易之前或之后执行某些自定义操作。但与一般的 hook 函数不同的是，它不单单是一种回调机制，hook 可以通过返回自定义的“差额（deltas）”，从而改变交换（swap）的行为，如完全绕过内置的集中流动性模型，而在 hook 内就完成整个 swap 交易。
+> Note: A Hook is a mechanism similar to hook functions in JavaScript, designed to execute custom logic at specific lifecycle stages, such as performing certain operations before or after a transaction. However, unlike typical hook functions that merely act as a callback mechanism, Hooks in this context can return custom “deltas,” enabling them to alter the behavior of a swap. For example, they can completely bypass the built-in concentrated liquidity model and handle the entire swap transaction within the Hook itself.
 
-**Singleton（单例模式）**：Uniswap v4 不再采用之前版本的工厂模式，而是实现一个单一合约来持有所有池子。单例模式能够降低创建新池以及多跳交易（multi-hop）的成本。
+**Singleton**: Uniswap v4 moves away from the factory model used in previous versions, instead implementing a single contract that holds all pools. The singleton model reduces the cost of pool creation and multi-hop trades.
 
-> 注：在 Uniswap v3 中，每个池子都是一个独立的合约，由一个工厂合约创建。而在 Uniswap v4 中，所有池子都由一个单一合约管理存放。
+> Note: In Uniswap v3, each pool is an independent contract created by a factory contract. In Uniswap v4, however, all pools are managed and stored within a single contract.
 
-**Flash accounting（闪电记账）**：单例模式使用了“闪电记账”机制，允许调用方锁定池并访问池内的代币，只要在调用结束时，所有该调用方与池之间的代币借贷都结清即可。该功能是通过 EIP-1153 [5] 定义的“瞬时存储（transient storage）”操作码来高效实现的。闪电记账能进一步降低跨池的交易的 gas 成本，也能为与 Uniswap v4 的更复杂的整合提供支持。
+**Flash accounting**: The singleton uses "flash accounting," which allows a caller to lock the pool and access any of its tokens, as long as no tokens are owed to or from the caller by the end of the lock. This functionality is made efficient by the transient storage opcodes described in EIP-1153 [5]. Flash accounting further reduces the gas cost of trades that cross multiple pools and supports more complex integrations with Uniswap v4.
 
-> 注：EIP-1153 提出了引入两种新的以太坊虚拟机（EVM）操作码：TLOAD（0x5c）和 TSTORE（0x5d）。这些操作码用于操作称为“瞬态存储”的状态，该存储在每个交易结束后被丢弃。与传统的存储操作码 SLOAD 和 SSTORE 相比，瞬态存储不需要从磁盘加载或保存数据，因此在执行时更为高效，且不涉及退款的复杂计算。
+> Note: EIP-1153 proposes the introduction of two new Ethereum Virtual Machine (EVM) opcodes: TLOAD (0x5c) and TSTORE (0x5d). These opcodes are used to operate on a type of state called “transient storage,” which is discarded at the end of each transaction. Compared to traditional storage opcodes SLOAD and SSTORE, transient storage does not require loading or saving data to disk, making it more execution-efficient and eliminating the need for complex refund calculations.
 
-**原生 ETH**：Uniswap v4 再次支持原生 ETH，可在 v4 池直接使用带原生代币的交易对。对于使用 ETH 进行交易或提供流动性的用户而言，这使他们受益，因为更便宜的转账和避免了额外包装操作的开销都降低了 gas 成本。
+**Native ETH**: Uniswap v4 brings back support for native ETH, with support for pairs with native tokens inside v4 pools. ETH swappers and liquidity providers benefit from gas cost reductions from cheaper transfers and removal of additional wrapping costs.
 
-> 注：Uniswap v1 支持原生 ETH，但出于对 ETH 和 WETH 流动性分裂的担忧，Uniswap v2 和 v3 的 core 合约都只支持 WETH。
+> Note: Uniswap v1 supported native ETH, but due to concerns about liquidity fragmentation between ETH and WETH, the core contracts of Uniswap v2 and v3 only support WETH.
 
-**Custom Accounting（自定义记账）**：单例合约通过 hook 返回的差额（deltas），支持增强或者绕过原生的集中流动性池，从而将单例合约视为关联池的一个不可变的结算层。该特性使得某些用例成为可能，如在 hook 中增加提现费用、包装资产，或者使用类似 Uniswap v2 的常数乘积做市商曲线等。
+**Custom Accounting**: The singleton supports both augmenting and bypassing the native concentrated liquidity pools through hook-returned deltas, utilizing the singleton as an immutable settlement layer for connected pools. This feature can support use-cases like hook withdrawal fees, wrapping assets, or constant product market maker curves like Uniswap v2.
 
-> 注：通过定义返回的 delta，hook 不仅能够实现自定义回调逻辑，还能够改变交换的行为，如绕过内置的集中流动性模型，实现自定义 AMM 算法。
+> Note: By defining the returned delta, a Hook can not only implement custom callback logic but also alter the behavior of swaps. For instance, it can bypass the built-in concentrated liquidity model to enable custom AMM algorithms.
 
-以下章节将深入介绍这些变化以及使这些特性成为可能的架构变化。
+The following sections provide in-depth explanations of these changes and the architectural changes that help make them possible.
 
-## 2 Hooks | 钩子
+## 2 HOOKS
 
-Hook 是外部部署的合约，可在池子执行过程的特定阶段执行开发者自定义的逻辑。这些 hook 允许集成方创建具有灵活可定制执行逻辑的集中流动性池。可选地，hook 还能返回自定义的“差额（deltas）”，从而改变交换（swap）的行为 —— 详情可见第 5 节的“自定义记账（Custom Accounting）”。
+Hooks are externally deployed contracts that execute some developer defined logic at a specified point in a pool’s execution. These hooks allow integrators to create a concentrated liquidity pool with flexible and customizable execution. Optionally, hooks can also return custom deltas that allow the hook to change the behavior of the swap — described in detail in the Custom Accounting section (5).
 
-Hook 可以修改池的参数，或增加新特性和功能。以下是一些可能在 hook 中实现的功能示例：
+Hooks can modify pool parameters, or add new features and functionality. Example functionalities that could be implemented with hooks include:
 
-* 通过 TWAMM [8] 将大额订单分开在一段时间内执行
-* 在价格跳点（tick price）触发的链上限价单
-* 随波动率而调整的动态费率
-* 帮助流动性提供者将 MEV 内部化的机制 [1]
-* 中位数、截断或其它定制化预言机的实现
-* 常数乘积做市商（Uniswap v2 的功能）
+* Executing large orders over time through TWAMM [8]
+* Onchain limit orders that fill at tick prices
+* Volatility-shifting dynamic fees
+* Mechanisms to internalize MEV for liquidity providers [1]
+* Median, truncated, or other custom oracle implementations
+* Constant Product Market Makers (Uniswap v2 functionality)
 
-### 2.1 Action Hooks | 操作钩子
+### 2.1 Action Hooks
 
-当有人在 Uniswap v4 上创建一个池时，他们可指定一个 hook 合约。该合约实现了自定义逻辑的回调方法，这些方法会在池子执行流程中被调用。当前 Uniswap v4 支持 10 个 hook 回调方法：
+When someone creates a pool on Uniswap v4, they can specify a hook contract. This hook contract implements custom logic that the pool will call out to during its execution. Uniswap v4 currently supports ten such hook callbacks:
 
 * beforeInitialize/afterInitialize
 * beforeAddLiquidity/afterAddLiquidity1
@@ -71,89 +73,96 @@ Hook 可以修改池的参数，或增加新特性和功能。以下是一些可
 * beforeSwap/afterSwap
 * beforeDonate/afterDonate
 
-hook 合约地址决定了哪些回调方法会被执行。这样的设计既高效又灵活，并可确保即便是可升级的 hook，也必须遵守特定的不变量。这些是创建一个可工作的 hook 的最小化要求。在图 1 中，我们展示了 `beforeSwap` 和 `afterSwap` hook 如何作为 `swap` 执行工作流程的一部分来工作的。
+The address of the hook contract determines which of these hook callbacks are executed. This creates a gas efficient and expressive methodology for determining the desired callbacks to execute, and ensures that even upgradeable hooks obey certain invariants. There are minimal requirements for creating a working hook. In Figure 1, we describe how the beforeSwap and afterSwap hooks work as part of swap execution flow.
 
-> 注：在 Uniswap v4 中，一个池是由两种代币地址、LP 费率、tick spacing，以及 hook 地址来唯一确定的。这意味着，如果同样两种代币，使用了不同的 hook 进行部署，那么这两个池是不同的。
+> Note: In Uniswap v4, a pool is uniquely defined by the two token addresses, the LP fee rate, the tick spacing, and the hook address. This means that if the same two tokens are deployed with different hooks, the resulting pools will be distinct.
 
-> 注：实现一个基础可用的 hook 并不需要实现所有回调。例如，一个简单的 hook 可能只实现 `beforeSwap` 回调，以便在交换之前执行某些逻辑。
+> Note: Implementing a basic and functional Hook does not require implementing all callbacks. For example, a simple Hook might only implement the `beforeSwap` callback to execute certain logic prior to a swap.
 
 ![](./assets/v4-1.jpg)
 
-### 2.2 Hook-managed fees | Hook 管理的费用
+### 2.2 Hook-managed fees
 
-Uniswap v4 允许通过 hook 征收交易手续费。
+Uniswap v4 allows fees to be taken on swapping by the hook.
 
-交易手续费可以是固定的，也可以是由 hook 合约动态管理的。Hook 合约也可以把一部分交易手续费分给自身。Hook 合约得到手续费后，可以按照合约代码逻辑任意分配给流动性提供者、交易者、hook 创建者或其它任意方。
+Swap fees can be either static, or dynamically managed by a hook contract. The hook contract can also choose to allocate a percentage of the swap fees to itself. Fees that accrue to hook contracts can be allocated arbitrarily by the hook’s code, including to liquidity providers, swappers, hook creators, or any other party.
 
-不过，Hook 的权限会受到池子在创建时设定的不可变标记（immutable flags）的限制。例如，池创建者可以指定一个池是否采用固定费率（以及费率大小）或动态费率。
+The capabilities of the hook are limited by immutable flags chosen when the pool is created. For example, a pool creator can choose whether a pool has a static fee (and what that fee is) or dynamic fees.
 
-> 注：如前所述，如果在池创建时指定 LP fee 为 `0x800000`，则表示该池采用动态费率。同时，在创建池时，池创建者可以指定 hook 地址，以及 hook 权限。实际上，hook 的权限是包含在地址中的，因此这些权限在池创建后也是不可变的。
+> Note: As mentioned earlier, if the LP fee is set to `0x800000` when creating a pool, it indicates that the pool uses a dynamic fee structure. Additionally, during pool creation, the creator can specify a hook address and define hook permissions. In practice, the permissions of a hook are embedded in its address, making these permissions immutable once the pool is created.
 
-治理层也可以拿走一部分交易手续费，但有上限，详见 6.2 节“治理”。
+Governance also can take a capped percentage of swap fees, as discussed below in the Governance section (6.2).
 
-## 3 Singleton and Flash Accounting | 单例和闪电记账
+## 3 SINGLETON AND FLASH ACCOUNTING
 
-以往版本的 Uniswap 协议采用“工厂/池”的模式，由工厂负责为每对代币创建独立的合约。Uniswap v4 采用单例设计模式，所有池都由一个合约管理，从而减少 99% 的池创建成本。
+Previous versions of the Uniswap Protocol use the factory/pool pattern, where the factory creates separate contracts for new token pairs. Uniswap v4 uses a singleton design pattern where all pools are managed by a single contract, making pool deployment 99% cheaper.
 
-> 注：在 Uniswap v2 和 v3 中，每一对交易对都是一个独立的合约，由工厂合约创建。而在 Uniswap v4 中，所有池都保存在一个单一合约中。
+> Note: In Uniswap v2 and v3, each trading pair is an independent contract created by a factory contract. In Uniswap v4, however, all pools are stored within a single contract.
 
-单例设计与 v4 的另一个架构改动 —— 闪电记账（flash accounting）—— 相得益彰。在之前版本的 Uniswap 协议中，大多数操作（例如交换或往池中添加流动性）会在操作结束时执行代币转移。而在 v4 中，每个操作仅更新一个内部的净余额（delta），只有在 lock 结束时才执行外部代币转移。新的 `take()` 和 `settle()` 函数可分别用于从池中借出或归还资金。协议要求在调用结束时，调用方与池的代币借出数量都必须为零，从而确保池的资金安全。
+The singleton design complements another architectural change in v4: flash accounting. In previous versions of the Uniswap Protocol, most operations (such as swapping or adding liquidity to a pool) ended by transferring tokens. In v4, each operation updates an internal net balance, known as a delta, only making external transfers at the end of the lock. The new take() and settle() functions can be used to borrow or deposit funds to the pool, respectively. By requiring that no tokens are owed to the pool manager or to the caller by the end of the call, the pool’s solvency is enforced.
 
-闪电记账简化了复杂的池操作，比如原子化兑换和添加流动性操作。当与单例模型结合时，也简化了多跳交易或更复杂的组合操作，比如先兑换，再添加流动性等。
+Flash accounting simplifies complex pool operations, such as atomic swapping and adding. When combined with the singleton model, it also simplifies multi-hop trades or compound operations like swapping before adding liquidity.
 
-> 注：在 Uniswap v4 中，无论进行多少操作，都仅在单例合约中更新内部的净余额，在交易结束时才执行代币转移操作，极大减少了 gas 成本。
+> Note: In Uniswap v4, regardless of the number of operations performed, only the net balances within the singleton contract are updated during the process. Token transfers are executed only at the end of the transaction, significantly reducing gas costs.
 
-在坎昆（Cancun）硬分叉之前，闪电记账的架构比较昂贵，因为它要求每次余额变动都需要进行存储更新。即使合约确保内部记账数据永远不会序列化到存储上，但只要超过了存储退还的上限，用户仍然需要承担与普通存储操作同样的成本 [6]。然而，因为在同一笔交易结束时，所有余额必须为0，这些余额的记账工作正好可利用 EIP-1153 [5] 提出的“瞬时存储”来实现。
+Before the Cancun hard fork, the flash accounting architecture was expensive because it required storage updates at every balance change. Even though the contract guaranteed that internal accounting data is never actually serialized to storage, users would still pay those same costs once the storage refund cap was exceeded [6]. But, because balances must be 0 by the end of the transaction, accounting for these balances can be implemented with transient storage, as specified by EIP-1153 [5].
 
-总体而言，单例和闪电记账使得跨多个 v4 池的路由更加高效，减少流动性分散造成的成本。这一点在 hook 的引入可能大量增加池子数量时，显得尤为重要。
+Together, singleton and flash accounting enable more efficient routing across multiple v4 pools, reducing the cost of liquidity fragmentation. This is especially useful given the introduction of hooks, which will greatly increase the number of pools.
 
-> 注：如前所述，同样两种代币，使用了不同的 hook 进行部署，那么这两个池是不同的。因此，hook 会导致池子数量的增加。但是由于闪电记账可极大减少跨多个池的交易成本，因此 hook 的引入并不会导致交易成本大量增加。
+> Note: As mentioned earlier, if the same two tokens are deployed with different hooks, the resulting pools will be distinct, leading to an increase in the number of pools. However, since flash accounting can significantly reduce the cost of transactions across multiple pools, the introduction of hooks does not result in a substantial increase in transaction costs.
 
-## 4 Native ETH | 原生 ETH
+## 4 NATIVE ETH
 
-Uniswap v4 再次在交易对中支持原生 ETH。在 Uniswap v1 中，所有交易对都严格基于 ETH 与 ERC-20 的组合，到了 Uniswap v2，由于实现复杂度和对 WETH/ETH 流动性分散的担忧，原生 ETH 被移除。单例和闪电记账解决了这些问题，因此 Uniswap v4 可以同时支持 WETH 与原生 ETH。
+Uniswap v4 is bringing back native ETH in trading pairs. While Uniswap v1 was strictly ETH paired against ERC-20 tokens, native ETH pairs were removed in Uniswap v2 due to implementation complexity and concerns of liquidity fragmentation across WETH and ETH pairs. Singleton and flash accounting mitigate these problems, so Uniswap v4 allows for both WETH and ETH pairs.
 
-> 注：在 Uniswap v4 中，每一种代币都需要一个唯一的合约地址，原生 ETH 则使用 `address(0)` 表示。
+> Note: In Uniswap v4, each token requires a unique contract address, with native ETH represented by `address(0)`.
 
-原生 ETH 转账消耗的 gas 大约为 ERC-20 转账的一半（转移 ETH 需 21k gas，而转移 ERC-20 代币需 40k gas）。目前 Uniswap v2 和 v3 要求大多数用户在 Uniswap 协议上开始（或结束）交易时，将 ETH 封装成 WETH（或反之），从而带来了额外的 gas 开销。根据交易数据统计，大部分用户都会用 ETH 开始或结束他们的交易，这带来了额外的不必要的复杂性。
+Native ETH transfers are about half the gas cost of ERC-20 transfers (21k gas for ETH and around 40k gas for ERC-20s). Currently Uniswap v2 and v3 require the vast majority of users to wrap (unwrap) their ETH to (from) WETH before (after) trading on the Uniswap Protocol, requiring extra gas. According to transaction data, the majority of users start or end their transactions in ETH, adding this additional unneeded complexity.
 
-## 5 Custom Accounting | 自定义记账
+## 5 CUSTOM ACCOUNTING
 
-Uniswap v4 新增了自定义记账功能，它允许 hook 开发者利用 hook 返回的差额（deltas）、用户与 hook 借贷的代币数量来修改用户操作行为。这可被合约开发者用于实现诸如：在移除头寸时增加提现费用、为 LP 定义不同的费率分配模型，或者在 hook 中进行撮合等操作，同时仍可利用 Uniswap v4 自身的内部集中流动性逻辑。
+Newly introduced in Uniswap v4 is custom accounting - which allows hook developers to alter end user actions utilizing hook returned deltas, token amounts that are debited/credited to the user and credited/debited to the hook, respectively. This allows hook developers to potentially add withdrawal fees on LP positions, customized LP fee models, or match against some flow, all while ultimately utilizing the internal concentrated liquidity native to
+Uniswap v4.
 
-值得强调的是，hook 开发者也可以完全舍弃集中流动性模型，根据 v4 交易参数创建定制化曲线（自定义 AMM）。这为集成方创造了接口可组合性 —— 允许 hook 将交易参数映射为其内部逻辑。
+Importantly, hook developers can also forgo the concentrated liquidity model entirely, creating custom curves from the v4 swap parameters. This creates interface composability for integrators - allowing the hook to map the swap parameters to their internal logic.
 
-在 Uniswap v3 中，用户必须依赖该版本自带的集中流动性 AMM。自推出以来，集中流动性模型已在 DeFi 市场获得了广泛应用。虽然集中流动性可以支持大多数流动性管理策略，但对于某些特定策略而言，它可能带来额外 gas 开销。
+> Note: Hooks can be used not only to redistribute fees and implement custom callback logic but also to enable an entirely independent AMM algorithm.
 
-一个可能的例子是：利用 Uniswap v4 hook 实现 Uniswap v2，它完全跳过内部集中流动性模型，而在 hook 内部实现一个常数乘积做市商。使用自定义记账比在集中流动性的数学算法中实现一个类似的策略更加节省成本。
+In Uniswap v3, users were required to utilize the concentrated liquidity AMM introduced in the same version. Since their introduction, concentrated liquidity AMMs have become widely used as the base liquidity provision strategy in the decentralized finance markets. While concentrated liquidity is able to support most arbitrary liquidity provision strategies, it may require increased gas overhead to implement specific strategies.
 
-相比从零开始自研一套自定义 AMM，开发者使用自定义记账的优势是可以利用单例、闪电记账和 ERC-6909。这些特性可支持更便宜的多跳交易，安全优势，并且流程更易集成。开发者也能够受益于一套经过充分审计的底层代码，以实现他们自己的 AMM。
+One possible example is a Uniswap v2 on Uniswap v4 hook, which bypasses the internal concentrated liquidity model entirely - utilizing a constant product market maker fully inside of the hook. Using custom accounting is cheaper than creating a similar strategy in the concentrated liquidity math.
 
-自定义记账也支持对流动性策略进行快速实验，在过去，这种实验需要创建一套全新的 AMM。创建一套自定义 AMM 需要大量的技术资源和资金，这对于大多数人而言，从经济上不太可行。
+The benefit of custom accounting for developers - compared to rolling a custom AMM - is the singleton, flash accounting, and ERC-6909. These features support cheaper multi-hop swaps, security benefits, and easier integration for flow. Developers should also benefit from a well-audited code-base for the basis of their AMM.
 
-## 6 Other Notable Features | 其它值得关注的特性
+Custom accounting will also support experimentation in liquidity provision strategies, which historically requires the creation of an entirely new AMM. Creating a custom AMM requires significant technical resources and investment, which may not be economically viable for many.
 
-### 6.1 ERC-6909 Accounting | ERC-6909 记账
+## 6 OTHER NOTABLE FEATURES
 
-Uniswap v4 支持在单例合约内直接铸造/销毁 ERC-6909 代币，以进行多样化的代币记账，详见 ERC-6909 标准 [7]。现在用户可以在单例合约内直接持有这些代币，避免与合约之间进行 ERC-20 代币转移操作。对于那些需要在多个区块和交易中频繁与合约交互的用户和 hook（如高频交易者、流动性提供者，或自定义记账 hook）而言，这一特性尤为重要。
+### 6.1 ERC-6909 Accounting
 
-### 6.2 Governance update | 治理更新
+Uniswap v4 supports the minting/burning of singleton-implemented ERC-6909 tokens for additional token accounting, described in the ERC-6909 specification [7]. Users can now keep tokens within the singleton and avoid ERC-20 transfers to and from the contract. This will be especially valuable for users and hooks who continually use the same tokens over multiple blocks or transactions, like frequent swappers, liquidity providers, or custom accounting hooks.
 
-与 Uniswap v3 类似，Uniswap v4 允许治理层（Governance）获取部分交易手续费（swap fee），但有一个上限，这部分费用是叠加在 LP 费率之上的。与 Uniswap v3 不同的是，Uniswap v4 的治理层无法控制可使用的费率档或 tick spacing 范围。
+> Note: ERC-6909 is a multi-token standard designed as a simplified and more efficient alternative to ERC-1155. Unlike ERC-1155, ERC-6909 removes features such as callbacks and batch operations, focusing solely on the core functionality of multi-token management, thereby improving the gas efficiency of the contract.
 
-### 6.3 Gas reductions | Gas 降低
+### 6.2 Governance updates
 
-如前所述，Uniswap v4 通过闪电记账、单例模型和支持原生 ETH 等方式显著优化了 gas 成本。此外，hook 的引入使得在 Uniswap v2 和 Uniswap v3 中内置的价格预言机功能变得不再必要，所以基础池不再需要预言机相关的功能，并且可以在每个区块的首笔 swap 交易中节省大约 15k gas。
+Similar to Uniswap v3, Uniswap v4 allows governance the ability to take up to a capped percentage of the swap fee on a particular pool, which are additive to LP fees. Unlike in Uniswap v3, governance does not control the permissible fee tiers or tick spacings.
 
-### 6.4 donate() | 捐赠
+> Note: In Uniswap v4, the protocol fee is configured per pool and can be set up to a maximum of 0.1% (1000 pips). The protocol fee is deducted first from the input tokens, followed by the LP fee being deducted from the remaining tokens.
 
-`donate()` 允许用户、集成方和 hook 直接向当前价格区间（in-range）的流动性提供者捐赠池内一种或两种代币。该功能依赖交易费记账系统以实现高效的支付。交易费支付系统能够只支持使用该池的任意一种代币进行支付。一个潜在的用例是，为在 TWAMM 订单中提供流动性的用户提供奖励，或实现某些新的费用分配系统。
+### 6.3 Gas reductions
 
-## 7 Summary | 总结
+As discussed above, Uniswap v4 introduces meaningful gas optimizations through flash accounting, the singleton model, and support for native ETH. Additionally, the introduction of hooks makes the protocol-enshrined price oracle that was included in Uniswap v2 and Uniswap v3 unnecessary, which also means base pools forgo the oracle altogether and save around 15k gas on the first swap on a pool in each block.
 
-总的来说，Uniswap v4 是一个去托管的、不可升级的，且无许可的 AMM 协议。它构建在 Uniswap v3 集中流动性模型的基础上，通过 hook 引入了定制化池的功能。与 hook 相补充的其它架构改动，如单例合约：在单个合约中保存所有池状态；闪电记账：高效地确保每个池的资金完整性。此外，hook 开发者可选择完全跳过集中流动性，利用 v4 单例作为任意的记账结算层。其它一些改进，如原生 ETH 支持、ERC-6909 记账、新的费用机制和直接向流动性提供者捐赠等。
+### 6.4 donate()
 
-## References | 参考文献
+`donate()` allows users, integrators, and hooks to directly pay in-range liquidity providers in either or both of the tokens of the pool. This functionality relies on the fee accounting system to facilitate efficient payments. The fee payment system can only support either of the tokens in the token pair for the pool. Potential use-cases could be tipping in-range liquidity providers on TWAMM orders or new types of fee systems.
+
+## 7 SUMMARY
+
+In summary, Uniswap v4 is a non-custodial, non-upgradeable, and permissionless AMM protocol. It builds upon the concentrated liquidity model introduced in Uniswap v3 with customizable pools through hooks. Complementary to hooks are other architectural changes like the singleton contract which holds all pool state in one contract, and flash accounting which enforces pool solvency across each pool efficiently. Additionally, hook developers can elect to bypass the concentrated liquidity entirely, utilizing the v4 singleton as an arbitrary delta resolver. Some other improvements are native ETH support, ERC-6909 balance accounting, new fee mechanisms, and the ability to donate to in-range liquidity providers.
+
+## REFERENCES
 
 * [1] Austin Adams, Ciamac Moallemi, Sara Reynolds, and Dan Robinson. 2024. am-AMM: An Auction-Managed Automated Market Maker. arXiv preprint arXiv:2403.03367 (2024).
 * [2] Hayden Adams. 2018. Uniswap v1 Core. Retrieved Jun 12, 2023 from https://hackmd.io/@HaydenAdams/HJ9jLsfTz
