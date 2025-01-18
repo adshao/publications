@@ -172,7 +172,7 @@ UNI governance can add additional transaction fee tiers. When adding a fee tier,
 
 > Note: Regarding the concept of ticks and tick spacing, please refer to section 6.1.
 >
-> Simply put, each tick (point) corresponds to a price range which can hold a liquidity of tokens. To aggregate the liquidity of different positions, the price space is divided into ticks that can be initialized, with only ticks divisible by tickSpacing allowed to be initialized. Inside a tick, the trading mechanism is similar to v2; once the liquidity of that tick is consumed, the price moves to the next tick and repeats the process. Thus, smaller tickSpacing means more continuous liquidity and smaller slippage but also higher gas consumption.
+> Simply put, each tick (point) corresponds to a price. To aggregate the liquidity of different positions, the price space is divided into ticks that can be initialized, with only ticks divisible by tickSpacing allowed to be initialized. Inside a tick, the trading mechanism is similar to v2; once the liquidity of that tick is consumed, the price moves to the next tick and repeats the process. Thus, smaller tickSpacing means more continuous liquidity and smaller slippage but also higher gas consumption.
 >
 > Therefore, each fee tier's tickSpacing is a trade-off value. Generally, higher fee tiers have larger tickSpacing because higher fees indicate greater volatility of the trading pair, and traders can tolerate larger slippage.
 >
