@@ -80,9 +80,11 @@ modifier onlyWhenUnlocked() {
 
 `unlock` 函数用于解锁合约，只有合约处于 `unlocked` 状态，才能执行闪电记账操作。
 
-调用方（如 periphery 合约）需要实现 `IUnlockCallback` 的 `unlockCallback` 接口，在 `unlockCallback` 中将完成 token transfer 操作，确保与 `PoolManager` 合约之间的闪电记账余额为 0。
+调用方（如 periphery 合约）需要实现 `IUnlockCallback` 的 `unlockCallback` 接口，在 `unlockCallback` 中将完成 token transfer 操作，确保与 `PoolManager` 合约之间的记账余额为 0。
 
-`unlock` 函数最后会调用 `NonzeroDeltaCount.read()` 检查闪电记账余额是否为 0，如果不为 0，则会回滚。
+`unlock` 函数最后会调用 `NonzeroDeltaCount.read()` 检查是否有记账余额不为 0 的账户地址，如果是，则回滚交易。
+
+因此，在结束 `unlock` 调用时，合约确保所有账户的闪电记账余额为 0，即所有账户都完成了还款或者取款操作。
 
 ```solidity
 /// @inheritdoc IPoolManager
@@ -170,7 +172,7 @@ function initialize(PoolKey memory key, uint160 sqrtPriceX96) external noDelegat
 
 返回：
 
-- `callerDelta`：调用方的闪电记账余额变化量
+- `callerDelta`：调用方的记账余额变化量
 - `feesAccrued`：调用方的手续费
 
 ```solidity
@@ -223,14 +225,14 @@ function modifyLiquidity(
 调用池子的 [pool.modifyLiquidity](./PoolLibrary.md#modifyliquidity) 函数修改流动性。
 返回的 `principalDelta` 为调用方的流动性变化量，负数表示需要调用方存入代币，正数表示允许调用方取回代币；`feesAccrued` 为待调用方领取的手续费。
 
-`callerDelta = principalDelta + feesAccrued;` 表示调用方的闪电记账余额变化量。
+`callerDelta = principalDelta + feesAccrued;` 表示调用方的记账余额变化量。
 
 调用 Hooks Library 的 [afterModifyLiquidity](./HooksLibrary.md#aftermodifyliquidity) 函数，允许 Hooks 合约将旧 `callerDelta` 拆成新 `callerDelta` 和 `hookDelta`。
 
-* 如果 `hookDelta` 不为 0，则调用 [_accountPoolBalanceDelta](#_accountpoolbalancedelta) 函数，为 Hooks 合约记录闪电记账余额变化量。
-* 调用 [_accountPoolBalanceDelta](#_accountpoolbalancedelta) 函数，为调用方记录闪电记账余额变化量。
+* 如果 `hookDelta` 不为 0，则调用 [_accountPoolBalanceDelta](#_accountpoolbalancedelta) 函数，为 Hooks 合约记录余额变化量。
+* 调用 [_accountPoolBalanceDelta](#_accountpoolbalancedelta) 函数，为调用方记录余额变化量。
 
-注意：`hookDelta` 和 `callerDelta` 分别为需要 Hooks 合约和调用方结算的闪电记账余额变化量。
+注意：`hookDelta` 和 `callerDelta` 分别为需要 Hooks 合约和调用方结算的余额变化量。
 * 如果 `delta` 为正，则允许 Hooks 合约或调用方取回代币；
 * 如果 `delta` 为负，则需要 Hooks 合约或调用方存入代币。
 * 高 128 位表示 `token0` 的余额变化量，低 128 位表示 `token1` 的余额变化量。
@@ -247,7 +249,7 @@ function modifyLiquidity(
 
 返回：
 
-- `BalanceDelta` swapDelta：交易的闪电记账余额变化量
+- `BalanceDelta` swapDelta：交易的余额变化量
 
 ```solidity
 /// @inheritdoc IPoolManager
@@ -300,14 +302,14 @@ function swap(PoolKey memory key, IPoolManager.SwapParams memory params, bytes c
 
 调用 Hooks Library 的 [beforeSwap](./HooksLibrary.md#beforeswap) 函数，获取本次交易的数量、交易前的余额变化量和 LP 手续费。
 
-调用 `_swap` 函数执行交易，计算交易的闪电记账余额变化量 `swapDelta`，该值为需要调用方结算的代币数量。
+调用 `_swap` 函数执行交易，计算交易的余额变化量 `swapDelta`，该值为需要调用方结算的代币数量。
 
-  * 在 `_swap` 函数中，会调用 [pool.swap](./PoolLibrary.md#swap) 函数执行交易，计算交易的闪电记账余额变化量 `swapDelta`。
+  * 在 `_swap` 函数中，会调用 [pool.swap](./PoolLibrary.md#swap) 函数执行交易，计算交易的余额变化量 `swapDelta`。
 
 调用 Hooks Library 的 [afterSwap](./HooksLibrary.md#afterswap) 函数，允许 Hooks 合约将旧 `swapDelta` 拆成新 `swapDelta` 和 `hookDelta`。
 
-* 如果 `hookDelta` 不为 0，则调用 [_accountPoolBalanceDelta](#_accountpoolbalancedelta) 函数，为 Hooks 合约记录闪电记账余额变化量。
-* 调用 [_accountPoolBalanceDelta](#_accountpoolbalancedelta) 函数，为调用方记录闪电记账余额变化量 `swapDelta`。
+* 如果 `hookDelta` 不为 0，则调用 [_accountPoolBalanceDelta](#_accountpoolbalancedelta) 函数，为 Hooks 合约记录余额变化量。
+* 调用 [_accountPoolBalanceDelta](#_accountpoolbalancedelta) 函数，为调用方记录余额变化量 `swapDelta`。
   * 这两个余额分别需要 Hooks 合约和调用方结算。
   * 如果为正，则允许 Hooks 合约或调用方取回代币；如果为负，则需要 Hooks 合约或调用方存入代币。
   * 高 128 位表示 `token0` 的余额变化量，低 128 位表示 `token1` 的余额变化量。
@@ -343,12 +345,12 @@ function _accountDelta(Currency currency, int128 delta, address target) internal
 }
 ```
 
-通过 `currency.applyDelta` 函数，为某个地址记录某种代币的闪电记账余额变化量。
+通过 [currency.applyDelta](./CurrencyDeltaLibrary.md#applydelta) 函数，为某个地址记录某种代币的余额变化量。
 返回修改前后的余额，由于 `delta != 0`，因为，`previous` 和 `next` 至多有一个为 `0`。
-如果修改后的余额为 0，则调用 `NonzeroDeltaCount.decrement()` 减少闪电记账余额不为 0 的地址数量，否则增加。
+如果修改后的余额为 0，则调用 `NonzeroDeltaCount.decrement()` 减少余额不为 0 的地址数量，否则增加。
 注意：这里 `NonzeroDeltaCount` 基于任何 `target` 地址和 `currency` 进行统计，因此是全局的。
 
-回顾前面介绍的 [unlock](#unlock) 函数，`NonzeroDeltaCount.read()` 用于检查调用结束后闪电记账余额是否为 0。
+回顾前面介绍的 [unlock](#unlock) 函数，`NonzeroDeltaCount.read()` 用于检查调用结束后余额不为 0 的地址数量。
 
 ### donate
 
@@ -383,11 +385,11 @@ function donate(PoolKey memory key, uint256 amount0, uint256 amount1, bytes call
 
 调用 Hooks Library 的 [beforeDonate](./HooksLibrary.md#beforedonate) 函数。
 
-调用池子的 [pool.donate](./PoolLibrary.md#donate) 函数，捐赠代币，返回闪电记账余额变化量 `delta`。
+调用池子的 [pool.donate](./PoolLibrary.md#donate) 函数，捐赠代币，返回余额变化量 `delta`。
 
 注意：这里 `amount0` 和 `amount1` 都是 `uint256` 类型，在 `pool.donate` 函数中，会将 `amount0` 和 `amount1` 取反，确保 `delta` 中的 `amount0` 和 `amount1` 为负数，表示需要调用方存入的代币数量。
 
-调用 [_accountPoolBalanceDelta](#_accountpoolbalancedelta) 函数，为调用方记录闪电记账余额变化量。
+调用 [_accountPoolBalanceDelta](#_accountpoolbalancedelta) 函数，为调用方记录余额变化量。
 
 调用 Hooks Library 的 [afterDonate](./HooksLibrary.md#afterdonate) 函数。
 
@@ -434,7 +436,7 @@ function take(Currency currency, address to, uint256 amount) external onlyWhenUn
 
 ### settle
 
-`PoolManager` 提供 `settle` 和 `settleFor` 两个方法为调用方 `msg.sender` 和指定地址 `target` 结算闪电记账余额。这两个方法都调用 `_settle` 函数完成。
+`PoolManager` 提供 `settle` 和 `settleFor` 两个方法为调用方 `msg.sender` 和指定地址 `target` 结算应付的代币余额。这两个方法都调用 `_settle` 函数完成。
 
 在调用该方法前，需要先调用 `sync` 方法同步代币地址和余额。
 
@@ -442,7 +444,7 @@ function take(Currency currency, address to, uint256 amount) external onlyWhenUn
 
 1. 调用 `sync` 方法同步代币地址和余额。
 2. transfer token
-3. 调用 `settle` 或 `settleFor` 方法结算闪电记账余额。
+3. 调用 `settle` 或 `settleFor` 方法结算代币余额。
 
 ```solidity
 // if settling native, integrators should still call `sync` first to avoid DoS attack vectors
@@ -471,7 +473,7 @@ function _settle(address recipient) internal returns (uint256 paid) {
 
 否则，获取 `PoolManager` 的 `currency` 代币的当前余额，比较结算前 `sync` 的余额，计算出结算金额（即 transfer token 的数量）。这里要求结算的金额 `paid` 为正数或 0。
 
-调用 `_accountDelta` 函数，为 `recipient` 地址记录结算的闪电记账余额变化量。
+调用 `_accountDelta` 函数，为 `recipient` 地址记录结算的余额变化量。
 
 ### clear
 
@@ -498,13 +500,13 @@ function clear(Currency currency, uint256 amount) external onlyWhenUnlocked {
 }
 ```
 
-通过 `currency.getDelta` 获取调用方 `msg.sender` 的闪电记账余额。
+通过 `currency.getDelta` 获取调用方 `msg.sender` 的记账余额。
 
 如果需要清零的代币数量 `amount` 与当前余额不一致，则回滚。
 
 由于 `amount` 为非负数，因此调用方只能放弃应取回的代币权益。
 
-调用 `_accountDelta` 函数，为调用方记录清零的闪电记账余额。
+调用 `_accountDelta` 函数，为调用方清零记账余额。
 
 ### mint
 
@@ -530,11 +532,11 @@ function clear(Currency currency, uint256 amount) external onlyWhenUnlocked {
 
 通过 `CurrencyLibrary.fromId` 获取代币地址 `address`。
 
-由于 `amount` 为非负数，因此从闪电记账余额中增加调用方应付的 `amount` 数量的代币，然后调用 `_mint` 函数向指定地址发放 ERC6909 代币（只记录余额变化，没有 `transfer token` 操作）。
+由于 `amount` 为非负数，因此从记账余额中增加调用方应付的 `amount` 数量的代币，然后调用 `_mint` 函数向指定地址发放 ERC6909 代币（只记录余额变化，没有 `transfer token` 操作）。
 
 ### burn
 
-与 [mint](#mint) 类似，`burn` 通过 ERC6909 `burn token` 的形式销毁应取回的代币，同时在闪电记账余额中增加对应数量的代币，从而避免了执行 `transfer token` 操作。
+与 [mint](#mint) 类似，`burn` 通过 ERC6909 `burn token` 的形式销毁应取回的代币，同时在记账余额中增加对应数量的代币，从而避免了执行 `transfer token` 操作。
 
 输入参数：
 
@@ -554,7 +556,7 @@ function burn(address from, uint256 id, uint256 amount) external onlyWhenUnlocke
 
 通过 `CurrencyLibrary.fromId` 获取代币地址 `address`。
 
-由于 `amount` 为非负数，因此从闪电记账余额中增加调用方应取回的 `amount` 数量的代币，然后调用 `_burnFrom` 函数销毁对应数量的 ERC6909 代币（只记录余额变化，没有 `transfer token` 操作）。
+由于 `amount` 为非负数，因此从记账余额中增加调用方应取回的 `amount` 数量的代币，然后调用 `_burnFrom` 函数销毁对应数量的 ERC6909 代币（只记录余额变化，没有 `transfer token` 操作）。
 
 ### updateDynamicLPFee
 
