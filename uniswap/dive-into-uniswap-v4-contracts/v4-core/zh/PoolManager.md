@@ -2,6 +2,20 @@
 
 PoolManager 是 Uniswap v4 的核心合约，采用单例合约模式，负责管理所有 Uniswap v4 池子，提供池子所有对外接口，包括创建、修改流动性、交易等操作。
 
+PoolManager 的主要接口如下：
+
+- [unlock](#unlock)：解锁合约
+- [initialize](#initialize)：初始化池子
+- [modifyLiquidity](#modifyliquidity)：修改流动性
+- [swap](#swap)：交易代币，从 `token0` 交换 `token1`，或者相反
+- [donate](#donate)：捐赠代币
+- [sync](#sync)：同步代币余额
+- [take](#take)：取回代币，从 `PoolManager` 完成 transfer token 操作
+- [settle](#settle)：结算代币
+- [clear](#clear)：放弃 `PoolManager` 中应取回的代币，完成余额清零操作
+- [mint](#mint)：通过 ERC6909 token 完成取回代币操作
+- [burn](#burn)：通过 销毁 ERC6909 token，完成向 `PoolManager` 存入代币操作
+
 ## 全局变量
 
 作为单例合约，我们首先关注 PoolManager 是如何保存所有池子状态的。PoolManager 定义了一个全局变量 `_pools`，用于保存所有池子的状态。
@@ -239,7 +253,7 @@ function modifyLiquidity(
 
 ### swap
 
-交易。该方法会调用闪电记账操作，因此需要 `onlyWhenUnlocked` 修饰符。
+交易代币。该方法会调用闪电记账操作，因此需要 `onlyWhenUnlocked` 修饰符。
 
 输入参数如下：
 
