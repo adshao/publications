@@ -433,7 +433,7 @@ function sync(Currency currency) external {
 
 ### take
 
-从 `PoolManager` 取回指定数量的代币，并发送到指定地址。
+从 `PoolManager` 取回指定数量的代币，并发送到指定地址。该操作会先调用 `_accountDelta` 函数，记录调用方的余额变化量，然后调用 `currency.transfer` 函数完成 transfer token 操作。
 
 可以使用该方法完成闪电贷 `flash loan` 操作。
 
