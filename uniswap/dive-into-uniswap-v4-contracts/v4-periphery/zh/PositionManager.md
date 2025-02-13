@@ -232,13 +232,6 @@ return;
 
 解码参数，调用 [_mint](#_mint) 方法。
 
-##### _mapRecipient
-
-其中，`_mapRecipient` 方法用于将 `owner` 转换为 `recipient`：
-* 如果 `owner` 为 `address(1)`，则表示 `msgSender()`
-* 如果 `owner` 为 `address(2）`，则表示 `PositionManager` 合约地址
-* 否则，使用 `owner` 地址本身
-
 #### MINT_POSITION_FROM_DELTAS
 
 使用闪电记账余额创建头寸。
@@ -259,7 +252,7 @@ return;
 
 解码参数，调用 [_mintFromDeltas](#_mintfromdeltas) 方法。
 
-这里同样适用 [_mapRecipient](#_maprecipient) 方法计算 `owner` 地址。
+这里同样适用 [_mapRecipient](./BaseActionsRouter.md#_maprecipient) 方法计算 `owner` 地址。
 
 #### BURN_POSITION
 
@@ -299,7 +292,7 @@ return;
 
 解码参数，调用 [_takePair](#_takepair) 方法。
 
-使用 [_mapRecipient](#_maprecipient) 方法计算接收代币的 `recipient` 地址。
+使用 [_mapRecipient](./BaseActionsRouter.md#_maprecipient) 方法计算接收代币的 `recipient` 地址。
 
 #### SETTLE
 
@@ -311,19 +304,7 @@ _settle(currency, _mapPayer(payerIsUser), _mapSettleAmount(amount, currency));
 return;
 ```
 
-解码参数，调用 [_settle](#_settle) 方法。
-
-##### _mapPayer
-
-其中，`_mapPayer` 方法根据 `payerIsUser` 来确定支付方：
-* 如果 `payerIsUser` 为 `true`，则支付方为 `msgSender()`，即调用方
-* 否则，支付方为 `PositionManager` 合约地址
-
-##### _mapSettleAmount
-
-`_mapSettleAmount` 方法根据 `amount` 和 `currency` 计算结算的代币数量：
-* 如果 `amount` 为 `0`，则表示结算所有欠款
-* 否则，表示结算指定 `amount` 数量的代币
+解码参数，使用 [_mapPayer](./BaseActionsRouter.md#_mappayer) 方法确定支付方；使用 [_mapSettleAmount](./DeltaResolver.md#_mapsettleamount) 方法计算结算的代币数量；最后，调用 [_settle](./DeltaResolver.md#_settle) 方法。
 
 #### TAKE
 
@@ -335,16 +316,10 @@ _take(currency, _mapRecipient(recipient), _mapTakeAmount(amount, currency));
 return;
 ```
 
-解码参数，调用 [_take](#_take) 方法。
+解码参数，调用 [_take](./DeltaResolver.md#_take) 方法。
 
-其中，使用 [_mapRecipient](#_maprecipient) 方法计算接收代币的 `recipient` 地址。
-使用 [_mapTakeAmount](#_maptakeamount) 方法计算提取的代币数量。
-
-##### _mapTakeAmount
-
-`_mapTakeAmount` 方法根据 `amount` 和 `currency` 计算提取的代币数量：
-* 如果 `amount` 为 `0`，则表示提取所有余额
-* 否则，表示提取指定 `amount` 数量的代币
+其中，使用 [_mapRecipient](./BaseActionsRouter.md#_maprecipient) 方法计算接收代币的 `recipient` 地址。
+使用 [_mapTakeAmount](./DeltaResolver.md#_maptakeamount) 方法计算提取的代币数量。
 
 #### CLOSE_CURRENCY
 
@@ -382,7 +357,7 @@ return;
 
 解码参数，调用 [_sweep](#_sweep) 方法。
 
-其中，使用 [_mapRecipient](#_maprecipient) 方法计算接收代币的 `to` 地址。
+其中，使用 [_mapRecipient](./BaseActionsRouter.md#_maprecipient) 方法计算接收代币的 `to` 地址。
 
 #### WRAP
 
@@ -396,52 +371,7 @@ return;
 
 解码参数，调用 [_wrap](#_wrap) 方法。
 
-使用 [_mapWrapUnwrapAmount](#_mapwrapunwrapamount) 方法计算包装的代币数量。
-
-##### _mapWrapUnwrapAmount
-
-计算包装/解包的代币数量。
-
-输入参数：
-
-- `inputCurrency`：输入的代币，可以是原生代币或包装代币
-- `amount`：包装/解包的数量，可以是 `CONTRACT_BALANCE`、`OPEN_DELTA` 或具体数量
-- `outputCurrency`：包装/解包后的代币，用户在 `PoolManager` 上可能欠费的代币
-
-```solidity
-/// @notice Calculates the sanitized amount before wrapping/unwrapping.
-/// @param inputCurrency The currency, either native or wrapped native, that this contract holds
-/// @param amount The amount to wrap or unwrap. Can be CONTRACT_BALANCE, OPEN_DELTA or a specific amount
-/// @param outputCurrency The currency after the wrap/unwrap that the user may owe a balance in on the poolManager
-function _mapWrapUnwrapAmount(Currency inputCurrency, uint256 amount, Currency outputCurrency)
-    internal
-    view
-    returns (uint256)
-{
-    // if wrapping, the balance in this contract is in ETH
-    // if unwrapping, the balance in this contract is in WETH
-    uint256 balance = inputCurrency.balanceOf(address(this));
-    if (amount == ActionConstants.CONTRACT_BALANCE) {
-        // return early to avoid unnecessary balance check
-        return balance;
-    }
-    if (amount == ActionConstants.OPEN_DELTA) {
-        // if wrapping, the open currency on the PoolManager is WETH.
-        // if unwrapping, the open currency on the PoolManager is ETH.
-        // note that we use the DEBT amount. Positive deltas can be taken and then wrapped.
-        amount = _getFullDebt(outputCurrency);
-    }
-    if (amount > balance) revert InsufficientBalance();
-    return amount;
-}
-```
-
-获取 `PositionManager` 合约的 `inputCurrency` 代币余额。
-
-如果 `amount` 为 `1 << 255`，则表示使用代币余额作为包装/解包的数量。
-
-如果 `amount` 为 `0`，则表示使用 `PositionManager` 在 `PoolManager` 上 `outputCurrency` 的欠款作为包装/解包的数量。
-确保 `inputCurrency` 代币余额大于欠款数量。
+使用 [_mapWrapUnwrapAmount](./DeltaResolver.md#_mapwrapunwrapamount) 方法计算包装的代币数量。
 
 #### UNWRAP
 
@@ -455,7 +385,7 @@ return;
 
 解码参数，调用 [_unwrap](#_unwrap) 方法。
 
-使用 [_mapWrapUnwrapAmount](#_mapwrapunwrapamount) 方法计算解包的代币数量。
+使用 [_mapWrapUnwrapAmount](./DeltaResolver.md#_mapwrapunwrapamount) 方法计算解包的代币数量。
 
 ### _increase
 
@@ -535,7 +465,7 @@ function _increaseFromDeltas(uint256 tokenId, uint128 amount0Max, uint128 amount
 }
 ```
 
-`_getFullCredit` 方法确保 `PositionManager` 在 `PoolManager` 中的闪电记账余额一定是正数，即拥有可取回的代币，否则将回滚交易。
+[_getFullCredit](./DeltaResolver.md#_getfullcredit) 方法确保 `PositionManager` 在 `PoolManager` 中的闪电记账余额一定是非负数，即拥有可取回的代币，否则将回滚交易。
 
 ### _decrease
 
@@ -655,7 +585,7 @@ function _mint(
 - `owner`：头寸的所有者
 - `hookData`：Hook 数据，用于传入 `beforeModifyLiquidity` 以及 `afterModifyLiquidity` Hooks 函数
 
-与 `_mint` 方法类似，不同之处在于 `_mintFromDeltas` 无需指定具体的流动性数量，而是通过查询当前 `PositionManager` 合约在 `PoolManager` 中关于池子两种代币的闪电记账余额，然后计算出需要增加的流动性数量。
+与 `_mint` 方法类似，不同之处在于 `_mintFromDeltas` 无需指定具体的流动性数量，而是通过 [_getFullCredit](./DeltaResolver.md#_getfullcredit) 查询当前 `PositionManager` 合约在 `PoolManager` 中关于池子两种代币的闪电记账余额，然后计算出需要增加的流动性数量。
 
 最后再调用 [_mint](#_mint) 方法，创建头寸。
 
@@ -765,7 +695,9 @@ function _settlePair(Currency currency0, Currency currency1) internal {
 }
 ```
 
-调用 [_settle](#_settle) 方法，分别结算代币 0 和代币 1 的余额。此时 `PoolManager` 中的闪电记账余额一定是非负数，意味着需要调用方支付代币。代币的支付者是调用方，而非 `PositionManager`。
+调用 [_settle](./DeltaResolver.md#_settle) 方法，分别结算代币 0 和代币 1 的余额。此时 `PoolManager` 中的闪电记账余额一定是非负数，意味着需要调用方支付代币。代币的支付者是调用方，而非 `PositionManager`。
+
+使用 [_getFullDebt](./DeltaResolver.md#_getfulldebt) 方法获取 `PositionManager` 在 `PoolManager` 中的欠款。
 
 ### _takePair
 
@@ -778,7 +710,7 @@ function _takePair(Currency currency0, Currency currency1, address recipient) in
 }
 ```
 
-调用 [_take](#_take) 方法，分别提取代币 0 和代币 1 的余额。此时 `PoolManager` 中的闪电记账余额一定是非负数，意味着允许调用方提取代币。
+调用 [_take](./DeltaResolver.md#_take) 方法，分别提取代币 0 和代币 1 的余额。根据 [_getFullCredit](./DeltaResolver.md#_getfullcredit) 获取 `PoolManager` 中的闪电记账余额一定是非负数，意味着允许调用方提取代币。
 
 ### _close
 
@@ -803,9 +735,9 @@ function _close(Currency currency) internal {
 
 调用 [poolManager.currencyDelta](../../v4-core/zh/PoolManager.md#currencydelta) 方法，获取 `PositionManager` 在 `PoolManager` 中的闪电记账余额。
 
-如果 `currencyDelta` 小于 0，即代表 `PositionManager` 欠款，调用 [_settle](#_settle) 方法，向 `PoolManager` 支付代币。
+如果 `currencyDelta` 小于 0，即代表 `PositionManager` 欠款，调用 [_settle](./DeltaResolver.md#_settle) 方法，向 `PoolManager` 支付代币。
 
-否则，调用 [_take](#_take) 方法，从 `PoolManager` 提取代币。
+否则，调用 [_take](./DeltaResolver.md#_take) 方法，从 `PoolManager` 提取代币。
 
 ### _clearOrTake
 
@@ -833,13 +765,13 @@ function _clearOrTake(Currency currency, uint256 amountMax) internal {
 }
 ```
 
-获取 `PositionManager` 在 `PoolManager` 中的闪电记账余额。该值一定是非负数。
+使用 [_getFullCredit](./DeltaResolver.md#_getfullcredit) 获取 `PositionManager` 在 `PoolManager` 中的闪电记账余额。该值一定是非负数。
 
 如果 `delta` 为 0，直接返回。
 
 如果 `delta` 小于等于 `amountMax`，则调用 [poolManager.clear](../../v4-core/zh/PoolManager.md#clear) 方法，放弃代币。
 
-否则，调用 [_take](#_take) 方法，从 `PoolManager` 提取代币到调用方。
+否则，调用 [_take](./DeltaResolver.md#_take) 方法，从 `PoolManager` 提取代币到调用方。
 
 ### _sweep
 
@@ -856,70 +788,6 @@ function _sweep(Currency currency, address to) internal {
 调用 `currency.balanceOfSelf` 方法，获取 `PositionManager` 合约中的代币余额。
 
 如果余额大于 0，调用 `currency.transfer` 方法，将代币转入 `to` 地址。
-
-### _settle
-
-结算单个代币的欠款。需要向 `PoolManager` 支付代币。
-
-输入参数：
-
-- `currency`：代币
-- `payer`：支付者
-- `amount`：支付金额
-
-```solidity
-/// @notice Pay and settle a currency to the PoolManager
-/// @dev The implementing contract must ensure that the `payer` is a secure address
-/// @param currency Currency to settle
-/// @param payer Address of the payer
-/// @param amount Amount to send
-/// @dev Returns early if the amount is 0
-function _settle(Currency currency, address payer, uint256 amount) internal {
-    if (amount == 0) return;
-
-    poolManager.sync(currency);
-    if (currency.isAddressZero()) {
-        poolManager.settle{value: amount}();
-    } else {
-        _pay(currency, payer, amount);
-        poolManager.settle();
-    }
-}
-```
-
-如果 `amount` 为 0，直接返回。
-
-调用 [poolManager.sync](../../v4-core/zh/PoolManager.md#sync) 方法，同步 `poolManager` 中的代币余额。
-
-如果 `currency` 为 `ADDRESS_ZERO`，即原生 ETH，通过 `{value: amount}` 向 `poolManager` 转入 ETH，调用 [poolManager.settle](../../v4-core/zh/PoolManager.md#settle) 方法，结算记账余额。
-
-否则，调用 [_pay](#_pay) 方法，向 `poolManager` 支付 ERC20 代币，然后调用 [poolManager.settle](../../v4-core/zh/PoolManager.md#settle) 方法，结算记账余额。
-
-### _take
-
-提取单个代币的余额。
-
-输入参数：
-
-- `currency`：代币
-- `recipient`：接收者
-- `amount`：提取金额
-
-```solidity
-/// @notice Take an amount of currency out of the PoolManager
-/// @param currency Currency to take
-/// @param recipient Address to receive the currency
-/// @param amount Amount to take
-/// @dev Returns early if the amount is 0
-function _take(Currency currency, address recipient, uint256 amount) internal {
-    if (amount == 0) return;
-    poolManager.take(currency, recipient, amount);
-}
-```
-
-如果 `amount` 为 0，直接返回。
-
-调用 [poolManager.take](../../v4-core/zh/PoolManager.md#take) 方法，从 `poolManager` 提取代币。
 
 ### _modifyLiquidity
 
