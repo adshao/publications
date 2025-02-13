@@ -386,7 +386,7 @@ return;
 
 #### WRAP
 
-包装代币，将原生 `ETH` 包装成 `WETH`。
+包装代币，将 `PositionManager` 合约的原生 `ETH` 包装成 `WETH`。
 
 ```solidity
 uint256 amount = params.decodeUint256();
@@ -394,15 +394,68 @@ _wrap(_mapWrapUnwrapAmount(CurrencyLibrary.ADDRESS_ZERO, amount, Currency.wrap(a
 return;
 ```
 
+解码参数，调用 [_wrap](#_wrap) 方法。
+
+使用 [_mapWrapUnwrapAmount](#_mapwrapunwrapamount) 方法计算包装的代币数量。
+
+##### _mapWrapUnwrapAmount
+
+计算包装/解包的代币数量。
+
+输入参数：
+
+- `inputCurrency`：输入的代币，可以是原生代币或包装代币
+- `amount`：包装/解包的数量，可以是 `CONTRACT_BALANCE`、`OPEN_DELTA` 或具体数量
+- `outputCurrency`：包装/解包后的代币，用户在 `PoolManager` 上可能欠费的代币
+
+```solidity
+/// @notice Calculates the sanitized amount before wrapping/unwrapping.
+/// @param inputCurrency The currency, either native or wrapped native, that this contract holds
+/// @param amount The amount to wrap or unwrap. Can be CONTRACT_BALANCE, OPEN_DELTA or a specific amount
+/// @param outputCurrency The currency after the wrap/unwrap that the user may owe a balance in on the poolManager
+function _mapWrapUnwrapAmount(Currency inputCurrency, uint256 amount, Currency outputCurrency)
+    internal
+    view
+    returns (uint256)
+{
+    // if wrapping, the balance in this contract is in ETH
+    // if unwrapping, the balance in this contract is in WETH
+    uint256 balance = inputCurrency.balanceOf(address(this));
+    if (amount == ActionConstants.CONTRACT_BALANCE) {
+        // return early to avoid unnecessary balance check
+        return balance;
+    }
+    if (amount == ActionConstants.OPEN_DELTA) {
+        // if wrapping, the open currency on the PoolManager is WETH.
+        // if unwrapping, the open currency on the PoolManager is ETH.
+        // note that we use the DEBT amount. Positive deltas can be taken and then wrapped.
+        amount = _getFullDebt(outputCurrency);
+    }
+    if (amount > balance) revert InsufficientBalance();
+    return amount;
+}
+```
+
+获取 `PositionManager` 合约的 `inputCurrency` 代币余额。
+
+如果 `amount` 为 `1 << 255`，则表示使用代币余额作为包装/解包的数量。
+
+如果 `amount` 为 `0`，则表示使用 `PositionManager` 在 `PoolManager` 上 `outputCurrency` 的欠款作为包装/解包的数量。
+确保 `inputCurrency` 代币余额大于欠款数量。
+
 #### UNWRAP
 
-解包代币，将 `WETH` 解包成原生 `ETH`。
+解包代币，将 `PositionManager` 合约的 `WETH` 解包成原生 `ETH`。
 
 ```solidity
 uint256 amount = params.decodeUint256();
 _unwrap(_mapWrapUnwrapAmount(Currency.wrap(address(WETH9)), amount, CurrencyLibrary.ADDRESS_ZERO));
 return;
 ```
+
+解码参数，调用 [_unwrap](#_unwrap) 方法。
+
+使用 [_mapWrapUnwrapAmount](#_mapwrapunwrapamount) 方法计算解包的代币数量。
 
 ### _increase
 
@@ -919,3 +972,29 @@ function _pay(Currency currency, address payer, uint256 amount) internal overrid
 如果 `payer` 为 `PositionManager` 合约地址，直接调用 `currency.transfer` 方法，将代币转入 `poolManager`。
 
 否则，调用 `permit2.transferFrom` 方法，从 `payer` 账户中转出代币，转入 `poolManager`。这里需要 `payer` 提前调用 `permit` 方法授权 `PositionManager` 从 `payer` 账户中转出代币。
+
+### _wrap
+
+包装代币，将 `PositionManager` 合约的原生 `ETH` 包装成 `WETH`。
+
+```solidity
+/// @dev The amount should already be <= the current balance in this contract.
+function _wrap(uint256 amount) internal {
+    if (amount > 0) WETH9.deposit{value: amount}();
+}
+```
+
+调用 `WETH9.deposit` 方法，将 `amount` 数量的 `ETH` 包装成 `WETH`。
+
+### _unwrap
+
+解包代币，将 `PositionManager` 合约的 `WETH` 解包成原生 `ETH`。
+
+```solidity
+/// @dev The amount should already be <= the current balance in this contract.
+function _unwrap(uint256 amount) internal {
+    if (amount > 0) WETH9.withdraw(amount);
+}
+```
+
+调用 `WETH9.withdraw` 方法，将 `amount` 数量的 `WETH` 解包成 `ETH`。
