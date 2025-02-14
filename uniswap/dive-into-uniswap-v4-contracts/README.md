@@ -21,10 +21,10 @@ Similar to Uniswap v2/v3, Uniswap v4 contracts are also divided into two reposit
         * [CurrencyDelta.sol](./v4-core/en/CurrencyDeltaLibrary.md): CurrencyDelta Library contract, used to execute operations related to Flash Accounting.
         * [BalanceDelta.sol](./v4-core/en/BalanceDelta.md)：BalanceDelta defines the type of balance delta.
 
-* [v4-periphery](./v4-periphery/README.md) [[Github](https://github.com/Uniswap/v4-periphery/)]: Contains the peripheral contracts of Uniswap v4, mainly including:
-    * [PositionManager.sol](./v4-periphery/PositionManager.md): PositionManager contract, used to manage the minting, burning, and liquidity modification of positions, calling [PoolManager](./v4-core/en/PoolManager.md) to execute specific operations.
+* [v4-periphery](./v4-periphery/en/README.md) [[Github](https://github.com/Uniswap/v4-periphery/)]: Contains the peripheral contracts of Uniswap v4, mainly including:
+    * [PositionManager.sol](./v4-periphery/en/PositionManager.md): PositionManager contract, used to manage the minting, burning, and liquidity modification of positions, calling [PoolManager](./v4-core/en/PoolManager.md) to execute specific operations.
         * External contracts operate positions through the PositionManager contract, rather than directly calling the v4-core PoolManager contract.
         * Supports combining multiple operations into a single transaction, ensuring atomicity of transactions and reducing gas consumption.
-    * [V4Router.sol](./v4-periphery/V4Router.md): V4Router contract, used to execute trading operations, calling [PoolManager](./v4-core/en/PoolManager.md) to execute specific trading operations.
+    * [V4Router.sol](./v4-periphery/en/V4Router.md): V4Router contract, used to execute trading operations, calling [PoolManager](./v4-core/en/PoolManager.md) to execute specific trading operations.
         * Supports single-hop and multi-hop trading.
         * Supports specifying the exact input or output token amount.

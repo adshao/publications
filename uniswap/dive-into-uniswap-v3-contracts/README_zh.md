@@ -1417,8 +1417,8 @@ function cross(
 
 TickMath主要包含两个方法：
 
-* [getSqrtRatioAtTick](#getSqrtRatioAtTick)：根据tick计算开根号价格 $\sqrt{P}$
-* [getTickAtSqrtRatio](#getTickAtSqrtRatio)：根据开根号价格 $\sqrt{P}$ 计算tick
+* [getSqrtRatioAtTick](#getsqrtratioattick)：根据tick计算开根号价格 $\sqrt{P}$
+* [getTickAtSqrtRatio](#gettickatsqrtratio)：根据开根号价格 $\sqrt{P}$ 计算tick
 
 #### getSqrtRatioAtTick
 

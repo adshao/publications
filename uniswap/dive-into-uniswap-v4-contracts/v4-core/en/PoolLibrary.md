@@ -243,7 +243,7 @@ function initialize(State storage self, uint160 sqrtPriceX96, uint24 lpFee) inte
 
 The current price `sqrtPriceX96` of an uninitialized pool is 0, so it can be determined whether the pool has been initialized by checking whether `sqrtPriceX96` is 0.
 
-Calculate the `tick` corresponding to the current price based on `sqrtPriceX96`. The specific algorithm can be referred to in Uniswap v3's [TickMath.getTickAtSqrtPrice](../../../dive-into-uniswap-v3-contracts/README.md#getTickAtSqrtRatio) method.
+Calculate the `tick` corresponding to the current price based on `sqrtPriceX96`. The specific algorithm can be referred to in Uniswap v3's [TickMath.getTickAtSqrtPrice](../../../dive-into-uniswap-v3-contracts/README.md#gettickatsqrtratio) method.
 
 The `initialize` method sets the `slot0` fields `sqrtPriceX96`, `tick`, and `lpFee`.
 
@@ -415,7 +415,7 @@ If `liquidityDelta != 0`, i.e., liquidity changes, it is necessary to calculate 
 
 If the current `tick` is less than `tickLower`, since the size of `tick` is proportional to $\sqrt{P}$ (i.e., $\sqrt{\frac{y}{x}}$), it means that in the range greater than the current `tick`, the value of $x$ is higher (less $x$ is needed), so when adding liquidity, $x$ tokens need to be provided in this part, i.e., `token0` needs to be calculated; conversely, $y$ tokens need to be provided, i.e., `token1` needs to be calculated.
 
-Refer to Uniswap v3 to understand how to calculate [getAmount0Delta](../../../dive-into-uniswap-v3-contracts/README.md#getAmount0Delta) and [getAmount1Delta](../../../dive-into-uniswap-v3-contracts/README.md#getAmount1Delta).
+Refer to Uniswap v3 to understand how to calculate [getAmount0Delta](../../../dive-into-uniswap-v3-contracts/README.md#getamount0delta) and [getAmount1Delta](../../../dive-into-uniswap-v3-contracts/README.md#getamount1delta).
 
 ### swap
 
@@ -533,7 +533,7 @@ Check the validity of `sqrtPriceLimitX96`:
 * If `zeroForOne` is `true`, i.e., a swap from `token0` to `token1`, after the swap, `token0` ( $x$ ) increases, `token1` ( $y$ ) decreases, i.e., $ \sqrt{P} = \sqrt{\frac{y}{x}} $ decreases, so the target price `sqrtPriceLimitX96` should be less than the current price but not less than `MIN_SQRT_PRICE`.
 * Conversely, the target price `sqrtPriceLimitX96` should be greater than the current price but not greater than `MAX_SQRT_PRICE`.
 
-As introduced in the [Uniswap v3 whitepaper](../../../dive-into-uniswap-v3-whitepaper/README.md#621-price-and-liquidity-价格和流动性), the core logic of the `swap` process is:
+As introduced in the [Uniswap v3 whitepaper](../../../dive-into-uniswap-v3-whitepaper/README.md#621-price-and-liquidity), the core logic of the `swap` process is:
 
 * At any time, only one of the liquidity $L$ and the price $\sqrt{P}$ will change.
 * During a `swap`:
@@ -650,7 +650,7 @@ In the `while` loop, execute the `swap step` for each `step`:
 
 1. Get at most one initialized `tick` through `tickBitmap.nextInitializedTickWithinOneWord` and calculate the price `sqrtPriceNextX96` corresponding to the `tick`.
 
-1. Calculate a swap within a `tick` through [SwapMath.computeSwapStep](../../../dive-into-uniswap-v3-contracts/README.md#computeSwapStep). In this step, the liquidity $L$ remains unchanged, and only the price $\sqrt{P}$ changes. Calculate the ending price `sqrtPriceX96`, input `amountIn`, output `amountOut`, and fee `feeAmount` for this `swap step`. The returned results are all non-negative.
+1. Calculate a swap within a `tick` through [SwapMath.computeSwapStep](../../../dive-into-uniswap-v3-contracts/README.md#computeswapstep). In this step, the liquidity $L$ remains unchanged, and only the price $\sqrt{P}$ changes. Calculate the ending price `sqrtPriceX96`, input `amountIn`, output `amountOut`, and fee `feeAmount` for this `swap step`. The returned results are all non-negative.
 
 1. Update `amountSpecifiedRemaining` and `amountCalculated`:
    * If `params.amountSpecified > 0`, i.e., `exactOutput`, `amountSpecifiedRemaining` represents the output token and needs to subtract `amountOut`, and `amountCalculated` represents the input token, using a negative number to indicate the amount of `amountIn` and `feeAmount` that the user needs to deposit;

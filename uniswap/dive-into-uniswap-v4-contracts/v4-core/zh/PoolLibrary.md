@@ -243,7 +243,7 @@ function initialize(State storage self, uint160 sqrtPriceX96, uint24 lpFee) inte
 
 未初始化的池子的当前价格 `sqrtPriceX96` 为 0，因此可以通过判断 `sqrtPriceX96` 是否为 0 来判断池子是否已经初始化。
 
-根据 `sqrtPriceX96` 计算当前价格对应的 `tick`，具体的算法可参考 Uniswap v3 的 [TickMath.getTickAtSqrtPrice](../../../dive-into-uniswap-v3-contracts/README_zh.md#getTickAtSqrtRatio) 方法。
+根据 `sqrtPriceX96` 计算当前价格对应的 `tick`，具体的算法可参考 Uniswap v3 的 [TickMath.getTickAtSqrtPrice](../../../dive-into-uniswap-v3-contracts/README_zh.md#gettickatsqrtratio) 方法。
 
 `initialize` 方法设置 `slot0` 的 `sqrtPriceX96`、`tick` 和 `lpFee` 字段。
 
@@ -415,7 +415,7 @@ function modifyLiquidity(State storage self, ModifyLiquidityParams memory params
 
 如果当前 `tick` 小于 `tickLower`，由于 `tick` 大小与 $\sqrt{P}$（即 $\sqrt{\frac{y}{x}}$ ）成正比，意味着在大于当前 `tick` 的区间， $x$ 的价值更高（需要更少的 $x$ ），因此添加流动性时需在该部分提供 $x$ 代币，即需要计算 `token0`；反之，则提供 $y$ 代币，即计算 `token1`。
 
-可参考 Uniswap v3 了解如何计算 [getAmount0Delta](../../../dive-into-uniswap-v3-contracts/README_zh.md#getAmount0Delta) 和 [getAmount1Delta](../../../dive-into-uniswap-v3-contracts/README_zh.md#getAmount1Delta)。
+可参考 Uniswap v3 了解如何计算 [getAmount0Delta](../../../dive-into-uniswap-v3-contracts/README_zh.md#getamount0delta) 和 [getAmount1Delta](../../../dive-into-uniswap-v3-contracts/README_zh.md#getamount1delta)。
 
 ### swap
 
@@ -650,7 +650,7 @@ $$
 
 1. 通过 `tickBitmap.nextInitializedTickWithinOneWord` 获取至多一个初始化的 `tick`，并计算该 `tick` 对应的价格 `sqrtPriceNextX96`。
 
-1. 通过 [SwapMath.computeSwapStep](../../../dive-into-uniswap-v3-contracts/README_zh.md#computeSwapStep) 计算一个 `tick` 内的交易，在该步骤里，流动性 $L$ 不变，仅价格 $\sqrt{P}$ 发生变化。计算该 `swap step` 的结束价格 `sqrtPriceX96`，输入 `amountIn`、输出 `amountOut` 和手续费 `feeAmount`。返回结果均为非负数。
+1. 通过 [SwapMath.computeSwapStep](../../../dive-into-uniswap-v3-contracts/README_zh.md#computeswapstep) 计算一个 `tick` 内的交易，在该步骤里，流动性 $L$ 不变，仅价格 $\sqrt{P}$ 发生变化。计算该 `swap step` 的结束价格 `sqrtPriceX96`，输入 `amountIn`、输出 `amountOut` 和手续费 `feeAmount`。返回结果均为非负数。
 
 1. 更新 `amountSpecifiedRemaining` 和 `amountCalculated`：
    * 如果 `params.amountSpecified > 0`，即 `exactOutput`，则 `amountSpecifiedRemaining` 表示输出代币，需减去 `amountOut`，`amountCalculated` 表示输入代币，用负数表示需要用户存入对应的 `amountIn` 和 `feeAmount`；

@@ -248,7 +248,7 @@ Call the [afterModifyLiquidity](./HooksLibrary.md#aftermodifyliquidity) function
 * If `hookDelta` is not 0, call the [_accountPoolBalanceDelta](#_accountpoolbalancedelta) function to record the balance change for the Hooks contract and allocate the balance to the Hooks contract;
 * Call the [_accountPoolBalanceDelta](#_accountpoolbalancedelta) function to record the balance change for the caller and allocate the balance to the caller.
 
-Note: `hookDelta` and `callerDelta` are the balance changes that need to be settled/withdrawn by the Hooks contract and the caller, respectively.
+Note: `hookDelta` and `callerDelta` are the balance changes that need to be settled/taken by the Hooks contract and the caller, respectively.
 * If `delta` is positive, it allows the Hooks contract or the caller to withdraw tokens;
 * If `delta` is negative, it requires the Hooks contract or the caller to deposit tokens;
 * The upper 128 bits represent the balance change of `token0`, and the lower 128 bits represent the balance change of `token1`.
@@ -520,7 +520,7 @@ Call the [_accountDelta](#_accountdelta) function to record the balance change f
 
 The `clear` method is used for the caller to abandon the tokens to be withdrawn from `PoolManager` and clear the balance to zero.
 
-This method is generally used for the caller to abandon small amounts of dust tokens, as the transaction fees (such as gas consumed by `transfer token`) for settling these tokens may be higher than the value of the tokens themselves.
+This method is generally used for the caller to abandon small amounts of dust tokens, as the transaction fees (such as gas consumed by `transfer token`) for taking these tokens may be higher than the value of the tokens themselves.
 
 Input parameters:
 
