@@ -208,7 +208,7 @@ function initialize(uint160 sqrtPriceX96) external override {
 `slot0` is defined as follows:
 
 * `sqrtPriceX96`: The current square root price $\sqrt{P}$ of the trading pair.
-* `tick`: The current tick corresponding to $\sqrt{P}$, calculated using [getTickAtSqrtRatio](#getTickAtSqrtRatio).
+* `tick`: The current tick corresponding to $\sqrt{P}$, calculated using [getTickAtSqrtRatio](#gettickatsqrtratio).
 * `observationIndex`: The most recently updated (oracle) observation array index.
 * `observationCardinality`: The capacity of the (oracle) observation array, maximum 65536, initially set to 1.
 * `observationCardinalityNext`: The next (oracle) observation array capacity, if manually expanded, this value will be updated, initially set to 1.

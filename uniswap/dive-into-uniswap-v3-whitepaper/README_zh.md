@@ -566,6 +566,14 @@ $$
 > $$
 > \underbrace{\overbrace{..., i_l - 1}^{f_b(i_l)}, \overbrace{i_l, i_l + 1, ..., i_u - 1, i_u}^{f_r}, \overbrace{i_u + 1, ...}^{f_a(i_u)}}_{f_g}
 > $$
+>
+> 根据公式 (6.17) (6.18) (6.19) 以及 $i_c$ 和 $i_l$、$i_u$ 的关系，可以总结区间内的手续费计算方式如下：
+> $$
+> f_r = \begin{cases} 
+> f_o(i_l) - f_o(i_u) & \text{$i_c < i_l < i_u$}\\
+> f_g - f_o(i_l) - f_o(i_u) & \text{$i_l \leq i_c < i_u$}\\
+> f_o(i_u) - f_o(i_l) & \text{$i_l < i_u \leq i_c$} \end{cases}
+> $$
 
 $f_o$ 需要在每次tick穿越时被更新。特别地，当tick被反方向穿越时，其对应的 $f_o$（token0和token1）需要按照如下方式更新：
 
