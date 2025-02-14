@@ -19,15 +19,15 @@ function _computeSlot(address target, Currency currency) internal pure returns (
 }
 ```
 
-因为 `target` 和 `currency` 都是 `address` 类型，因此只需要对保留前 20 字节的数据。
+因为 `target` 和 `currency` 都是 `address` 类型，因此只需要保留低 20 字节的数据。
 
-同时，在 EVM 的内存布局中，前 64 字节是用于 hash 计算的临时区域，因此可以直接使用 `mstore` 指令将 `target` 和 `currency` 分别写入 0 和 32 的位置（各 32 字节）。
+在 EVM 的内存布局中，前 64 字节是用于 hash 计算的临时区域，因此可以直接使用 `mstore` 指令将 `target` 和 `currency` 分别写入地址 0 和地址 32 的位置（各 32 字节）。
 
-最后，通过 `keccak256(0, 64)` 计算出 slot 地址。
+最后，通过 `keccak256(0, 64)` 对前 64 字节的数据进行哈希，得到 slot 地址。
 
 ### getDelta
 
-获取某个地址的代币余额变化值。
+获取某个地址和代币的记账余额。
 
 ```solidity
 function getDelta(Currency currency, address target) internal view returns (int256 delta) {
@@ -42,7 +42,7 @@ function getDelta(Currency currency, address target) internal view returns (int2
 
 ### applyDelta
 
-应用新的余额变化值，更新某个地址的代币余额。
+应用新的余额变化值，更新指定地址和代币的余额。
 
 输入参数：
 
@@ -52,7 +52,7 @@ function getDelta(Currency currency, address target) internal view returns (int2
 
 返回：
 
-- `previous` 之前的余额
+- `previous` 更新前的余额
 - `next` 更新后的余额
 
 ```solidity
@@ -75,6 +75,6 @@ function applyDelta(Currency currency, address target, int128 delta)
 }
 ```
 
-通过 `_computeSlot` 计算出 slot 地址，然后通过 `tload` 读取 slot 中的值，得到之前的余额。
+通过 `_computeSlot` 计算出 slot 地址，然后通过 `tload` 读取 slot 中的值，得到更新前的余额。
 
-接着，计算出新的余额，并通过 `tstore` 更新 slot 中的值。
+接着，计算出新的余额，并通过 `tstore` 保存。

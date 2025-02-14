@@ -1,6 +1,6 @@
 # Pool Library
 
-Pool Library 定义了针对单个池子的操作，包括修改流动性、交易等。其中，大部分涉及到 `liquidity`、`tick`、`fee` 等的计算逻辑都与 Uniswap v3 一样。因此，Uniswap v4 并没有对核心的 swap 计算逻辑进行大的调整，主要是在 Hooks 管理、单例架构、闪电记账等方面进行了架构优化。
+Pool Library 定义了针对单个池子的操作，包括修改流动性、交易等。其中，大部分涉及到 `liquidity`、`tick`、`fee` 等的计算逻辑都与 Uniswap v3 一样。因为 Uniswap v4 并没有对核心的 AMM 逻辑进行调整，而主要是在 Hooks 管理、单例架构、闪电记账等方面进行了架构优化。
 
 ## 结构体定义
 
@@ -27,7 +27,7 @@ struct TickInfo {
 * `liquidityGross` 表示总流动性，用于判断 `tick` 是否需要初始化：
     * 如果 `mint`，则增加流动性；如果 `burn`，则减少流动性
     * 该变量与 `tick` 在不同头寸中是否作为边界低点或高点无关，只与 `mint` 或 `burn` 操作有关
-    * 如果一个 `tick` 多不同的头寸同时用作 `tickLower` 和 `tickUpper`，则其`liquidityNet` 可能是 0，但 `liquidityGross` 仍然会大于 0，因此不需要再次初始化
+    * 如果一个 `tick` 被不同的头寸同时用作 `tickLower` 和 `tickUpper`，则其`liquidityNet` 可能是 0，但 `liquidityGross` 仍然会大于 0，因此不需要再次初始化
 
 * `liquidityNet` 表示净流动性，当 `swap` 穿越 `tick` 时，用于更新全局可用流动性`liquidity`：
     * 如果作为 `tickLower`，即边界低点（左边界点），则增加 `liquidityDelta`
@@ -59,7 +59,7 @@ struct State {
 * `feeGrowthGlobal0X128` 和 `feeGrowthGlobal1X128` 分别表示 `token0` 和 `token1` 的全局手续费增长。
 * `liquidity` 表示当前池子的总流动性。
 * `ticks` 是一个 `mapping`，存储了每个 `tick` 的信息。
-* `tickBitmap` 是一个 `mapping`，存储了每个 `tick` 的 `bitmap` 信息。
+* `tickBitmap` 是一个 `mapping`，存储了每个 `tick` 的 `bitmap` 信息，用于快速查询下一个已被初始化的 `tick`。
 * `positions` 是一个 `mapping`，存储了每个头寸的信息。
 
 #### Slot0
@@ -108,7 +108,7 @@ struct ModifyLiquidityParams {
 * `tickLower` 和 `tickUpper`：头寸的 `tick` 范围
 * `liquidityDelta`：流动性变化，如果是增加流动性，则为正数；如果是减少流动性，则为负数
 * `tickSpacing`：`tick` 之间的间隔
-* `salt`：用于区分同一拥有者的不同头寸
+* `salt`：用于区分不同头寸
 
 ### SwapParams
 
@@ -126,7 +126,8 @@ struct SwapParams {
 
 其中：
 
-* `amountSpecified`：指定的代币数量。注意，这里与 Uniswap v3 不同，在 Uniswap v4 中，如果 `amountSpecified` 为负，则表示希望输入的代币数量，即 `exactInput`；如果为正，表示希望输出的代币数量，即 `exactOutput`
+* `amountSpecified`：指定的代币数量。
+  > 注意，这里与 Uniswap v3 不同，在 Uniswap v4 中，如果 `amountSpecified` 为负，则表示希望输入的代币数量，即 `exactInput`；如果为正，表示希望输出的代币数量，即 `exactOutput`
 * `tickSpacing`：`tick` 之间的间隔
 * `zeroForOne`：交易方向，`true` 表示 `token0` 到 `token1`，`false` 表示 `token1` 到 `token0`
 * `sqrtPriceLimitX96`：交易价格限制，可以是最高价格或最低价格
@@ -185,8 +186,8 @@ struct StepComputations {
 * `tickNext`：当前交易方向的下一个用于交易的 `tick`
 * `initialized`：`tickNext` 是否已经初始化
 * `sqrtPriceNextX96`：下一个 `tick` 对应的价格
-* `amountIn`：交易输入数量
-* `amountOut`：交易输出数量
+* `amountIn`：输入代币数量
+* `amountOut`：输出代币数量
 * `feeAmount`：交易手续费
 * `feeGrowthGlobalX128`：输入代币的全局手续费增长
 
@@ -294,9 +295,9 @@ function modifyLiquidity(State storage self, ModifyLiquidityParams memory params
 返回值为：
 
 * `BalanceDelta` delta：流动性变化后的 token 余额变化
-* `BalanceDelta` feeDelta：流动性变化后的手续费变化，永远为正。
+* `BalanceDelta` feeDelta：流动性变化后的手续费变化，为非负数。
 
-`BalanceDelta` 是一个 int256 类型，前 128 位表示 `token0` 的余额变化，后 128 位表示 `token1` 的余额变化。如果为正数，则表示允许用户提取 `token0` 或 `token1`；如果为负数，则表示用户需要存入 `token0` 或 `token1`。
+[BalanceDelta](./BalanceDelta.md) 是一个 int256 类型，前 128 位表示 `token0` 的余额变化，后 128 位表示 `token1` 的余额变化。如果为正数，则表示允许用户提取 `token0` 或 `token1`；如果为负数，则表示用户需要存入 `token0` 或 `token1`。
 
 ```solidity
 {
@@ -410,17 +411,17 @@ function modifyLiquidity(State storage self, ModifyLiquidityParams memory params
 }
 ```
 
-如果 `liquidityDelta != 0`，即流动性发生变化，则需要计算 `delta`，即需要用户提供或者向用户返还的 `token0` 和 `token1` 的数量。
+如果 `liquidityDelta != 0`，即流动性发生变化，则需要计算 `delta`，表示需要用户提供或者用户可取回的 `token0` 和 `token1` 的数量。
 
-如果当前 `tick` 小于 `tickLower`，由于 `tick` 大小与 $\sqrt{P}$（即 $\sqrt{\frac{y}{x}}$ ）成正比，意味着在大于 `tick` 的区间， $x$ 的价值更高（因此需要更少的 $x$ ），因此添加流动性时需在该部分提供 $x$ 代币，即需要计算 `token0`；反之，则提供 $y$ 代币，即计算 `token1`。
+如果当前 `tick` 小于 `tickLower`，由于 `tick` 大小与 $\sqrt{P}$（即 $\sqrt{\frac{y}{x}}$ ）成正比，意味着在大于当前 `tick` 的区间， $x$ 的价值更高（需要更少的 $x$ ），因此添加流动性时需在该部分提供 $x$ 代币，即需要计算 `token0`；反之，则提供 $y$ 代币，即计算 `token1`。
 
 可参考 Uniswap v3 了解如何计算 [getAmount0Delta](../../../dive-into-uniswap-v3-contracts/README_zh.md#getAmount0Delta) 和 [getAmount1Delta](../../../dive-into-uniswap-v3-contracts/README_zh.md#getAmount1Delta)。
 
 ### swap
 
-执行交易操作，完成从 `token0` 交换到 `token1` 或从 `token1` 交换到 `token0` 的操作。
+执行交易操作，完成从 `token0` 交换到 `token1` 或者相反。
 
-整个 `swap` 代码的逻辑与 Uniswap v3 的 [swap](../../../dive-into-uniswap-v3-contracts/README_zh.md#swap) 逻辑几乎完全一样。
+整个 `swap` 代码的逻辑与 Uniswap v3 的 [swap](../../../dive-into-uniswap-v3-contracts/README_zh.md#swap) 几乎完全一样。
 
 以下为 Uniswap v4 的 `swap` 方法的实现：
 
@@ -532,7 +533,7 @@ $$
 * 如果 `zeroForOne` 为 `true`，即从 `token0` 到 `token1` 的交易，交易之后 `token0`（ $x$ ） 变多，`token1`（ $y$ ） 变少，即 $ \sqrt{P} = \sqrt{\frac{y}{x}} $ 变小，因此目标价格 `sqrtPriceLimitX96` 应该小于当前价格，但不能小于 `MIN_SQRT_PRICE`。
 * 反之，目标价格 `sqrtPriceLimitX96` 应该大于当前价格，但不能大于 `MAX_SQRT_PRICE`。
 
-我们在 [Uniswap v3 白皮书](../../../dive-into-uniswap-v3-whitepaper/README_zh.md#621-price-and-liquidity-价格和流动性) 中介绍过，整个 `swap` 流程的核心逻辑为：
+我们在 [Uniswap v3 白皮书](../../../dive-into-uniswap-v3-whitepaper/README_zh.md#621-price-and-liquidity-价格和流动性) 中介绍过，`swap` 流程的核心逻辑为：
 
 * 任意时刻， 流动性 $L$ 和 价格 $\sqrt{P}$ 只有其中一个值会变化。
 * 在 `swap` 时：
@@ -540,7 +541,7 @@ $$
   * 每个 `swap` 将拆成多个 `step`，每个 `step` 只在一个 `tick` 区间内执行 `swap` 操作，因此：
     * 在 `swap` 时， $L$ 不变， $\sqrt{P}$ 变化；
     * 当价格穿越 `cross tick` 时，修改总流动性 $L$ ，保持 $\sqrt{P}$ 不变，再继续进行下一个 `swap step`；
-* 同时在 add/burn liquidity 时， $L$ 变化， $\sqrt{P}$ 不变。
+* 在 add/burn liquidity 时， $L$ 变化， $\sqrt{P}$ 不变。
 
 接下来的 `swap` 代码即实现上述逻辑。
 

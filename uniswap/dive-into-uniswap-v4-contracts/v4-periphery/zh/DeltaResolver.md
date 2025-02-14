@@ -6,7 +6,7 @@ DeltaResolver 是一个抽象合约（Abstract Contract），用于向 `PoolMana
 
 ### _pay
 
-DeltaResolver 定义了一个抽象方法 `_pay`，用于实现具体的支付逻辑，将指定数量的代币支付给 `poolManager`。所有继承 DeltaResolver 的合约都需要实现 `_pay` 方法。
+DeltaResolver 定义了一个抽象方法 `_pay`，实现将指定数量的代币支付给 `poolManager`。所有继承 DeltaResolver 的合约都需要实现 `_pay` 方法。
 
 如 [PositionManager](./PositionManager.md) 合约继承了 DeltaResolver 合约，并实现了 [_pay](./PositionManager.md#_pay) 方法。
 
@@ -27,7 +27,7 @@ function _pay(Currency token, address payer, uint256 amount) internal virtual;
 
 ### _getFullDebt
 
-获取当前合约在 `PoolManager` 欠款的全部金额（负 delta）。取反后，返回值为 `uint256` 类型。
+获取当前合约在 `PoolManager` 的全部欠款（负 delta）。取反后，返回值为 `uint256` 类型。
 
 输入参数：
 
@@ -48,7 +48,7 @@ function _getFullDebt(Currency currency) internal view returns (uint256 amount) 
 
 ### _getFullCredit
 
-获取当前合约在 `PoolManager` 信用的全部金额（正 delta）。返回值为 `uint256` 类型。
+获取当前合约在 `PoolManager` 全部可取回金额（正 delta）。返回值为 `uint256` 类型。
 
 输入参数：
 
@@ -68,7 +68,7 @@ function _getFullCredit(Currency currency) internal view returns (uint256 amount
 
 ### _take
 
-提取单个代币的余额。
+提取单个代币的余额。由 `PoolManager` 合约向 `recipient` 转移代币。
 
 输入参数：
 
@@ -99,7 +99,7 @@ function _take(Currency currency, address recipient, uint256 amount) internal {
 在 [PoolManager.settle](../../v4-core/zh/PoolManager.md#settle) 方法中，我们介绍了结算欠款的流程：
 
 1. 调用 [PoolManager.sync](../../v4-core/zh/PoolManager.md#sync) 方法，同步代币余额；
-2. 向 `PoolManager` 支付代币；
+2. 向 `PoolManager` 转移代币；
 3. 调用 [PoolManager.settle](../../v4-core/zh/PoolManager.md#settle) 方法，结算记账余额。
 
 输入参数：
@@ -134,12 +134,12 @@ function _settle(Currency currency, address payer, uint256 amount) internal {
 
 如果 `currency` 为 `ADDRESS_ZERO`，即原生 ETH，通过 `{value: amount}` 向 `poolManager` 转入 ETH，调用 [PoolManager.settle](../../v4-core/zh/PoolManager.md#settle) 方法，结算记账余额。
 
-否则，调用 [_pay](#_pay) 方法，向 `poolManager` 支付 ERC20 代币，然后调用 [PoolManager.settle](../../v4-core/zh/PoolManager.md#settle) 方法，结算记账余额。
+否则，对于 ERC20 代币，调用 [_pay](#_pay) 方法，向 `poolManager` 转移代币，然后调用 [PoolManager.settle](../../v4-core/zh/PoolManager.md#settle) 方法，结算记账余额。
 
 ### _mapSettleAmount
 
-`_mapSettleAmount` 方法根据 `amount` 和 `currency` 计算结算的代币数量：
-* 如果 `amount` 为 `1 << 255`，即 `ActionConstants.CONTRACT_BALANCE`，则表示结算当前合约的代币余额
+`_mapSettleAmount` 方法根据 `amount` 和 `currency` 计算待结算的代币数量：
+* 如果 `amount` 为 `1 << 255`，即 `ActionConstants.CONTRACT_BALANCE`，则表示使用当前合约的代币余额进行结算
 * 否则，如果 `amount` 为 `0`，即 `ActionConstants.OPEN_DELTA`，则表示结算所有欠款
 * 否则，表示结算指定 `amount` 数量的代币
 
@@ -211,9 +211,10 @@ function _mapWrapUnwrapAmount(Currency inputCurrency, uint256 amount, Currency o
 }
 ```
 
-获取 `PositionManager` 合约的 `inputCurrency` 代币余额。
+获取当前合约的 `inputCurrency` 代币余额。
 
-如果 `amount` 为 `1 << 255`，则表示使用代币余额作为包装/解包的数量。
+如果 `amount` 为 `1 << 255`，则表示使用当前合约的代币余额作为包装/解包的数量。
 
-如果 `amount` 为 `0`，则表示使用 `PositionManager` 在 `PoolManager` 上 `outputCurrency` 的欠款作为包装/解包的数量。
-确保 `inputCurrency` 代币余额大于欠款数量。
+如果 `amount` 为 `0`，则表示使用当前合约在 `PoolManager` 上 `outputCurrency` 的欠款作为包装/解包的数量。
+
+确保欠款数量小于 `inputCurrency` 代币余额。

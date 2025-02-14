@@ -8,32 +8,32 @@ PositionManager 合约主要包括以下接口：
 - [modifyLiquidities](#modifyliquidities)：修改流动性
 - [modifyLiquiditiesWithoutUnlock](#modifyLiquiditiesWithoutUnlock)：修改流动性（不解锁）
 
-根据 [Uniswap v4 workflow](../../assets/uniswap-v4-workflow.png) 图示，`modifyLiquidities` 和 `modifyLiquiditiesWithoutUnlock` 都将通过 [BaseActionsRouter._executeActionsWithoutUnlock](./BaseActionsRouter.md#_executeActionsWithoutUnlock) 来执行 [_handleAction](#_handleAction) 方法，该方法根据用户传入的不同操作类型，来执行具体的操作。
+根据 [Uniswap v4 workflow](../../assets/uniswap-v4-workflow.png) 图示，`modifyLiquidities` 和 `modifyLiquiditiesWithoutUnlock` 都通过 [BaseActionsRouter._executeActionsWithoutUnlock](./BaseActionsRouter.md#_executeActionsWithoutUnlock) 执行 [_handleAction](#_handleAction) 方法，该方法执行用户指定的不同操作。
 
 PositionManager 主要包括以下两类操作：
 
 * 修改流动性操作
-  - [IncreaseLiquidity](#increase_liquidity)：增加流动性
-  - [IncreaseLiquidityFromDelta](#increase_liquidity_from_deltas)：使用闪电记账余额增加流动性
-  - [DecreaseLiquidity](#decrease_liquidity)：减少流动性
-  - [MintPosition](#mint_position)：创建头寸
-  - [MintPositionFromDelta](#mint_position_from_deltas)：使用闪电记账余额创建头寸
-  - [BurnPosition](#burn_position)：销毁头寸
+  - [INCREASE_LIQUIDITY](#increase_liquidity)：增加流动性
+  - [INCREASE_LIQUIDITY_FROM_DELTAS](#increase_liquidity_from_deltas)：使用闪电记账余额增加流动性
+  - [DECREASE_LIQUIDITY](#decrease_liquidity)：减少流动性
+  - [MINT_POSITION](#mint_position)：创建头寸
+  - [MINT_POSITION_FROM_DELTAS](#mint_position_from_deltas)：使用闪电记账余额创建头寸
+  - [BURN_POSITION](#burn_position)：销毁头寸
 
 * 结算余额操作
-  - [SettlePair](#settle_pair)：结算交易对的欠款，调用方向 `PoolManager` 合约支付代币
-  - [TakePair](#take_pair)：提取交易对的余额
-  - [Settle](#settle)：结算单个代币的欠款，向 `PoolManager` 合约支付代币
-  - [Take](#take)：提取单个代币的余额
-  - [CloseCurrency](#close_currency)：结算或提取单个代币的余额
-  - [ClearOrTake](#clear_or_take)：放弃或提取单个代币的余额
-  - [Sweep](#sweep)：从 PositionManager 提取单个代币的余额
+  - [SETTLE_PAIR](#settle_pair)：结算交易对的欠款，调用方向 `PoolManager` 合约支付代币
+  - [TAKE_PAIR](#take_pair)：提取交易对的余额
+  - [SETTLE](#settle)：结算单个代币的欠款，向 `PoolManager` 合约支付代币
+  - [TAKE](#take)：提取单个代币的余额
+  - [CLOSE_CURRENCY](#close_currency)：结算或提取单个代币的余额
+  - [CLEAR_OR_TAKE](#clear_or_take)：放弃或提取单个代币的余额
+  - [SWEEP](#sweep)：从 PositionManager 提取单个代币的余额
 
 ## 方法定义
 
 ### modifyLiquidities
 
-PositionManager 合约的设计思想是基于命令行模式，它本身并不提供具体的操作入口，而是让用户组合不同的操作，并调用 [modifyLiquidities](#modifyLiquidities)，在一次调用中按顺序执行所有的操作。
+PositionManager 合约采用命令行的设计思想，它没有为每一种操作分别提供接口，而是让用户通过 [modifyLiquidities](#modifyLiquidities) 组合不同的操作命令，顺序执行。
 
 该方法是 PositionManager 的标准入口。
 
@@ -55,7 +55,7 @@ function modifyLiquidities(bytes calldata unlockData, uint256 deadline)
 
 `modifyLiquiditiesWithoutUnlock` 方法与 `modifyLiquidities` 方法类似，但不执行解锁操作。
 
-调用该方法的合约需要确保已调用 [PoolManager.unlock](../../v4-core/zh/PoolManager.md#unlock) 方法解锁。
+外部合约需要确保已调用 [PoolManager.unlock](../../v4-core/zh/PoolManager.md#unlock) 方法解锁。
 
 ```solidity
 /// @inheritdoc IPositionManager
@@ -70,7 +70,7 @@ function modifyLiquiditiesWithoutUnlock(bytes calldata actions, bytes[] calldata
 
 ### _handleAction
 
-所有继承 `BaseActionsRouter` 的合约都需要实现 `_handleAction` 方法，该方法根据用户传入的不同操作类型，来执行具体的操作。
+所有继承 [BaseActionsRouter](./BaseActionsRouter.md) 的合约都需要实现 `_handleAction` 方法，根据用户传入的 Action 和参数，执行具体的操作。
 
 ```solidity
 function _handleAction(uint256 action, bytes calldata params) internal virtual override {
@@ -165,10 +165,10 @@ function _handleAction(uint256 action, bytes calldata params) internal virtual o
 }
 ```
 
-由于 [ActionsLibrary](./ActionsLibrary.md) 中按照数值顺序定义了所有的 `action`：
+[ActionsLibrary](./ActionsLibrary.md) 按照数值顺序定义了所有的 `action`：
 
 * 小于 `Actions.SETTLE` 的操作是修改流动性操作
-* 大于等于 `Actions.SETTLE` 的操作是结算余额操作
+* 大于等于 `Actions.SETTLE` 的操作是结算余额（平账）操作
 
 以下介绍每个 Action 的逻辑：
 
@@ -252,7 +252,7 @@ return;
 
 解码参数，调用 [_mintFromDeltas](#_mintfromdeltas) 方法。
 
-这里同样适用 [_mapRecipient](./BaseActionsRouter.md#_maprecipient) 方法计算 `owner` 地址。
+这里同样使用 [_mapRecipient](./BaseActionsRouter.md#_maprecipient) 方法计算 `owner` 地址。
 
 #### BURN_POSITION
 
@@ -270,7 +270,7 @@ return;
 
 #### SETTLE_PAIR
 
-结算交易对的余额，调用方向 `PoolManager` 合约支付代币。
+结算交易对的余额，由 `payer` 向 `PoolManager` 合约支付代币。
 
 ```solidity
 (Currency currency0, Currency currency1) = params.decodeCurrencyPair();
@@ -282,7 +282,7 @@ return;
 
 #### TAKE_PAIR
 
-提取交易对的余额。
+提取交易对的余额，由 `PoolManager` 向 `recipient` 支付代币。
 
 ```solidity
 (Currency currency0, Currency currency1, address recipient) = params.decodeCurrencyPairAndAddress();
@@ -296,7 +296,7 @@ return;
 
 #### SETTLE
 
-结算单个代币的余额，调用方向 `PoolManager` 合约支付代币。
+结算单个代币的余额（欠款），由 `payer` 向 `PoolManager` 合约支付代币。
 
 ```solidity
 (Currency currency, uint256 amount, bool payerIsUser) = params.decodeCurrencyUint256AndBool();
@@ -308,7 +308,7 @@ return;
 
 #### TAKE
 
-提取单个代币的余额。
+提取单个代币的余额，由 `PoolManager` 向 `recipient` 支付代币。
 
 ```solidity
 (Currency currency, address recipient, uint256 amount) = params.decodeCurrencyAddressAndUint256();
@@ -325,6 +325,8 @@ return;
 
 结算或提取单个代币的余额。
 
+当不确定是结算还是提取时，可以使用 `CLOSE_CURRENCY` 关闭指定代币的仓位。
+
 ```solidity
 Currency currency = params.decodeCurrency();
 _close(currency);
@@ -337,6 +339,8 @@ return;
 
 放弃或提取单个代币的余额。
 
+当余额小于等于 `amountMax` 时，放弃代币；否则提取代币。
+
 ```solidity
 (Currency currency, uint256 amountMax) = params.decodeCurrencyAndUint256();
 _clearOrTake(currency, amountMax);
@@ -347,7 +351,7 @@ return;
 
 #### SWEEP
 
-从 `PositionManager` 提取单个代币的余额。
+从 `PositionManager` 提取单个代币的余额，由 `PositionManager` 向 `recipient` 支付代币。
 
 ```solidity
 (Currency currency, address to) = params.decodeCurrencyAndAddress();
@@ -431,7 +435,7 @@ function _increase(
 
 ### _increaseFromDeltas
 
-该方法与 [_increase](#_increase) 方法类似，不同之处在于 `_increaseFromDeltas` 无需指定具体的流动性数量，而是通过查询当前 `PositionManager` 合约在 `PoolManager` 中关于池子两种代币的闪电记账余额，然后计算出需要增加的流动性数量。
+该方法与 [_increase](#_increase) 方法类似，不同之处在于 `_increaseFromDeltas` 无需指定具体的流动性数量，而是通过查询当前 `PositionManager` 合约在 `PoolManager` 中关于池子两种代币的闪电记账余额，计算出需要增加的流动性数量。
 
 最后再调用 [_modifyLiquidity](#_modifyLiquidity) 方法，完成流动性修改。
 
@@ -509,7 +513,7 @@ function _decrease(
 
 > 注：`liquidityDelta` 是调用方可提取的最终代币数量，用正数或 0 表示
 
-由于 Uniswap v4 没有提供直接提取手续费的方法，因此可以通过调用 `DECRESAE_LIQUIDITY` 操作来提取手续费，即将 `liquidity`、`amount0Min` 和 `amount1Min` 设置为 0。
+由于 Uniswap v4 没有提供直接提取手续费的方法，因此可以通过 `DECRESAE_LIQUIDITY` 操作来提取手续费，将 `liquidity`、`amount0Min` 和 `amount1Min` 设置为 0。
 
 ### _mint
 
@@ -528,46 +532,46 @@ function _decrease(
 
 ```solidity
 function _mint(
-        PoolKey calldata poolKey,
-        int24 tickLower,
-        int24 tickUpper,
-        uint256 liquidity,
-        uint128 amount0Max,
-        uint128 amount1Max,
-        address owner,
-        bytes calldata hookData
-    ) internal {
-        // mint receipt token
-        uint256 tokenId;
-        // tokenId is assigned to current nextTokenId before incrementing it
-        unchecked {
-            tokenId = nextTokenId++;
-        }
-        _mint(owner, tokenId);
-
-        // Initialize the position info
-        PositionInfo info = PositionInfoLibrary.initialize(poolKey, tickLower, tickUpper);
-        positionInfo[tokenId] = info;
-
-        // Store the poolKey if it is not already stored.
-        // On UniswapV4, the minimum tick spacing is 1, which means that if the tick spacing is 0, the pool key has not been set.
-        bytes25 poolId = info.poolId();
-        if (poolKeys[poolId].tickSpacing == 0) {
-            poolKeys[poolId] = poolKey;
-        }
-
-        // fee delta can be ignored as this is a new position
-        (BalanceDelta liquidityDelta,) =
-            _modifyLiquidity(info, poolKey, liquidity.toInt256(), bytes32(tokenId), hookData);
-        liquidityDelta.validateMaxIn(amount0Max, amount1Max);
+    PoolKey calldata poolKey,
+    int24 tickLower,
+    int24 tickUpper,
+    uint256 liquidity,
+    uint128 amount0Max,
+    uint128 amount1Max,
+    address owner,
+    bytes calldata hookData
+) internal {
+    // mint receipt token
+    uint256 tokenId;
+    // tokenId is assigned to current nextTokenId before incrementing it
+    unchecked {
+        tokenId = nextTokenId++;
     }
+    _mint(owner, tokenId);
+
+    // Initialize the position info
+    PositionInfo info = PositionInfoLibrary.initialize(poolKey, tickLower, tickUpper);
+    positionInfo[tokenId] = info;
+
+    // Store the poolKey if it is not already stored.
+    // On UniswapV4, the minimum tick spacing is 1, which means that if the tick spacing is 0, the pool key has not been set.
+    bytes25 poolId = info.poolId();
+    if (poolKeys[poolId].tickSpacing == 0) {
+        poolKeys[poolId] = poolKey;
+    }
+
+    // fee delta can be ignored as this is a new position
+    (BalanceDelta liquidityDelta,) =
+        _modifyLiquidity(info, poolKey, liquidity.toInt256(), bytes32(tokenId), hookData);
+    liquidityDelta.validateMaxIn(amount0Max, amount1Max);
+}
 ```
 
 分配 ERC721 代币 ID `tokenId`，调用 `_mint` 方法，为 ``owner` 铸造 ERC721 代币，代表头寸。
 
-初始化头寸信息。`positionInfo` 保存 `tokenId` 到 头寸信息的映射。
-如果 `poolKey` 未存储，存储 `poolKey`。
-因此，后续可以使用 `tokenId` 获取池子信息 `poolKey` 和 头寸信息 `positionInfo`。
+初始化头寸信息。`positionInfo` 表示 `tokenId` 到头寸信息的映射。
+如果 `poolKey` 未存储，则存储 `poolKey`。
+因此，后续可以根据 `tokenId` 返回池子信息 `poolKey` 和 头寸信息 `positionInfo`。
 
 调用 [_modifyLiquidity](#_modifyLiquidity) 方法，完成流动性修改。返回 `liquidityDelta` 和 `feesAccrued`。由于此时 `freeAccrued` 为 0，因此可以忽略。检查 `liquidityDelta` 是否超过 `amount0Max` 和 `amount1Max`。
 
@@ -673,9 +677,9 @@ function _burn(uint256 tokenId, uint128 amount0Min, uint128 amount1Min, bytes ca
 
 由于 `liquidityDelta` 已经包含了 `feeAccrued`，而 `amount0Min` 和 `amount1Min` 是不包含手续费的（仅计算流动性本身），因此需要将 `liquidityDelta - feesAccrued` 作为输入参数进行最小值检查。
 
-如果头寸有订阅者，调用 [_removeSubscriberAndNotifyBurn](#_removeSubscriberAndNotifyBurn) 方法，通知订阅者。
+如果头寸有订阅者，调用 `_removeSubscriberAndNotifyBurn` 方法，通知订阅者。
 
-注意，在完成头寸销毁后，调用方并没有收到任何代币，这些代币记录在 `PoolManager` 的闪电记账余额中；调用方需要结合 [TAKE_PAIR](#TAKE_PAIR) 等操作，将这些代币提取到自己的账户中。
+注意，在完成头寸销毁后，调用方并没有收到任何代币，这些代币记录在 `PoolManager` 的闪电记账余额中；调用方需要结合 [TAKE_PAIR](#take_pair) 等操作，将代币提取到自己的账户中。
 
 ### _settlePair
 
@@ -695,13 +699,13 @@ function _settlePair(Currency currency0, Currency currency1) internal {
 }
 ```
 
-调用 [_settle](./DeltaResolver.md#_settle) 方法，分别结算代币 0 和代币 1 的余额。此时 `PoolManager` 中的闪电记账余额一定是非负数，意味着需要调用方支付代币。代币的支付者是调用方，而非 `PositionManager`。
+调用 [_settle](./DeltaResolver.md#_settle) 方法，分别结算代币 0 和代币 1 的余额。此时 `PoolManager` 中的闪电记账余额一定是非正数，意味着需要调用方支付代币。
 
 使用 [_getFullDebt](./DeltaResolver.md#_getfulldebt) 方法获取 `PositionManager` 在 `PoolManager` 中的欠款。
 
 ### _takePair
 
-提取交易对的余额。
+提取交易对的余额，由 `PoolManager` 向 `recipient` 支付代币。
 
 ```solidity
 function _takePair(Currency currency0, Currency currency1, address recipient) internal {
@@ -710,11 +714,11 @@ function _takePair(Currency currency0, Currency currency1, address recipient) in
 }
 ```
 
-调用 [_take](./DeltaResolver.md#_take) 方法，分别提取代币 0 和代币 1 的余额。根据 [_getFullCredit](./DeltaResolver.md#_getfullcredit) 获取 `PoolManager` 中的闪电记账余额一定是非负数，意味着允许调用方提取代币。
+调用 [_take](./DeltaResolver.md#_take) 方法，分别提取代币 0 和代币 1 的余额。根据 [_getFullCredit](./DeltaResolver.md#_getfullcredit) 获取 `PoolManager` 的闪电记账余额，该余额一定是非负数，意味着允许调用方提取代币。
 
 ### _close
 
-结算或提取单个代币的余额。
+结算或提取单个代币的余额。根据 `currencyDelta` 的正负，决定是结算欠款还是提取余额。
 
 ```solidity
 function _close(Currency currency) internal {
@@ -735,9 +739,9 @@ function _close(Currency currency) internal {
 
 调用 [poolManager.currencyDelta](../../v4-core/zh/PoolManager.md#currencydelta) 方法，获取 `PositionManager` 在 `PoolManager` 中的闪电记账余额。
 
-如果 `currencyDelta` 小于 0，即代表 `PositionManager` 欠款，调用 [_settle](./DeltaResolver.md#_settle) 方法，向 `PoolManager` 支付代币。
+如果 `currencyDelta` 小于 0，即代表 `PositionManager` 欠款，调用 [_settle](./DeltaResolver.md#_settle) 方法，向 `PoolManager` 支付代币，`payer` 为调用方。
 
-否则，调用 [_take](./DeltaResolver.md#_take) 方法，从 `PoolManager` 提取代币。
+否则，调用 [_take](./DeltaResolver.md#_take) 方法，从 `PoolManager` 提取代币，代币接受者为调用方。
 
 ### _clearOrTake
 
@@ -746,7 +750,7 @@ function _close(Currency currency) internal {
 输入参数：
 
 - `currency`：代币
-- `amountMax`：最大提取金额。如果小于等于该值，放弃代币；否则提取代币
+- `amountMax`：最大金额。如果小于等于该值，放弃代币；否则提取代币。
 
 ```solidity
 /// @dev integrators may elect to forfeit positive deltas with clear
@@ -785,7 +789,7 @@ function _sweep(Currency currency, address to) internal {
 }
 ```
 
-调用 `currency.balanceOfSelf` 方法，获取 `PositionManager` 合约中的代币余额。
+调用 `currency.balanceOfSelf` 方法，获取 `PositionManager` 合约指定代币的余额。
 
 如果余额大于 0，调用 `currency.transfer` 方法，将代币转入 `to` 地址。
 
@@ -819,11 +823,11 @@ function _modifyLiquidity(
 
 调用 [poolManager.modifyLiquidity](../../v4-core/zh/PoolManager.md#modifyliquidity) 方法，完成流动性修改。返回 `liquidityDelta` 和 `feesAccrued`。
 
-如果头寸有订阅者，调用 [_notifyModifyLiquidity](#_notifyModifyLiquidity) 方法，通知订阅者。
+如果头寸有订阅者，调用 `_notifyModifyLiquidity` 方法，通知订阅者。
 
 ### _pay
 
-由 `payer` 向 `poolManager` 支付代币。
+由 `payer` 向 `poolManager` 支付代币。实现 `DeltaResolver` 的 [_pay](./DeltaResolver.md#_pay) 方法。
 
 ```solidity
 // implementation of abstract function DeltaResolver._pay
@@ -839,7 +843,8 @@ function _pay(Currency currency, address payer, uint256 amount) internal overrid
 
 如果 `payer` 为 `PositionManager` 合约地址，直接调用 `currency.transfer` 方法，将代币转入 `poolManager`。
 
-否则，调用 `permit2.transferFrom` 方法，从 `payer` 账户中转出代币，转入 `poolManager`。这里需要 `payer` 提前调用 `permit` 方法授权 `PositionManager` 从 `payer` 账户中转出代币。
+否则，调用 `permit2.transferFrom` 方法，从 `payer` 账户中转出代币，转入 `poolManager`。
+> 注：这里需要 `payer` 提前调用 `permit` 方法授权 `PositionManager` 从 `payer` 账户中转出代币。
 
 ### _wrap
 

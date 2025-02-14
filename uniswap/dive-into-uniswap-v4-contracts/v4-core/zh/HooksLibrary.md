@@ -4,7 +4,7 @@
 
 ### Hooks 权限
 
-Uniswap v4 的 Hooks 地址的低 14 位分别表示以下权限标志：
+Uniswap v4 使用 Hooks 地址的低 14 位表示以下权限：
 
 - `BEFORE_INITIALIZE_FLAG = 1 << 13`：在初始化池子前执行
 - `AFTER_INITIALIZE_FLAG = 1 << 12`：在初始化池子后执行
@@ -32,13 +32,13 @@ Uniswap v4 的 Hooks 地址的低 14 位分别表示以下权限标志：
 
 ### Hooks 地址
 
-Hooks 的权限被设计成包含在 Hooks 地址中。通过检查 Hooks 地址特定的 bit 位，来分别判断该 Hooks 是否有特定权限。
+Hooks 的权限被设计成包含在其地址中。通过检查 Hooks 地址特定的 bit 位，来判断是否有特定权限。
 
-比如 Hooks 地址为 `0x0000000000000000000000000000000000002400`，其低 14 位为 `10 0100 0000 0000`，因此该 Hooks 具有 `before initialize` 和 `after add liquidity` 权限。
+比如 Hooks 地址为 `0x0000000000000000000000000000000000002400`，低 14 位为 `10 0100 0000 0000`，因此该 Hooks 具有 `before initialize` 和 `after add liquidity` 权限。
 
 ### 如何生成 Hooks 地址
 
-由于 Hooks 地址是在部署后才生成的，要确保 Hooks 地址的权限正确，一般会通过不断修改 `CREATE2` 的 `salt` 来生成 Hooks 地址，直到满足权限要求。
+要确保 Hooks 地址符合预设的权限，可以通过不断修改 `CREATE2` 的 `salt` 值尝试生成 Hooks 地址，直到满足权限要求为止。
 
 以下方法是计算 Hooks 地址的示例：
 
@@ -91,7 +91,7 @@ function isValidHookAddress(IHooks self, uint24 fee) internal pure returns (bool
 }
 ```
 
-检查 Hooks 地址权限的合法性：
+检查 Hooks 地址的权限是否正确：
 * 如果开启了 `BEFORE_SWAP_RETURNS_DELTA_FLAG`，则必须开启 `BEFORE_SWAP_FLAG`
 * 如果开启了 `AFTER_SWAP_RETURNS_DELTA_FLAG`，则必须开启 `AFTER_SWAP_FLAG`
 * 如果开启了 `AFTER_ADD_LIQUIDITY_RETURNS_DELTA_FLAG`，则必须开启 `AFTER_ADD_LIQUIDITY_FLAG`
@@ -105,7 +105,7 @@ function isValidHookAddress(IHooks self, uint24 fee) internal pure returns (bool
 
 ### callHook
 
-执行 Hooks 合约方法的调用，并统一错误处理。
+执行 Hooks 合约方法，并统一错误处理。
 
 其中，`self` 为 Hooks 地址，`data` 为调用数据，如 `abi.encodeCall(IHooks.beforeInitialize, (msg.sender, key, sqrtPriceX96))`。
 
@@ -141,7 +141,7 @@ function callHook(IHooks self, bytes memory data) internal returns (bytes memory
 
 ### callHookAndReturnDelta
 
-通过 [callHook](#callhook) 执行 Hooks 合约方法的调用，如果 `parseReturn ==  true`，则返回 delta。
+通过 [callHook](#callhook) 执行 Hooks 合约方法，如果 `parseReturn ==  true`，则返回 delta。
 
 ```solidity
 /// @notice performs a hook call using the given calldata on the given hook
@@ -269,7 +269,7 @@ function afterModifyLiquidity(
 * 如果 Hooks 具有 `BEFORE_SWAP_FLAG` 权限，则通过 [callHook](#callhook) 执行 `beforeSwap` 方法；
   * 如果池子支持动态费率，Hooks 可以通过返回 `lpFeeOverride` 来覆盖当前的 LP 费率；
   * 如果 Hooks 具有 `BEFORE_SWAP_RETURNS_DELTA_FLAG` 权限，则解析 `hookReturn`，并根据 `hookReturn`（高 128 位）来修改 `amountToSwap`。
-  * 注意：`hookReturn` 的高 128 位表示 `hookDeltaSpecified`，低 128 位表示 `hookDeltaUnspecified`。
+    > 注：`hookReturn` 的高 128 位表示 `hookDeltaSpecified`，低 128 位表示 `hookDeltaUnspecified`。
 
     根据 `params.amountSpecified` 和 `params.zeroForOne`，`hookDeltaSpecified` 和 `hookDeltaUnspecified` 可能代表 `amount0` 或 `amount1`，有如下组合：
 
@@ -327,7 +327,7 @@ function beforeSwap(IHooks self, PoolKey memory key, IPoolManager.SwapParams mem
   * 如果 Hooks 具有 `AFTER_SWAP_RETURNS_DELTA_FLAG` 权限，则解析 `hookDelta`
   * 注意：`afterSwap` 仅返回 `hookDeltaUnspecified`；而 `beforeSwap` 返回的是 `hookDeltaSpecified` 和 `hookDeltaUnspecified`。
     * `beofreSwap` 影响输入值 `amountToSwap`，而 `afterSwap` 影响输出值 `hookDeltaUnspecified`。
-* 将 `hookDelta` 从 `swapDelta` 中扣除。
+* 从 `swapDelta` 中扣除 `hookDelta`。
 
 根据 `params.amountSpecified` 和 `params.zeroForOne`，判断 `hookDeltaSpecified` 和 `hookDeltaUnspecified` 的顺序，有如下组合：
 

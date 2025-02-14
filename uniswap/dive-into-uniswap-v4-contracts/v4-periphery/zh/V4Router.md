@@ -1,6 +1,6 @@
 # V4Router
 
-与 [PositionManager](./PositionManager.md) 定位于头寸管理不同，V4Router 主要用于执行交易（swap），调用 [PoolManager](../../v4-core/zh/PoolManager.md) 合约来完成具体的交易操作。
+与 [PositionManager](./PositionManager.md) 定位于头寸管理不同，V4Router 主要用于执行交易（swap），底层调用 [PoolManager](../../v4-core/zh/PoolManager.md) 合约完成具体的交易操作。
 
 先来看一下 V4Router 合约的声明：
 
@@ -12,7 +12,7 @@
 abstract contract V4Router is IV4Router, BaseActionsRouter, DeltaResolver {
 ```
 
-与 [PositionManager](./PositionManager.md) 类似，V4Router 合约也继承了 `BaseActionsRouter` 和 `DeltaResolver` 合约，通过调用 `BaseActionsRouter._executeActions` 方法来执行具体的操作。
+与 [PositionManager](./PositionManager.md) 类似，V4Router 合约也继承了 `BaseActionsRouter` 和 `DeltaResolver` 合约，通过调用 `BaseActionsRouter._executeActions` 方法来批量执行操作。
 
 V4Router 本身是一个抽象合约，因此不能直接部署，其它合约需要继承 V4Router 合约，并实现 `DeltaResolver` 合约中的 `pay` 方法：
 
@@ -25,9 +25,9 @@ V4Router 本身是一个抽象合约，因此不能直接部署，其它合约�
 function _pay(Currency token, address payer, uint256 amount) internal virtual;
 ```
 
-`pay` 方法需要实现具体的支付逻辑，将指定数量的代币支付给 `poolManager`。
+`pay` 方法将指定数量的代币支付给 `poolManager`。
 
-在 Uniswap v4 中，[universal-router](https://github.com/Uniswap/universal-router) 的 [V4SwapRouter.sol](https://github.com/Uniswap/universal-router/blob/8bd498a3fc9f8bc8577e626c024c4fcf0691f885/contracts/modules/uniswap/v4/V4SwapRouter.sol#L14) 合约继承了 V4Router 合约，并实现了 `pay` 方法。
+Uniswap v4 [universal-router](https://github.com/Uniswap/universal-router) 的 [V4SwapRouter.sol](https://github.com/Uniswap/universal-router/blob/8bd498a3fc9f8bc8577e626c024c4fcf0691f885/contracts/modules/uniswap/v4/V4SwapRouter.sol#L14) 合约继承了 V4Router 合约，并实现了 `pay` 方法。
 
 ## 结构体定义
 
@@ -35,7 +35,7 @@ function _pay(Currency token, address payer, uint256 amount) internal virtual;
 
 ### ExactInputSingleParams
 
-指定单个池子的单跳精确输入交换参数：
+指定池子的单跳交易的精确输入交换参数：
 
 ```solidity
 /// @notice Parameters for a single-hop exact-input swap
@@ -58,7 +58,7 @@ struct ExactInputSingleParams {
 
 ### ExactInputParams
 
-指定多跳精确输入交换参数：
+多跳交易的精确输入交换参数：
 
 ```solidity
 /// @notice Parameters for a multi-hop exact-input swap
@@ -79,7 +79,7 @@ struct ExactInputParams {
 
 ### ExactOutputSingleParams
 
-指定单个池子的单跳精确输出交换参数：
+指定池子的单跳交易的精确输出交换参数：
 
 ```solidity
 /// @notice Parameters for a single-hop exact-output swap
@@ -102,7 +102,7 @@ struct ExactOutputSingleParams {
 
 ### ExactOutputParams
 
-指定多跳精确输出交换参数：
+多跳交易的精确输出交换参数：
 
 ```solidity
 /// @notice Parameters for a multi-hop exact-output swap
@@ -123,11 +123,11 @@ struct ExactOutputParams {
 
 ## 方法定义
 
-由于 V4Router 是一个抽象合约，因此它并没有提供直接的对外调用接口，而是由继承它的合约来实现具体的交易入口。
+由于 V4Router 是一个抽象合约，它并没有提供直接的对外调用接口，而由继承它的合约来实现具体的交易入口。
 
 ### _handleAction
 
-V4Router 合约主要实现了 `BaseActionsRouter._handleAction` 方法，用于处理具体的交易操作：
+V4Router 合约主要实现了 `BaseActionsRouter._handleAction` 方法，用于处理不同类型的交易操作：
 
 ```solidity
 function _handleAction(uint256 action, bytes calldata params) internal override {
@@ -181,7 +181,7 @@ function _handleAction(uint256 action, bytes calldata params) internal override 
 }
 ```
 
-V4Router 同样使用了 [ActionsLibrary](./ActionsLibrary.md) 中定义的操作类型，根据不同的操作类型，调用不同的具体交易方法。
+V4Router 同样使用了 [ActionsLibrary](./ActionsLibrary.md) 中定义的操作类型。
 
 #### SWAP_EXACT_IN
 
@@ -297,9 +297,9 @@ return;
 
 #### TAKE_PORTION
 
-提取在 `poolManager` 中的指定代币的部分信用（正 delta）。提取的比例由 `bips` 指定。`BIPS` 上限是 `10000`，即 `100%`。
+提取在 `poolManager` 中的指定代币的部分信用（正 delta）。提取的比例由 `bips` 指定。上限是 `10000`，即 `100%`。
 
-与 [TAKE](#take) 类似，只是提取的金额由比例 `bips` 计算。
+与 [TAKE](#take) 逻辑类似，只是提取的金额由比例 `bips` 计算。
 
 ```solidity
 (Currency currency, address recipient, uint256 bips) = params.decodeCurrencyAddressAndUint256();
@@ -343,14 +343,14 @@ function _swapExactInput(IV4Router.ExactInputParams calldata params) private {
 }
 ```
 
-如果数量代币数量 `amountIn` 为 `ActionConstants.OPEN_DELTA`，即 `0`，则将其设置为当前合约在 `poolManager` 中的全部信用（闪电记账余额）。参考 [_getFullCredit](./DeltaResolver.md#_getfullcredit) 方法。
+如果输入代币数量 `amountIn` 为 `ActionConstants.OPEN_DELTA`，即 `0`，则使用当前合约在 `poolManager` 中的全部信用（闪电记账余额）作为 `amountIn`。参考 [_getFullCredit](./DeltaResolver.md#_getfullcredit) 方法。
 
 依次遍历交换路径：
 
-1. 根据 [getPoolAndSwapDirection](./PathKeyLibrary.md#getpoolandswapdirection) 方法，确定本次的交易池子和交易方向；
-2. 调用 [_swap](#_swap) 方法，完成具体的交易操作。`amountSpecified` 为负数，表示精确输入。返回的 `amountOut` 为输出代币数量；
+1. 对每个交易路径，根据 [getPoolAndSwapDirection](./PathKeyLibrary.md#getpoolandswapdirection) 方法，确定本次的交易池子和交易方向；
+2. 调用 [_swap](#_swap) 方法，完成单步交易。`amountSpecified` 为负数，表示精确输入。返回的 `amountOut` 为输出代币数量；
 3. 将本次中间交易的输出 `amountOut` 作为下一次交易的输入 `amountIn`；
-4. 将本次中间交易的代币地址 `intermediateCurrency` 作为下一次交易的输入代币地址。
+4. 将本次中间交易的代币地址 `intermediateCurrency` 作为下一次交易的输入代币地址，用于确定下一个交易池子和方向。
 
 完成所有交易后，获得的 `amountOut` 即为目标代币的数量。
 
@@ -378,7 +378,7 @@ function _swapExactInputSingle(IV4Router.ExactInputSingleParams calldata params)
 
 首先，计算输入代币数量 `amountIn`，如果 `amountIn` 为 `ActionConstants.OPEN_DELTA`，即 `0`，则将其设置为当前合约在 `poolManager` 中的全部信用（闪电记账余额）。根据 `params.zeroForOne` 确定查询的代币地址是 `currency0` 还是 `currency0`。
 
-调用 [_swap](#_swap) 方法，完成具体的交易操作。`amountSpecified` 为负数，表示精确输入。返回的 `amountOut` 为输出代币数量。
+调用 [_swap](#_swap) 方法，完成单步交易。`amountSpecified` 为负数，表示精确输入。返回的 `amountOut` 为输出代币数量。
 判断 `amountOut` 是否小于 `params.amountOutMinimum`，如果小于，则抛出异常。
 
 ### _swapExactOutput
@@ -418,10 +418,10 @@ function _swapExactOutput(IV4Router.ExactOutputParams calldata params) private {
 
 如果输出代币数量 `amountOut` 为 `ActionConstants.OPEN_DELTA`，即 `0`，则将其设置为当前合约在 `poolManager` 中的全部欠款（负 delta）。参考 [_getFullDebt](./DeltaResolver.md#_getfulldebt) 方法。
 
-由于我们需要根据输出代币计算输入代币，因此需要从最后一个代币开始，逆序依次遍历交换路径：
+由于我们需要根据输出代币计算输入代币，因此从最后一个代币开始，逆序依次遍历交换路径：
 
-1. 根据 [getPoolAndSwapDirection](./PathKeyLibrary.md#getpoolandswapdirection) 方法，确定本次的交易池子和交易方向；
-2. 调用 [_swap](#_swap) 方法，完成具体的交易操作。`amountSpecified` 为正数，表示精确输出。返回的 `amountIn` 为输入代币数量；
+1. 对每个交易路径，根据 [getPoolAndSwapDirection](./PathKeyLibrary.md#getpoolandswapdirection) 方法，确定本次的交易池子和交易方向；
+2. 调用 [_swap](#_swap) 方法，完成单步交易。`amountSpecified` 为正数，表示精确输出。返回的 `amountIn` 为输入代币数量；
    * 由于返回的 `amountIn` 为负数，表示输入代币数量，而在下一步操作中，需要将其表示为输出代币，即正数，因此需要进行取反操作
 3. 将本次中间交易的输入 `amountIn` 作为下一次交易的输出 `amountOut`；
 4. 将本次中间交易的代币地址 `intermediateCurrency` 作为下一次交易的输出代币地址。
@@ -453,7 +453,7 @@ function _swapExactOutputSingle(IV4Router.ExactOutputSingleParams calldata param
 
 首先，计算输出代币数量 `amountOut`，如果 `amountOut` 为 `ActionConstants.OPEN_DELTA`，即 `0`，则将其设置为当前合约在 `poolManager` 中的全部欠款（负 delta）。根据 `params.zeroForOne` 确定查询的代币地址是 `currency1` 还是 `currency0`。
 
-调用 [_swap](#_swap) 方法，完成具体的交易操作。`amountSpecified` 为正数，表示精确输出。返回的 `amountIn` 为负数，表示输入代币数量。对其执行取反操作，转换为正数。
+调用 [_swap](#_swap) 方法，完成单步交易。`amountSpecified` 为正数，表示精确输出。返回的 `amountIn` 为负数，表示输入代币数量。对其执行取反操作，转换为正数。
 
 判断 `amountIn` 是否大于 `params.amountInMaximum`，如果大于，则抛出异常。
 
@@ -503,11 +503,11 @@ struct SwapParams {
 }
 ```
 
-如果 `zeroForOne` 为 `true`，表示从 `token0` 交换到 `token1`，随着交易的进行，池子中 `token0` 的数量会增加，`token1` 的数量会减少。因此，$ \sqrt{P} $ = $ \sqrt{\frac{y}{x}} $ 变小。这里设置 `sqrtPriceLimitX96` 为 `TickMath.MIN_SQRT_PRICE + 1`，表示不限制交易的价格。
+如果 `zeroForOne` 为 `true`，表示从 `token0` 交换到 `token1`，随着交易的进行，池子中 `token0` 的数量会增加，`token1` 的数量会减少。因此，$ \sqrt{P} $ = $ \sqrt{\frac{y}{x}} $ 变小，价格限制需要比当前价格小，这里设置 `sqrtPriceLimitX96` 为 `TickMath.MIN_SQRT_PRICE + 1`，即最小价格，表示不限制交易的价格。
 
 同理，如果 `zeroForOne` 为 `false`，设置 `sqrtPriceLimitX96` 为 `TickMath.MAX_SQRT_PRICE - 1`。
 
-虽然这里没有设置价格上限，但是在上层调用方法中，可以判断 `reciprocalAmount` 是否超过最大值/最小值，从而限制交易的价格。
+虽然这里没有设置价格上限，但是在外部调用方法中，可以判断 `reciprocalAmount` 是否超过最大值/最小值，从而确保交易的安全性。
 
 调用 [poolManager.swap](../../v4-core/zh/PoolManager.md#swap) 方法，完成具体的交易操作。返回的 `delta` 为 `BalanceDelta` 结构体，高 128 位表示 `amount0`，低 128 位表示 `amount1`。
 

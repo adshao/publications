@@ -55,29 +55,29 @@ uint256 internal constant BURN_6909 = 0x18;
     - MINT_POSITION_FROM_DELTAS：根据余额铸造头寸
 
 - 交换相关操作：
-    - SWAP_EXACT_IN_SINGLE：精确输入单个资产
-    - SWAP_EXACT_IN：精确输入
-    - SWAP_EXACT_OUT_SINGLE：精确输出单个资产
-    - SWAP_EXACT_OUT：精确输出
+    - SWAP_EXACT_IN_SINGLE：精确输入代币数量，计算输出代币数量，完成单跳交易
+    - SWAP_EXACT_IN：精确输入代币数量，根据交易路径，计算输出代币数量，完成多跳交易
+    - SWAP_EXACT_OUT_SINGLE：精确输出代币数量，计算输入代币数量，完成单跳交易
+    - SWAP_EXACT_OUT：精确输出代币数量，根据交易路径，计算输入代币数量，完成多跳交易
 
 - 捐赠操作：
-    - DONATE：捐赠
+    - DONATE：捐赠代币
 
 - 结算操作：
-    - SETTLE：结算单个代币
-    - SETTLE_ALL：结算所有代币
-    - SETTLE_PAIR：结算交易对
-    - TAKE：提取单个代币
-    - TAKE_ALL：提取所有代币
-    - TAKE_PORTION：提取部分代币
-    - TAKE_PAIR：提取交易对
+    - SETTLE：结算单个代币欠款
+    - SETTLE_ALL：结算单个代币的全部欠款
+    - SETTLE_PAIR：结算交易对代币欠款
+    - TAKE：提取单个代币余额
+    - TAKE_ALL：提取单个代币的全部余额
+    - TAKE_PORTION：按比例提取单个代币余额
+    - TAKE_PAIR：提取交易对代币余额
     - CLOSE_CURRENCY：结算或提取单个代币
     - CLEAR_OR_TAKE：放弃或提取单个代币
-    - SWEEP：提取所有代币
+    - SWEEP：转出代币
 
 - 包装操作：
-    - WRAP：包装
-    - UNWRAP：解包
+    - WRAP：包装 ETH
+    - UNWRAP：解包 WETH
 
 - 铸造/销毁 ERC6909 token 操作：
     - MINT_6909：铸造 ERC6909

@@ -4,7 +4,7 @@
 
 ### _executeActions
 
-调用 [PoolManager.unlock](../../v4-core/zh/PoolManager.md#unlock) 方法，在 `PoolManager.unlock` 中执行解锁操作，并回调 [_unlockCallback](#_unlockCallback) 方法。
+批量执行操作。
 
 ```solidity
 /// @notice internal function that triggers the execution of a set of actions on v4
@@ -13,6 +13,8 @@ function _executeActions(bytes calldata unlockData) internal {
     poolManager.unlock(unlockData);
 }
 ```
+
+调用 [PoolManager.unlock](../../v4-core/zh/PoolManager.md#unlock) 方法，在 `PoolManager.unlock` 中执行解锁操作，回调 [_unlockCallback](#_unlockcallback) 方法。
 
 ### _unlockCallback
 
@@ -34,16 +36,16 @@ function _unlockCallback(bytes calldata data) internal override returns (bytes m
 
 通过 `data.decodeActionsRouterParams()` 解码 `data`，获取 `actions` 和 `params`。
 
-`data` 的格式为 `abi.encode(bytes actions, bytes[] params)`，其中 `params[i]` 是 `actions[i]` 的参数。
+`data` 的格式为 `abi.encode(bytes actions, bytes[] params)` 计算的 `bytes`，其中 `params[i]` 是 `actions[i]` 的参数。
 
-* `actions` 的格式为 `abi.encodePacked(uint8 action1, uint8 action2, ...)`，即每个字节表示一个 `action`，[ActionsLibrary](./ActionsLibrary.md) 中定义了所有的 `action`。
-* `params` 是一个数组，其中 `params[i]` 的格式为 `abi.encode(v1, v2, ...)`。
+* `actions` 的格式为 `abi.encodePacked(uint8 action1, uint8 action2, ...)` 计算的 `bytes`，每个字节表示一个 `action`，[ActionsLibrary](./ActionsLibrary.md) 中定义了所有的 `action`。
+* `params` 是一个数组，其中 `params[i]` 的格式为 `abi.encode(v1, v2, ...)` 计算的 `bytes`。
 
-调用 `_executeActionsWithoutUnlock` 方法，执行具体的操作。
+调用 [_executeActionsWithoutUnlock](#_executeactionswithoutunlock) 方法，执行具体的操作。
 
 ### _executeActionsWithoutUnlock
 
-顺序执行每个操作，并传入对应的参数。
+遍历所有操作和对应的参数，顺序执行每个操作。
 
 ```solidity
 function _executeActionsWithoutUnlock(bytes calldata actions, bytes[] calldata params) internal {
@@ -58,11 +60,12 @@ function _executeActionsWithoutUnlock(bytes calldata actions, bytes[] calldata p
 }
 ```
 
-确认 `actions` 和 `params` 的长度一致，然后通过 `_handleAction` 顺序执行每个操作。`_handleAction` 由继承 `BaseActionsRouter` 的合约实现。
+确认 `actions` 和 `params` 的长度一致，然后通过 `_handleAction` 顺序执行每个操作。`_handleAction` 方法由继承 `BaseActionsRouter` 的合约实现，如 [PositionManager._handleAction](./PositionManager.md#_handleaction) 和 [V4Router._handleAction](./V4Router.md#_handleaction)。
 
 ### _mapRecipient
 
 `_mapRecipient` 方法用于计算 `recipient` 地址：
+
 * 如果 `recipient` 为 `address(1)`，即 `ActionConstants.MSG_SENDER`，则表示 `msgSender()` 调用方地址
 * 否则，如果 `recipient` 为 `address(2）`，即 `ActionConstants.ADDRESS_THIS`，则表示当前合约地址，比如 `PositionManager`
 * 否则，使用 `recipient` 地址本身
@@ -83,6 +86,7 @@ function _mapRecipient(address recipient) internal view returns (address) {
 ### _mapPayer
 
 `_mapPayer` 方法根据 `payerIsUser` 来确定支付方：
+
 * 如果 `payerIsUser` 为 `true`，则支付方为 `msgSender()`，即调用方
 * 否则，支付方为当前合约地址，比如 `PositionManager`
 
