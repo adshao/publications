@@ -2,7 +2,7 @@
 
 # Deep Dive into Uniswap v2 Smart Contracts
 
-###### tags: `uniswap` `uniswap-v2` `solidity` `AMM`
+###### tags: `uniswap` `uniswap-v2` `smart contract` `solidity`
 
 Following the introduction to the [Dive into Uniswap v2 Whitepaper](../dive-into-uniswap-v2-whitepaper/README.md), today we'll explore the Uniswap v2 contract code.
 

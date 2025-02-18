@@ -2,7 +2,7 @@
 
 # Deep Dive into Uniswap v4 Whitepaper
 
-###### tags: `uniswap` `uniswap-v4` `uniswap-v4-core` `whitepaper`
+###### tags: `uniswap` `uniswap-v4` `whitepaper`
 
 ## Abstract
 

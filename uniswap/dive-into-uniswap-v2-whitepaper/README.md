@@ -2,6 +2,8 @@
 
 # Deep Dive into Uniswap v2 Whitepaper
 
+###### tags: `uniswap` `uniswap-v2` `whitepaper`
+
 ## Preface
 
 This article, as the first in the "Understanding Uniswap" series, begins with the Uniswap v2 whitepaper, explaining the design philosophy and the mathematical formula derivation process of the Uniswap v2 protocol.

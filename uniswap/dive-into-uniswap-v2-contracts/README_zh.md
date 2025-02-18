@@ -2,7 +2,7 @@
 
 # 深入理解 Uniswap v2 智能合约
 
-###### tags: `uniswap` `uniswap-v2` `solidity` `AMM`
+###### tags: `uniswap` `uniswap-v2` `smart contract` `solidity`
 
 上文介绍了《[深入理解 Uniswap v2 白皮书](../dive-into-uniswap-v2-whitepaper/README_zh.md)》，今天我们来讲解Uniswap v2合约代码。
 

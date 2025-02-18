@@ -2,7 +2,7 @@
 
 # Deep Dive into Uniswap v4 Smart Contracts
 
-###### tags: `uniswap` `solidity` `hooks` `uniswap-v4`
+###### tags: `uniswap` `uniswap-v4` `smart contract` `solidity`
 
 # Workflow
 

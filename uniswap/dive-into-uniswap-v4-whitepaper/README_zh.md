@@ -2,7 +2,7 @@
 
 # 深入理解 Uniswap v4 白皮书
 
-###### tags: `uniswap` `uniswap-v4` `uniswap-v4-core` `whitepaper`
+###### tags: `uniswap` `uniswap-v4` `whitepaper`
 
 ## Abstract | 概述
 

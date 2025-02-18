@@ -2,7 +2,7 @@
 
 # 深入理解 Uniswap v4 智能合约
 
-###### tags: `uniswap` `solidity` `hooks` `uniswap-v4`
+###### tags: `uniswap` `uniswap-v4` `smart contract` `solidity`
 
 # 工作流
 

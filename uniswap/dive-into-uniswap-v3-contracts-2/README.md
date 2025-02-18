@@ -2,7 +2,7 @@
 
 # Deep Dive Into Uniswap v3 Smart Contracts (Part 2)
 
-###### tags: `uniswap` `solidity` `logarithm` `uniswap-v3` `tick` `periphery` `contract`
+###### tags: `uniswap` `uniswap-v3` `smart contract` `solidity`
 
 ## Uniswap-v3-periphery
 

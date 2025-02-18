@@ -2,7 +2,7 @@
 
 # 深入理解 Uniswap v3 智能合约 （一）
 
-###### tags: `uniswap` `solidity` `logarithm` `uniswap-v3` `tick` `core`
+###### tags: `uniswap` `uniswap-v3` `smart contract` `solidity`
 
 ## 概述
 
