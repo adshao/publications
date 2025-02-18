@@ -1,6 +1,6 @@
 # Publications
 
-###### tags: `uniswap` `AMM` `artgobblers` `VRGDA`
+###### tags: `DeFi` `uniswap` `whitepaper` `smart contract` `solidity` `AMM`
 
 ## Uniswap
 
