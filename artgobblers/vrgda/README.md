@@ -240,10 +240,10 @@ constructor(
 
 Here, focus on the last few lines:
 
-* 69.42e18: Target price (initial price) $p_0$.
-* 0.31e18: Indicates that if no auction is successful within a day, the price becomes $1-0.31=69%$ of the previous day’s price.
-* MAX_MINTABLE: Maximum number of tokens that can be auctioned, i.e., $L - 1$ (note, not $L$).
-* 0.0023e18: Time multiplier $s$, $\frac{1}{0.0023} \approx 435$ indicates that it is expected to auction 46% of the total tokens in 435 days, according to [the Gobbler auction plan](https://docs.google.com/spreadsheets/d/1i8hYuWyAymjbwx54fA1HcEMEwfEEyluX4tPssOXoyf4/edit#gid=1608966566), reaching 46% of the auction volume around the 15th month (approximately 435 days).
+* `69.42e18`: Target price (initial price) $p_0$.
+* `0.31e18`: Indicates that if no auction is successful within a day, the price becomes `1-0.31=69%` of the previous day’s price.
+* `MAX_MINTABLE`: Maximum number of tokens that can be auctioned, i.e., $L - 1$ (note, not $L$).
+* `0.0023e18`: Time multiplier $s$, $\frac{1}{0.0023} \approx 435$ indicates that it is expected to auction 46% of the total tokens in 435 days, according to [the Gobbler auction plan](https://docs.google.com/spreadsheets/d/1i8hYuWyAymjbwx54fA1HcEMEwfEEyluX4tPssOXoyf4/edit#gid=1608966566), reaching 46% of the auction volume around the 15th month (approximately 435 days).
 
 ## Summary
 
