@@ -73,7 +73,7 @@ struct SwapParams {
     * `exactIn` means providing an exact amount of `token1` (to get as much `token0` as possible)
     * `exactOut` means getting an exact amount of `token0` (while providing as little `token1` as possible)
 - `sqrtPriceLimitX96`: The price limit of the trade, if this price is reached, the trade will stop
-  * If `zeroForOne` is `true`, i.e., a trade from `token0` to `token1`, after the trade, `token0` ( $x$ ) increases, `token1` ( $y$ ) decreases, i.e., $ \sqrt{P} = \sqrt{\frac{y}{x}} $ decreases, so the target price `sqrtPriceLimitX96` should be less than the current price
+  * If `zeroForOne` is `true`, i.e., a trade from `token0` to `token1`, after the trade, `token0` ( $x$ ) increases, `token1` ( $y$ ) decreases, i.e., $\sqrt{P} = \sqrt{\frac{y}{x}}$ decreases, so the target price `sqrtPriceLimitX96` should be less than the current price
   * Conversely, the target price `sqrtPriceLimitX96` should be greater than the current price
 
 ## Function Definitions
@@ -160,7 +160,7 @@ function initialize(PoolKey memory key, uint160 sqrtPriceX96) external noDelegat
 }
 ```
 
-* Check the validity of `tickSpacing`, which must satisfy $ 1 \leq tickSpacing \leq 32767 $.
+* Check the validity of `tickSpacing`, which must satisfy $1 \leq tickSpacing \leq 32767$.
 
 * Check the order of `currency0` and `currency1`, requiring `currency0 < currency1`. Among them, native ETH is represented by `address(0)`.
 
