@@ -73,7 +73,7 @@ struct SwapParams {
     * `exactIn` 表示希望提供精确数量的 `token1`（从而获得尽可能多的 `token0`）
     * `exactOut` 表示希望获得精确数量的 `token0`（而提供尽可能少的 `token1`）
 - `sqrtPriceLimitX96`：交易的价格上限，如果达到该价格，则停止交易
-  * 如果 `zeroForOne` 为 `true`，即从 `token0` 到 `token1` 的交易，交易之后 `token0`（ $x$ ） 变多，`token1`（ $y$ ） 变少，即 $ \sqrt{P} = \sqrt{\frac{y}{x}} $ 变小，因此目标价格 `sqrtPriceLimitX96` 应该小于当前价格
+  * 如果 `zeroForOne` 为 `true`，即从 `token0` 到 `token1` 的交易，交易之后 `token0`（ $x$ ） 变多，`token1`（ $y$ ） 变少，即 $\sqrt{P} = \sqrt{\frac{y}{x}}$ 变小，因此目标价格 `sqrtPriceLimitX96` 应该小于当前价格
   * 反之，目标价格 `sqrtPriceLimitX96` 应该大于当前价格
 
 ## 函数定义
@@ -160,7 +160,7 @@ function initialize(PoolKey memory key, uint160 sqrtPriceX96) external noDelegat
 }
 ```
 
-* 检查 `tickSpacing` 的合法性，必须满足 $ 1 \leq tickSpacing \leq 32767 $。
+* 检查 `tickSpacing` 的合法性，必须满足 $1 \leq tickSpacing \leq 32767$。
 
 * 检查 `currency0` 和 `currency1` 的顺序，要求 `currency0 < currency1`。其中，原生 ETH 用 `address(0)` 表示。
 
