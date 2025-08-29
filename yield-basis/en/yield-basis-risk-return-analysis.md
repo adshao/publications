@@ -241,11 +241,11 @@ At TVL $50M (capital outflow due to risk):
 
 ### 8.1 Overall Rating
 
-**Risk Level: High**
-**Yield Level (without YB): Negative**
-**Yield Level (with YB): Low-Medium (5.6% APY)**
-**Core Value: Eliminate impermanent loss, maintain BTC exposure**
-**Suitable For: Long-term investors wanting to hold BTC while earning yields**
+- **Risk Level: High**
+- **Yield Level (without YB): Negative**
+- **Yield Level (with YB): Low-Medium (5.6% APY)**
+- **Core Value: Eliminate impermanent loss, maintain BTC exposure**
+- **Suitable For: Long-term investors wanting to hold BTC while earning yields**
 
 ### 8.2 Position Recommendations
 
