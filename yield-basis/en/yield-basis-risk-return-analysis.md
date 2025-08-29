@@ -1,3 +1,5 @@
+[English](./yield-basis-risk-return-analysis.md) | [中文](../zh/yield-basis-risk-return-analysis.md)
+
 # Yield Basis Risk-Return Comprehensive Analysis Report
 
 ## Executive Summary
@@ -299,20 +301,20 @@ At TVL $50M (capital outflow due to risk):
 ## IX. Core Conclusions
 
 ### Advantages
-✅ **Core Innovation**: Completely eliminate impermanent loss through 2x leverage (protocol's biggest highlight)
-✅ **Maintain Exposure**: LPs can continuously hold BTC exposure while earning yields
-✅ **No Liquidation Risk**: Soft liquidation mechanism, no forced liquidation
-✅ **Curve Endorsement**: Deep integration, mature technology
-✅ **YB Token Potential**: 2-3x potential upside (if successful)
+- ✅ **Core Innovation**: Completely eliminate impermanent loss through 2x leverage (protocol's biggest highlight)
+- ✅ **Maintain Exposure**: LPs can continuously hold BTC exposure while earning yields
+- ✅ **No Liquidation Risk**: Soft liquidation mechanism, no forced liquidation
+- ✅ **Curve Endorsement**: Deep integration, mature technology
+- ✅ **YB Token Potential**: 2-3x potential upside (if successful)
 
 ### Disadvantages
-❌ **Extremely Low Base Yield**: Pure trading fees only 1-3% APY
-❌ **High Tail Risk**: Small probability of large losses (potentially 30-50% loss)
-❌ **Token Price Risk**: YB may go to zero or underperform
-❌ **High Complexity**: Complex mechanism, difficult for ordinary users to understand
-❌ **Team Risk**: Founder's controversial history, severe over-leverage tendency
-❌ **Double Risk**: Protocol risk + token risk compounded
-❌ **High Opportunity Cost**: Inferior to directly holding BTC or stablecoin yield farming
+- ❌ **Extremely Low Base Yield**: Pure trading fees only 1-3% APY
+- ❌ **High Tail Risk**: Small probability of large losses (potentially 30-50% loss)
+- ❌ **Token Price Risk**: YB may go to zero or underperform
+- ❌ **High Complexity**: Complex mechanism, difficult for ordinary users to understand
+- ❌ **Team Risk**: Founder's controversial history, severe over-leverage tendency
+- ❌ **Double Risk**: Protocol risk + token risk compounded
+- ❌ **High Opportunity Cost**: Inferior to directly holding BTC or stablecoin yield farming
 
 ### One-Sentence Summary
 
