@@ -25,6 +25,10 @@
 
 * [VRGDA Algorithm Analysis](./artgobblers/vrgda/README.md)
 
+## Yield Basis
+
+* [Yield Basis Risk Return Analysis](./yield-basis/en/yield-basis-risk-return-analysis.md)
+
 ## Links
 
 * [X](https://x.com/AdamShao)
