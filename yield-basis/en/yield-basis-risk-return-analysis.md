@@ -4,7 +4,7 @@
 
 ## Executive Summary
 
-Based on in-depth code analysis and Curve historical data, Yield Basis's **core innovation is completely eliminating impermanent loss through a 2x leverage mechanism**, allowing LPs to maintain BTC exposure while earning yields. Although base yields are negative (trading fees 1-3% - expected losses 3.9% = -2.9% to -0.9% APY), the protocol compensates risks through YB token incentives. YB emission's self-balancing mechanism (TVL decrease → more YB per LP unit) ensures reasonable risk-adjusted returns. After credit line approval, expected equilibrium yields are 8-10% APY (including YB incentives).
+Based on in-depth code analysis and Curve historical data, Yield Basis's **core innovation is completely eliminating impermanent loss through a 2x leverage mechanism**, allowing LPs to maintain BTC exposure while earning yields. The protocol offers a unique yield stacking mechanism: users can stake ybBTC to earn YB tokens, then lock YB as veYB to achieve dual yields (YB incentives + BTC admin fees), with voting rights further enhancing returns. Although base yields are negative (trading fees 0.5-2% - expected losses 3.9% = -3.4% to -1.9% APY), the combined strategy can achieve 2.1% to 11.1% APY after credit line approval. Market equilibrium is expected to stabilize at 8-12% APY through the flywheel effect of early veYB holders.
 
 ## I. Curve BTC Pool Historical Yield Benchmark
 
@@ -56,34 +56,94 @@ Based on BTC historical volatility data:
 
 ### 3.1 Yield Source Breakdown
 
+**Important Note: Users can achieve yield stacking through combined strategies**
+
+#### Base Modes (Choose One)
+
+##### Mode A: Hold ybBTC Unstaked (Earn BTC Trading Fees)
 | Yield Type | Estimated APY | Description |
 |------------|---------------|-------------|
-| Curve Pure Trading Fees | 1-3% | Based on 0.04% fee rate, actual volume |
-| YB Token Incentives | 5-10%* | Based on conservative token value expectations |
+| Curve Trading Fee Share | 0.5-2% | After deducting dynamic admin fee, distributed in BTC |
 | **No Impermanent Loss Value** | Unquantifiable | **Core innovation: Maintain BTC exposure while earning yields** |
-| **Total Yield** | **7-15%** | Including YB token value + intangible value |
+| **Total Yield** | **0.5-2%** | Pure BTC yield, no token risk |
 
-*Note: YB token incentive calculation based on:
-- Initial price: $0.05/YB
-- Conservative expected price: $0.10-0.15/YB (2-3x)
-- Mining annualized: Reduced to 5-10% after market equilibrium
+##### Mode B: Stake ybBTC to Gauge (Earn YB Tokens)
+| Yield Type | Estimated APY | Description |
+|------------|---------------|-------------|
+| YB Token Incentives | 5-10%* | Forgo BTC trading fees, receive YB emissions |
+| **No Impermanent Loss Value** | Unquantifiable | **Core innovation: Maintain BTC exposure while earning yields** |
+| **Total Yield** | **5-10%** | Pure YB token yield |
+
+#### Advanced Strategy: Yield Stacking
+
+##### Combined Strategy: Stake ybBTC + Lock YB as veYB
+| Yield Source | Estimated APY | Description |
+|------------|---------------|-------------|
+| YB Token Incentives | 5-10% | From staking ybBTC |
+| Dynamic Admin Fee Share | 1-5% | Lock earned YB as veYB, earn BTC |
+| Governance Boost | - | veYB can vote to increase own pool's YB emission weight |
+| **Combined Total Yield** | **6-15%** | YB tokens + BTC dual yield |
+
+*Note:
+- ybBTC holders must choose between unstaked (earn BTC fees) and staked (earn YB)
+- **Yield Stacking Mechanism**: YB earned from staking ybBTC can be locked as veYB for dual yields
+- veYB holders receive both protocol revenue and can vote to increase their pool's YB emissions
+- Fee distribution: 50% for fee distribution, 50% for pool rebalancing
+- Dynamic admin fee: Increases with staking rate (10%-100%), captured by veYB holders
+- YB token price assumption: Initial $0.05, conservative expectation $0.10-0.15 (2-3x)
 
 ### 3.2 Cost Comparison
 
 #### Current Model (with borrowing costs)
+
+**Base Mode A: Unstaked ybBTC (Earn BTC fees)**
 ```
-Total Yield: 7-15% APY (including YB tokens)
-- crvUSD Borrowing Rate: 4-8% APY (market standard rates)
+Total Yield: 0.5-2% APY (BTC trading fees)
+- crvUSD Borrowing Rate: 4-8% APY
 - Expected Losses: 3.9% APY
-= Net Yield: -0.9% to 3.1% APY
+= Net Yield: -11.4% to -5.9% APY (negative returns)
+```
+
+**Base Mode B: Staked ybBTC (Earn YB tokens)**
+```
+Total Yield: 5-10% APY (YB token incentives)
+- crvUSD Borrowing Rate: 4-8% APY
+- Expected Losses: 3.9% APY
+= Net Yield: -6.9% to 1.1% APY (near breakeven)
+```
+
+**Combined Strategy: Stake ybBTC + Lock veYB**
+```
+Total Yield: 6-15% APY (YB incentives + veYB admin fees)
+- crvUSD Borrowing Rate: 4-8% APY
+- Expected Losses: 3.9% APY
+= Net Yield: -5.9% to 3.1% APY (possible profit)
 ```
 
 #### After Curve Credit Line (zero interest)
+
+**Base Mode A: Unstaked ybBTC (Earn BTC fees)**
 ```
-Total Yield: 7-15% APY (including YB tokens)
+Total Yield: 0.5-2% APY (BTC trading fees)
 - Borrowing Rate: 0% APY
 - Expected Losses: 3.9% APY
-= Net Yield: 3.1% to 11.1% APY
+= Net Yield: -3.4% to -1.9% APY (still negative)
+```
+
+**Base Mode B: Staked ybBTC (Earn YB tokens)**
+```
+Total Yield: 5-10% APY (YB token incentives)
+- Borrowing Rate: 0% APY
+- Expected Losses: 3.9% APY
+= Net Yield: 1.1% to 6.1% APY (positive returns)
+```
+
+**Combined Strategy: Stake ybBTC + Lock veYB**
+```
+Total Yield: 6-15% APY (YB incentives + veYB admin fees)
+- Borrowing Rate: 0% APY
+- Expected Losses: 3.9% APY
+= Net Yield: 2.1% to 11.1% APY (good returns)
 ```
 
 #### Long-term Yield After Market Equilibrium
@@ -92,19 +152,25 @@ Based on emission mechanism's automatic adjustment:
 YB annual emission is fixed, but allocation per LP depends on TVL
 
 Example calculation (after credit line):
-Base Yield: 1-2% APY (trading fees)
-Expected Losses: -3.9% APY
-Net Base: -2.9% to -1.9% APY
+Mode A (Unstaked):
+- Base Yield: 1-2% APY (BTC trading fees)
+- Expected Losses: -3.9% APY
+- Net Yield: -2.9% to -1.9% APY (unsustainable)
 
-YB incentives need to reach 10-12% APY to achieve 8-10% net yield:
-Assuming annual emission of 100M YB (based on 1B total supply assumption):
-- If TVL $200M, each $1 gets 0.5 YB, needs price $0.20-0.24 (4-5x)
-- If TVL $100M, each $1 gets 1 YB, needs price $0.10-0.12 (2-2.5x)
-- If TVL $50M, each $1 gets 2 YB, needs price $0.05-0.06 (1-1.2x)
+Mode B (Staked for YB):
+- Forgo BTC trading fees: 0% APY
+- Expected Losses: -3.9% APY
+- Need YB incentives > 3.9% APY to breakeven
+
+Equilibrium Mechanism (Staking mode):
+Assuming annual emission of 100M YB (10% of assumed 1B total):
+- If TVL $200M, each $1 gets 0.5 YB, needs price $0.20 (4x) for 10% APY
+- If TVL $100M, each $1 gets 1 YB, needs price $0.10 (2x) for 10% APY
+- If TVL $50M, each $1 gets 2 YB, needs price $0.05 (1x) for 10% APY
 
 Market will automatically find equilibrium:
 TVL × YB price = constant (similar to xy=k)
-Eventually stabilizes at reasonable risk-adjusted yield level
+Eventually stabilizes at reasonable risk-adjusted yield level (expected 6-8% APY)
 ```
 
 ## IV. Scenario Analysis
@@ -117,28 +183,47 @@ Eventually stabilizes at reasonable risk-adjusted yield level
 | **Base Case** | 50% | Normal market, YB 2x | 6% APY | $0.10/YB |
 | **Pessimistic** | 30% | Market saturation, YB below issue price | 2% APY | $0.03/YB |
 
-### 4.2 Expected Return Calculation
+### 4.2 Expected Return Calculation (After Credit Line)
 
 ```
-Without YB tokens (pure trading fees):
-E(return) = 0.2 × 2.5% + 0.5 × 1.5% + 0.3 × 0.5%
-         = 1.4% APY
+Base Mode A: Unstaked (pure BTC trading fees):
+E(gross yield) = 0.2 × 1.75% + 0.5 × 1.25% + 0.3 × 0.75%
+              = 1.2% APY
+E(net yield) = 1.2% - 3.9% = -2.7% APY (negative returns)
 
-With YB token value:
-E(return) = 0.2 × 10% + 0.5 × 6% + 0.3 × 2%
-         = 2% + 3% + 0.6%
-         = 5.6% APY (after credit line)
+Base Mode B: Staked (pure YB tokens):
+E(YB yield) = 0.2 × 10% + 0.5 × 6% + 0.3 × 2%
+           = 5.6% APY
+E(net yield) = 5.6% - 3.9% = 1.7% APY (small profit)
+
+Combined Strategy: Staked + veYB (yield stacking):
+E(YB yield) = 5.6% APY
+E(veYB yield) = 0.2 × 4% + 0.5 × 2.5% + 0.3 × 1%
+             = 2.35% APY
+E(total net yield) = 5.6% + 2.35% - 3.9% = 4.05% APY (reasonable returns)
 ```
 
 ## V. Risk-Adjusted Metrics
 
 ### 5.1 Sharpe Ratio (After Credit Line)
-- Expected Return (without YB): -1.9% APY (trading fees 1.5% - losses 3.9% = -2.4% to -0.9%, taking midpoint)
-- Expected Return (with YB): 5.6% APY (based on scenario analysis)
-- Standard Deviation: 12% (considering YB token volatility)
+
+**Base Mode A: Unstaked (Earn BTC fees)**
+- Expected Return: -2.7% APY (trading fees 1.2% - losses 3.9%)
+- Standard Deviation: 8% (BTC price volatility)
 - Risk-free Rate: 4% (US Treasury)
-- **Sharpe Ratio (without YB) = -0.49** (negative, worse than risk-free asset)
-- **Sharpe Ratio (with YB) = 0.13** (low but positive)
+- **Sharpe Ratio = -0.84** (strongly negative)
+
+**Base Mode B: Staked (Earn YB tokens)**
+- Expected Return: 1.7% APY (YB 5.6% - losses 3.9%)
+- Standard Deviation: 15% (YB token volatility higher)
+- Risk-free Rate: 4% (US Treasury)
+- **Sharpe Ratio = -0.15** (negative, worse than risk-free asset after risk adjustment)
+
+**Combined Strategy: Staked + veYB**
+- Expected Return: 4.05% APY (YB + veYB - losses)
+- Standard Deviation: 12% (partial BTC yields reduce volatility)
+- Risk-free Rate: 4% (US Treasury)
+- **Sharpe Ratio = 0.004** (near zero, just covers risk-free rate)
 
 ### 5.2 Maximum Drawdown
 - Normal Market: -5%
@@ -146,11 +231,13 @@ E(return) = 0.2 × 10% + 0.5 × 6% + 0.3 × 2%
 - Black Swan: -50% to -90%
 
 ### 5.3 Risk-Reward Ratio (After Credit Line)
-- Expected Return (without YB): -1.9% APY
-- Expected Return (with YB): 5.6% APY
+- Expected Return (Base Mode A: BTC fees): -2.7% APY
+- Expected Return (Base Mode B: YB tokens): 1.7% APY
+- Expected Return (Combined Strategy): 4.05% APY
 - Maximum Regular Loss: 30%
-- **Risk-Reward Ratio (without YB): -0.06** (negative)
-- **Risk-Reward Ratio (with YB): 0.19** (low)
+- **Risk-Reward Ratio (Mode A): -0.09** (negative)
+- **Risk-Reward Ratio (Mode B): 0.06** (extremely low)
+- **Risk-Reward Ratio (Combined): 0.14** (low but acceptable)
 
 ## VI. YB Token Value Assessment
 
@@ -158,6 +245,8 @@ E(return) = 0.2 × 10% + 0.5 × 6% + 0.3 × 2%
 - **Total Supply**: 1 billion (assumed value, actual determined by reserve parameter at deployment)
 - **Initial Valuation**: $50M FDV ($0.05/YB, based on assumed 1B total supply)
 - **Unique Mechanism**: "Mining cost" model, each YB backed by opportunity cost of foregone BTC yields
+- **veYB Locking**: Lock YB up to 4 years for veYB, receive protocol revenue share and governance rights
+- **Fee Capture**: veYB holders receive dynamic admin fees (10%-50% of total trading fees)
 
 ### 6.2 Realistic Valuation Based on CRV Benchmark
 **Current CRV Data (August 2025)**:
@@ -172,14 +261,28 @@ Assuming YB reaches 10-20% of CRV market cap (considering niche positioning):
 - Corresponding Price: $0.10-0.20/YB (based on 1B total supply assumption)
 - Relative to Initial Price: 2-4x
 
-### 6.3 YB Emission Auto-Adjustment Mechanism
+### 6.3 Fee Distribution and Incentive Balance Mechanism
 
-**Emission Mechanism Based on Code Analysis**:
-1. **Fixed Total Emission**: Uses exponential decay function, released from reserve pool
-2. **Gauge Weight Voting**: veYB holders vote on pool weights
-3. **Key Formulas**:
-   - Pool emission = (Total emission × Pool weight) / Total weight
-   - When TVL low → Fewer participants → Each LP gets more YB
+**Dynamic Admin Fee Mechanism**:
+- 0% staking rate: 10% admin fee (veYB receives minimum)
+- 50% staking rate: ~36.4% admin fee (veYB receives moderate)
+- 100% staking rate: 100% admin fee (veYB receives all)
+
+**Yield Stacking Effect**:
+1. **Single Strategy**:
+   - Unstaked ybBTC: Only receive BTC trading fees
+   - Staked ybBTC: Only receive YB tokens
+2. **Combined Strategy** (Yield Stacking):
+   - Stake ybBTC → Receive YB
+   - Lock YB as veYB → Additionally receive admin fee income
+   - veYB voting rights → Increase own pool's YB emissions
+   - **Total Yield = YB incentives + veYB admin fees + voting boost**
+
+**Flywheel Effect**:
+- Early participants achieve higher yields through combined strategy
+- veYB holders form aligned interest group
+- Concentrated voting rights direct YB emissions to core pools
+- Creates positive cycle: More staking → More veYB → Higher yields
 
 **Market Equilibrium Mechanism**:
 - High TVL → Diluted per-unit YB incentives → Lower yields
@@ -244,6 +347,7 @@ At TVL $50M (capital outflow due to risk):
 - **Risk Level: High**
 - **Yield Level (without YB): Negative**
 - **Yield Level (with YB): Low-Medium (5.6% APY)**
+- **Yield Level (Combined Strategy): Medium (4.05% APY expected, 8-12% APY at equilibrium)**
 - **Core Value: Eliminate impermanent loss, maintain BTC exposure**
 - **Suitable For: Long-term investors wanting to hold BTC while earning yields**
 
@@ -283,20 +387,25 @@ At TVL $50M (capital outflow due to risk):
 
 1. **Current Phase** (with borrowing costs):
    - Recommendation: **Watch cautiously or minimal position** (<5%)
-   - Calculation: Trading fees(1-3%) - Borrowing(4-8%) - Losses(3.9%) = -10.9% to -4.9%
-   - Expected Return (with YB 5-10%): -0.9% to 3.1% APY
-   - Risk exceeds returns
+   - Base Mode A (Unstaked): -11.4% to -5.9% APY (severe losses)
+   - Base Mode B (Staked): -6.9% to 1.1% APY (near breakeven)
+   - Combined Strategy: -5.9% to 3.1% APY (possible small profit)
+   - Conclusion: Even combined strategy struggles to cover costs
 
 2. **After Credit Line Approval**:
-   - Recommendation: **Moderate participation acceptable** (5-10% position)
-   - Calculation: Trading fees(1-3%) - Losses(3.9%) = -2.9% to -0.9%
-   - Expected Return (with YB 5-10%): 3.1% to 11.1% APY
-   - Saving 4-8% borrowing cost is key
+   - Recommendation: **Moderate participation in combined strategy acceptable** (5-10% position)
+   - Base Mode A (Unstaked): -3.4% to -1.9% APY (not recommended)
+   - Base Mode B (Staked): 1.1% to 6.1% APY (acceptable)
+   - **Combined Strategy: 2.1% to 11.1% APY (recommended)**
+   - Optimal strategy: 70% stake ybBTC, lock all earned YB as veYB
 
 3. **After Market Equilibrium (6-12 months)**:
-   - Market auto-adjustment mechanism takes effect
-   - Expected equilibrium yield: 8-10% APY (including YB incentives)
-   - Benchmarking Curve stablecoin pools 10-15% APY, discounted 20-30% for higher risk
+   - Flywheel effect forms, early veYB holders gain advantage
+   - Expected equilibrium yields:
+     - Unstaked ybBTC: -1% to 0% APY (basically unprofitable)
+     - Pure staked ybBTC: 4-6% APY (after YB price stabilizes)
+     - **Combined Strategy: 8-12% APY (YB + veYB + voting rights)**
+   - Recommendation: Establish veYB position early for long-term compounding
 
 ## IX. Core Conclusions
 
@@ -306,19 +415,22 @@ At TVL $50M (capital outflow due to risk):
 - ✅ **No Liquidation Risk**: Soft liquidation mechanism, no forced liquidation
 - ✅ **Curve Endorsement**: Deep integration, mature technology
 - ✅ **YB Token Potential**: 2-3x potential upside (if successful)
+- ✅ **Diversified Yields**: Three participation methods suit different risk preferences
+- ✅ **Self-Balancing Mechanism**: Dynamic fee distribution ensures long-term viability of all strategies
 
 ### Disadvantages
-- ❌ **Extremely Low Base Yield**: Pure trading fees only 1-3% APY
+- ❌ **Extremely Low Base Yield**: All modes initially lose money after deducting losses
 - ❌ **High Tail Risk**: Small probability of large losses (potentially 30-50% loss)
 - ❌ **Token Price Risk**: YB may go to zero or underperform
-- ❌ **High Complexity**: Complex mechanism, difficult for ordinary users to understand
+- ❌ **High Complexity**: Three-way game theory mechanism, difficult for ordinary users
 - ❌ **Team Risk**: Founder's controversial history, severe over-leverage tendency
-- ❌ **Double Risk**: Protocol risk + token risk compounded
+- ❌ **Multiple Risk Stacking**: Protocol risk + token risk + strategy selection risk
 - ❌ **High Opportunity Cost**: Inferior to directly holding BTC or stablecoin yield farming
+- ❌ **Liquidity Risk**: veYB lock-up period up to 4 years
 
 ### One-Sentence Summary
 
-**Yield Basis's core innovation is completely eliminating impermanent loss through a 2x leverage mechanism, allowing LPs to earn yields while maintaining BTC exposure—something traditional AMMs cannot achieve. Although base yields are negative (-1.9% APY), YB token's self-balancing incentive mechanism (TVL × YB incentive = constant) ensures reasonable risk-adjusted returns of 8-10% APY. Investors are essentially paying for the "no impermanent loss" innovation, rather than purely pursuing yield rates.**
+**Yield Basis completely eliminates impermanent loss through a 2x leverage mechanism, allowing LPs to maintain BTC exposure while earning yields. The protocol's core value lies in its yield stacking mechanism: after staking ybBTC to earn YB tokens, users can lock YB as veYB to achieve dual yields of YB incentives + BTC admin fees, while further enhancing returns through voting rights. After Curve credit line approval, the combined strategy can achieve expected returns of 8-12% APY. Early participants establishing veYB positions can enjoy long-term compounding from the flywheel effect. Despite the 3.9% expected loss, the protocol provides a unique BTC yield opportunity for risk-tolerant investors through carefully designed incentive mechanisms and yield stacking.**
 
 ---
 
