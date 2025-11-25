@@ -22,12 +22,15 @@
 
 在旧的合约设计中，要实现这种组合，需要对代币进行层层嵌套（Nest）。但这会产生一个严重的问题：路径依赖（Path Dependence）。
 * 路径 1：你先抵押资金生成代表“Alice”的代币，然后再将“Alice代币”作为抵押品，去生成“Alice & High”的代币。
+
 ![](./assets/path_1.png)
 
 * 路径 2：你先抵押资金生成代表“High”的代币，然后再将“High代币”作为抵押品，去生成“High & Alice”的代币。
+
 ![](./assets/path_2.png)
 
 虽然逻辑上 Alice & High 和 High & Alice 代表的是完全相同的现实结果，但在区块链上，它们是两个完全不同的代币。
+
 ![](./assets/path_3.png)
 
 这导致了以下问题：
