@@ -1,6 +1,6 @@
 # Publications
 
-###### tags: `DeFi` `uniswap` `whitepaper` `smart contract` `solidity` `AMM`
+###### tags: `DeFi` `uniswap` `whitepaper` `smart contract` `solidity` `AMM` `gnosis` `conditional-tokens` `polymarket`
 
 ## Uniswap
 
@@ -20,6 +20,12 @@
 * [Deep Dive into Uniswap v2 Whitepaper](./uniswap/dive-into-uniswap-v2-whitepaper/README.md)
 * [Deep Dive into Uniswap v2 Smart Contracts](./uniswap/dive-into-uniswap-v2-contracts/README.md)
 * [Flashloan fee of Uniswap v2](https://hackmd.io/@adshao/SJptXNaI9)
+
+## Gnosis
+
+### Prediction Markets
+
+* [Conditional Tokens](./gnosis/conditional-tokens/README.md)
 
 ## Art Gobblers
 
