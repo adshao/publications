@@ -23,13 +23,16 @@ We want to predict the scenario: "Alice is elected **AND** Economy goes High".
 
 In older contract designs, achieving this combination required nesting tokens. However, this creates a serious problem: **Path Dependence**.
 
-  * **Path 1:** You first collateralize funds to generate tokens representing "Alice", and then use the "Alice Token" as collateral to generate "Alice & High" tokens.
-  ![](./assets/path_1.png)
+* **Path 1:** You first collateralize funds to generate tokens representing "Alice", and then use the "Alice Token" as collateral to generate "Alice & High" tokens.
 
-  * **Path 2:** You first collateralize funds to generate tokens representing "High", and then use the "High Token" as collateral to generate "High & Alice" tokens.
-  ![](./assets/path_2.png)
+![](./assets/path_1.png)
+
+* **Path 2:** You first collateralize funds to generate tokens representing "High", and then use the "High Token" as collateral to generate "High & Alice" tokens.
+
+![](./assets/path_2.png)
 
 Although "Alice & High" and "High & Alice" represent the exact same real-world outcome logically, on the blockchain, they are two completely different tokens.
+
 ![](./assets/path_3.png)
 
 This leads to the following issues:
