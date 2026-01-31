@@ -326,32 +326,48 @@ finalScore = vectorWeight * vectorScore + textWeight * textScore
 
 ## 9. 工具层与系统提示注入
 
-### 9.1 memory tools
+### 9.1 memory 工具（运行时）
 
-`memory-core` 插件注册了：
+当 memory search 启用时，OpenClaw 会暴露两个 memory 工具；工具定义位于
+`src/agents/tools/memory-tool.ts`，并在策略允许时被加入运行时工具列表：
 
 - `memory_search`
+  - 参数：`query`，可选 `maxResults`、`minScore`
+  - 通过 `getMemorySearchManager(...)` 对 `MEMORY.md`、`memory/**/*.md`
+    以及可选的会话转录（`memorySearch.sources` 启用时）做语义检索
+  - 返回 top snippets，包含 `path` 与行号区间，并带上 provider/model 元数据
 - `memory_get`
+  - 参数：`path`，可选 `from`、`lines`
+  - 通过 `MemorySearchManager.readFile(...)` 只读取需要的行
+  - 允许路径限制在 `MEMORY.md`、`memory/**/*.md` 与配置的 `memorySearch.extraPaths`
 
-这两个工具仅在 `memorySearch.enabled` 为 true 时才会注册。
-
-`memory_get` 有严格访问限制：
-
-- 只允许 `MEMORY.md`、`memory/` 和 extraPaths 中的 `.md` 文件
-- 禁止符号链接
-- 必须是文件
+这两个工具仅在 `resolveMemorySearchConfig(...)` 返回 enabled 配置时可用。
 
 ### 9.2 system prompt 注入规则
 
-当 memory tools 可用时，system prompt 会插入 Memory Recall 提示，要求遇到历史问题时必须先跑 `memory_search`。
+当 `memory_search` 或 `memory_get` 可用时，`buildAgentSystemPrompt(...)` 会插入 **Memory Recall**
+提示，要求模型在处理历史问题时：
+
+1. 先执行 `memory_search`
+2. 再用 `memory_get` 拉取必要行，避免上下文膨胀
 
 实现路径：`src/agents/system-prompt.ts`。
+
+### 9.3 Project Context 与 memory 工具的分工
+
+`MEMORY.md` 或 `memory.md` 可能作为 bootstrap 文件被注入到 **Project Context**
+（超过上限会被截断）。
+
+但注意：
+
+- `memory/` 目录不会被注入进 Project Context
+- `memory_search` / `memory_get` 才是持久记忆的标准检索路径，尤其适合长历史或被截断场景
 
 ---
 
 ## 10. CLI 与运维入口
 
-`memory-core` 同时提供 CLI：
+OpenClaw 同时提供 CLI：
 
 - `openclaw memory status`
 - `openclaw memory status --deep`

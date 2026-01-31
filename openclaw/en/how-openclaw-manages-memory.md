@@ -326,32 +326,49 @@ Each result includes:
 
 ## 9. Tool layer and system prompt injection
 
-### 9.1 Memory tools
+### 9.1 Memory tools (runtime)
 
-The `memory-core` plugin registers:
+OpenClaw exposes two memory tools when memory search is enabled; the tool definitions live in
+`src/agents/tools/memory-tool.ts` and are included in the runtime tool list when allowed by policy:
 
 - `memory_search`
+  - Parameters: `query`, optional `maxResults`, optional `minScore`
+  - Uses `getMemorySearchManager(...)` to run semantic search over `MEMORY.md`, `memory/**/*.md`,
+    and optional session transcripts (when enabled in `memorySearch.sources`).
+  - Returns top snippets with `path` and line ranges, plus provider/model metadata.
 - `memory_get`
+  - Parameters: `path`, optional `from`, optional `lines`
+  - Uses `MemorySearchManager.readFile(...)` to fetch only the needed lines.
+  - Allowed paths are constrained to `MEMORY.md`, `memory/**/*.md`, and configured `memorySearch.extraPaths`.
 
-These tools register only when `memorySearch.enabled` is true.
+These tools are only available when `resolveMemorySearchConfig(...)` returns enabled config.
 
-`memory_get` has strict access constraints:
+### 9.2 System prompt guidance (model behavior)
 
-- Only allows `.md` files in `MEMORY.md`, `memory/`, and extraPaths
-- No symlinks
-- Must be a file
+When `memory_search` or `memory_get` is available, `buildAgentSystemPrompt(...)` injects a **Memory Recall**
+section that instructs the model to:
 
-### 9.2 System prompt injection rules
-
-When memory tools are available, the system prompt inserts a Memory Recall instruction requiring `memory_search` before answering history questions.
+1. Run `memory_search` before answering about past work, decisions, dates, people, preferences, or todos.
+2. Follow up with `memory_get` to pull only the relevant lines.
 
 Implementation: `src/agents/system-prompt.ts`.
+
+### 9.3 Project Context vs. memory tools
+
+`MEMORY.md` or `memory.md` may also appear in **Project Context** because bootstrap files are injected
+into the system prompt (with truncation if they exceed the max chars limit).
+
+However:
+
+- The `memory/` directory is **not** injected into Project Context.
+- `memory_search`/`memory_get` are the canonical retrieval path for durable memory, especially for
+  long history or when Project Context was truncated.
 
 ---
 
 ## 10. CLI and ops entry points
 
-`memory-core` also provides CLI commands:
+OpenClaw also provides CLI commands:
 
 - `openclaw memory status`
 - `openclaw memory status --deep`

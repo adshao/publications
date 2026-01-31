@@ -145,6 +145,62 @@ OpenClaw 在 Pi-mono session 前构建系统提示词，注入：
 
 这使得 Pi-mono 的基础代理变成“理解当前环境的代理”。
 
+从实现来看，系统提示词并不是一个固定字符串，而是在运行时由
+`buildAgentSystemPrompt(...)`（经由 `buildEmbeddedSystemPrompt(...)`）按固定章节顺序拼装，
+并根据条件动态插入内容。提示词模式是动态的（主会话 `full`，子代理 `minimal`，特殊场景
+`none`）。
+
+完整模式下的提示词结构（顺序保持一致）：
+
+- 身份行（"You are a personal assistant running inside Moltbot."）
+- Tooling + 工具列表（按运行时策略过滤，带摘要）
+- 工具调用风格说明
+- Moltbot CLI 快速参考
+- Skills（当 skills prompt 非空时）
+- Memory recall 规则（仅当 memory 工具可用）
+- 自更新约束（仅当 gateway 工具启用）
+- 模型别名（如配置存在）
+- Workspace + workspace notes
+- 文档入口（当 docs path 可解析）
+- Sandbox 状态（当 sandbox 开启）
+- 用户身份（owner numbers）
+- Current Date & Time（仅时区行）
+- Workspace Files（注入说明）
+- Reply tags + Messaging + Voice（仅在相关条件下）
+- Group Chat Context / Subagent Context（额外系统提示词）
+- Reactions / Reasoning format（配置启用时）
+- Project Context（注入文件内容，含 SOUL.md persona 提示）
+- Silent replies + Heartbeats（仅主会话）
+- Runtime 行（host/os/model/default_model/channel/capabilities/thinking）
+
+动态注入来源：
+
+- Workspace bootstrap 文件来自工作区：
+  `AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`、`BOOTSTRAP.md`，
+  以及 `MEMORY.md` 或 `memory.md`。子代理仅加载 `AGENTS.md` 与 `TOOLS.md`。
+- 每个注入文件有最大字符限制（默认 20,000），超限时保留头尾并插入截断标记。
+- Skills prompt 由工作区/托管/内置/额外技能目录生成（使用 Pi-mono 的技能格式化器），嵌入
+  “Skills (mandatory)”段落。
+- 分渠道的 group/system context 会被拼接（Telegram：group + topic 配置；Slack：频道描述 +
+  channel 配置），并以 “Group Chat Context” 附加，首轮还可能带 group intro。
+- 工具清单、工具摘要、message actions、runtime capabilities、sandbox 标记均按每次运行动态生成。
+
+工具使用细节（运行时 vs. 提示词）：
+
+- 运行时工具清单按每次运行构建（`createMoltbotCodingTools(...)`），并经过多级策略过滤
+  （global/agent/group/sandbox/subagent）。过滤后的工具定义被传入 Pi-mono session，作为最终可用工具集。
+- 系统提示词里的 Tooling 段落来自同一份运行时清单（名称 + 摘要），但它只是说明性文本；
+  实际可用性以运行时工具清单为准。
+
+Memory 使用细节：
+
+- `memory_search` / `memory_get` 仅在 memory search 启用且策略允许时可用；一旦可用，
+  system prompt 会注入 **Memory Recall** 规则，要求先 `memory_search` 再 `memory_get`。
+- `memory_search` 查询索引过的 memory 文件（以及可选的 session transcripts），返回带路径
+  与行号的 snippet；`memory_get` 只拉取必要行，避免上下文膨胀。
+- `MEMORY.md`/`memory.md` 可能作为 bootstrap 文件进入 Project Context，但 `memory/` 目录不会被注入，
+  更深的记忆检索依赖 memory 工具。
+
 ### 3.4 工具治理与安全控制
 
 OpenClaw 在 Pi 工具体系之上叠加多级策略：

@@ -145,6 +145,67 @@ Implementation:
 
 This turns a baseline Pi-mono agent into an "environment-aware agent."
 
+Under the hood the system prompt is not a single static string. It is assembled at runtime by
+`buildAgentSystemPrompt(...)` (via `buildEmbeddedSystemPrompt(...)`) with a fixed section order and many
+conditional inserts. Prompt mode is dynamic (`full` for main sessions, `minimal` for subagents, `none`
+for special cases).
+
+Prompt shape (full mode, order preserved):
+
+- Identity line ("You are a personal assistant running inside Moltbot.")
+- Tooling + tool list (runtime-filtered, with summaries)
+- Tool call style guidelines
+- Moltbot CLI quick reference
+- Skills (if skills prompt is non-empty)
+- Memory recall rules (only if memory tools are available)
+- Self-update guardrails (only if gateway tool is enabled)
+- Model aliases (if configured)
+- Workspace + workspace notes
+- Documentation links (if docs path is resolved)
+- Sandbox status (if sandbox is enabled)
+- User identity (owner numbers, if configured)
+- Current Date & Time (timezone line)
+- Workspace Files (injected notice)
+- Reply tags + Messaging + Voice (only when relevant)
+- Group Chat Context / Subagent Context (extra system prompt)
+- Reactions / Reasoning format (when configured)
+- Project Context (injected file contents, with SOUL.md persona hint)
+- Silent replies + Heartbeats (main sessions only)
+- Runtime line (host/os/model/default_model/channel/capabilities/thinking)
+
+Dynamic injection sources:
+
+- Workspace bootstrap files are loaded from the agent workspace:
+  `AGENTS.md`, `SOUL.md`, `TOOLS.md`, `IDENTITY.md`, `USER.md`, `HEARTBEAT.md`, `BOOTSTRAP.md`,
+  plus `MEMORY.md` or `memory.md`. Subagents only receive `AGENTS.md` and `TOOLS.md`.
+- Each injected file is trimmed to a max character limit (default 20,000). If it overflows, OpenClaw
+  keeps head+tail and inserts a truncation marker.
+- Skills prompt is generated from workspace/managed/bundled/extra skill directories (via Pi-mono’s
+  skill formatter) and embedded in the “Skills (mandatory)” section.
+- Group/system context is composed per channel (Telegram: group + topic config; Slack: channel
+  description + channel config) and appended as “Group Chat Context”, optionally preceded by a
+  first-turn group intro.
+- Tool list, tool summaries, message actions, runtime capabilities, and sandbox flags are computed
+  per run and reflected in the prompt.
+
+Tool usage details (runtime vs. prompt):
+
+- The runtime tool list is built per run (`createMoltbotCodingTools(...)`) and filtered by policy
+  (global/agent/group/sandbox/subagent). The filtered tool definitions are passed into the Pi-mono
+  session as the authoritative tool set.
+- The Tooling section in the system prompt is derived from that same runtime list (names + summaries),
+  but it is descriptive; the actual availability is enforced by the runtime tool list.
+
+Memory usage details:
+
+- `memory_search` / `memory_get` are available only when memory search is enabled and allowed by tool
+  policy; when present, the system prompt injects a **Memory Recall** rule that requires
+  `memory_search` then `memory_get`.
+- `memory_search` queries indexed memory files (and optional session transcripts) and returns snippets
+  with path + line ranges; `memory_get` fetches only the needed lines to keep context small.
+- `MEMORY.md`/`memory.md` may appear in Project Context as bootstrap files, but the `memory/` directory
+  is not injected; retrieval beyond that relies on the memory tools.
+
 ### 3.4 Tool governance and safety control
 
 OpenClaw adds multi-layer policies on top of Pi tools:
